@@ -30,7 +30,6 @@ end:
 
 int main (int argc, char** argv)
 {
-	//gb_load_file ("/home/ximon/mnt/drive/games/roms/gb/megaman-dr.willys-revenge.gb");
-	gb_load_file ("/home/ximon/mnt/drive/games/roms/gb/pokemon_yellow.gb");
+	gb_load_file (argv[1]);
 	return 0;
 }
