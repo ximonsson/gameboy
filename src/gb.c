@@ -1,35 +1,17 @@
-#include <stdio.h>
-#include <stdint.h>
+#include "gameboy/file.h"
 
-int gb_load_file (const char* file)
+
+int gb_load (const char* file)
 {
-	FILE* fp = fopen (file, "rb");
-	int ret = 0;
-	if (!fp)
-	{
-		fprintf (stderr, "Failed to open file '%s'\n", file);
-		return 1;
-	}
-
-	uint8_t buf[8 << 10]; // 8KiB
-	int n = fread (buf, 1, 0x147, fp);
-	if (n < 0x147)
-	{
-		fprintf (stderr, "Did not get entire file\n");
-		ret = 1;
-		goto end;
-	}
-
-	uint8_t mapper = buf[0x147];
-	printf ("mapper = %.2X\n", mapper);
-
-end:
-	fclose (fp);
-	return ret;
+	return gb_load_file (file);
 }
 
-int main (int argc, char** argv)
+void gb_step ()
 {
-	gb_load_file (argv[1]);
-	return 0;
+
+}
+
+void gb_quit ()
+{
+
 }

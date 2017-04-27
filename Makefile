@@ -2,7 +2,7 @@ CC=gcc
 CFLAGS=-I./include
 LDFLAGS=
 
-SRC=gb.c
+SRC=gb.c file.c cpu.c
 OBJ=$(addprefix build/, $(SRC:.c=.o))
 LIB=
 
@@ -14,7 +14,7 @@ bin: $(BIN)
 
 $(BIN): $(OBJ)
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $< $(LDFLAGS)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ main.c $^ $(LDFLAGS)
 
 build/%.o: src/%.c
 	@mkdir -p $(@D)
