@@ -1,5 +1,6 @@
 build/*
 bin*
 *.o
-*.nes
-*.swp
+*.gb
+*.gbc
+*.gba
