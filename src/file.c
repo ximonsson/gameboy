@@ -45,7 +45,7 @@ static void print_nintendo_logo (uint8_t* logo)
 				int x = (scanln * 2 + r) * bw + dot;
 
 				if (b & 0x80)
-					bitmap[x] = '0';
+					bitmap[x] = '@';
 				else
 					bitmap[x] = ' ';
 
@@ -64,6 +64,57 @@ static void print_nintendo_logo (uint8_t* logo)
 	printf ("\n\n");
 }
 
+static int validate_checksum (uint8_t* header)
+{
+	int x = 0;
+	for (int i = 0x34; i < 0x4D; i ++)
+		x = x - header[i] - 1;
+	return header[0x4D] == (x & 0xFF);
+}
+
+static const char* CARTDRIDGE_TYPES[0x100] =
+{
+	"ROM ONLY",
+	"MBC1",
+	"MBC1+RAM",
+	"MBC1+RAM+BATTERY",
+	"0x04 unsupported",
+	"MBC2",
+	"MBC2+BATTERY",
+	"0x07 unsupported",
+	"ROM+RAM",
+	"ROM+RAM+BATTERY",
+	"0x0A unsupported",
+	"MMM01",
+	"MMM01+RAM",
+	"MMM01+RAM+BATTERY",
+	"0x0E unsupported",
+	"MBC3+TIMER+BATTERY",
+	"MBC3+TIMER+RAM+BATTERY",
+	"MBC3",
+	"MBC3+RAM",
+	"MBC3+RAM+BATTERY",
+	"0x14 Unsupported",
+	"MBC4",
+	"MBC4+RAM",
+	"MBC4+RAM+BATTERY",
+	"0x18 Unsupported",
+	"MBC5",
+	"MBC5+RAM",
+	"MBC5+RAM+BATTERY",
+	"MBC5+RUMBLE",
+	"MBC5+RUMBLE+RAM",
+	"MBC5+RUMBLE+RAM+BATTERY",
+	"0x21 Unsupported",
+	"MBC6",
+	"MBC7+SENSOR+RUMBLE+RAM+BATTERY",
+	// 0x23 -> 0xFB unsupported TODO
+	"POCKET CAMERA",
+	"BANDAI TAMA5",
+	"HuC3",
+	"HuC1+RAM+BATTERY"
+};
+
 static int read_header (FILE* fp)
 {
 	fseek (fp, HEADER_LOCATION, SEEK_SET);
@@ -71,12 +122,20 @@ static int read_header (FILE* fp)
 	fread (header, 1, HEADER_SIZE, fp);
 
 	// print the logo to stdout to make sure all is g00d
+	print_nintendo_logo (&header[4]);
+
+	// compare logo bytes to make sure they are correct
 	if (memcmp (header + 4, LOGO, LOGO_SIZE) != 0)
 	{
 		fprintf (stderr, "Logos do not match!\n");
 		return 1;
 	}
-	print_nintendo_logo (&header[4]);
+
+	if (validate_checksum (header) != 1)
+	{
+		fprintf (stderr, "checksum does not match!\n");
+		return 1;
+	}
 
 	// print title of the cartridge
 	char title[16];
@@ -107,6 +166,17 @@ static int read_header (FILE* fp)
 		printf ("Normal Gameboy or CGB only game\n");
 		break;
 	}
+
+	// Cartridge type
+	printf ("Cartridge type [x%.2X]: %s\n", header[0x47], CARTDRIDGE_TYPES[header[0x47]]);
+
+	// ROM size
+	size_t rom_size = 32 << (10 + header[0x48]);
+	printf ("ROM size: %lu B (= %d KB) [%d]\n", rom_size, rom_size >> 10, header[0x48]);
+
+	// RAM size
+	size_t ram_size = header[0x49];
+	printf ("RAM size: %lu\n", ram_size);
 }
 
 int gb_load_file (const char* file)
