@@ -32,6 +32,15 @@ uint8_t* reg_l = ((uint8_t *) &reg_hl);
 #define H *reg_h
 #define L *reg_l
 
+/* define flags */
+enum flags
+{
+	F_Z = 0x80,
+	F_N = 0x40,
+	F_H = 0x20,
+	F_C = 0x10,
+};
+
 static uint8_t ram[0xFFFF];
 
 typedef int (*read_handler) (uint16_t, uint8_t*);
@@ -141,31 +150,85 @@ enum addressing_modes {
  * instruction defines a CPU instruction
  * Points to a function to be excecuted.
  */
-typedef struct instruction
-{
-	// name for debugging purposes
-	const char* name;
+typedef void(*instruction)() ;
 
-	// function to be excecute on the CPU
-	// the function returns any extra amount of cycles the operation
-	// took to execute.
-	int (*fn) ();
-}
-instruction;
-
-int ld ()
+void ld8 (uint8_t* d, uint8_t v)
 {
-	return 0;
+	*d = v;
 }
 
-int push ()
+void ld16 (uint8_t* d, uint16_t v)
 {
-	return 0;
+	uint8_t _v = v;
+	ld8 (d, _v);
+	_v = v >> 8;
+	ld8 (d + 1, _v);
 }
 
-int pop ()
+void push (uint16_t v)
 {
+	stack_push (v);
+}
 
+void pop (uint16_t *v)
+{
+	stack_pop (v);
+}
+
+void add (uint8_t n)
+{
+	uint8_t a = A;
+	A = a + n;
+	F = 0; // reset flags
+	if (A == 0)
+		F |= F_Z;
+	if (a & 0x80 != 0 && (A) & 0x80 == 0) // carry
+		F |= F_C;
+	if (a & 0x08 != 0 && (A) & 0x08 == 0) // half carry
+		F |= F_H;
+}
+
+void adc (uint8_t n)
+{
+	uint8_t a = A;
+	A = a + n + ((F & F_C) >> 4);
+	F = 0; // reset flags
+	if (A == 0)
+		F |= F_Z;
+	if (a & 0x80 != 0 && (A) & 0x80 == 0) // carry
+		F |= F_C;
+	if (a & 0x08 != 0 && (A) & 0x08 == 0) // half carry
+		F |= F_H;
+}
+
+void sub (uint8_t n)
+{
+	uint8_t a = A;
+	A = a - n;
+
+	F = F_N;
+	if (A == 0)
+		F |= F_Z;
+	// TODO other flags
+}
+
+void sbc (uint8_t n)
+{
+	uint8_t a = A;
+	A = a - (n + ((F & F_C) >> 4));
+
+	F = F_N;
+	if (A == 0)
+		F |= F_Z;
+	// TODO other flags
+}
+
+void and (uint8_t n)
+{
+	A = (A) & n;
+	F = F_H;
+	if (A == 0)
+		F |= F_Z;
 }
 
 /**
@@ -175,6 +238,9 @@ int pop ()
  */
 typedef struct operation
 {
+	// name is the debugging name of the operation.
+	const char* name;
+
 	// the instruction to be executed
 	instruction instruction;
 
@@ -182,7 +248,7 @@ typedef struct operation
 	uint8_t bytes;
 
 	// number of cycles the operation needs.
-	// in some cases this might be more in case of e.g. branching.
+	// in some cases there might be more in the case of e.g. branching.
 	uint8_t cycles;
 }
 operation;
@@ -197,13 +263,14 @@ const operation operations[16][16] =
 
 void gb_cpu_reset ()
 {
-
+	pc = 0x100;
 }
 
 int gb_cpu_step ()
 {
-	pc ++;
-	uint8_t opcode = RAM(pc);
-	int cc = operations[opcode & 0xF][opcode >> 4].instruction.fn();
-	return cc;
+	uint8_t opcode = RAM (pc);
+	operation op = operations[opcode & 0xF][opcode >> 4];
+	op.instruction();
+	pc += op.bytes;
+	return op.cycles;
 }
