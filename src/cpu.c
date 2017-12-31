@@ -127,23 +127,6 @@ enum cpu_flags
 	// bits 0-3 are unused
 };
 
-typedef int addressing;
-
-enum addressing_modes {
-	addressing_a,
-	addressing_f,
-	addressing_af,
-	addressing_b,
-	addressing_c,
-	addressing_bc,
-	addressing_d,
-	addressing_e,
-	addressing_de,
-	addressing_h,
-	addressing_l,
-	addressing_hl
-};
-
 /* CPU Instructions */
 
 /**
