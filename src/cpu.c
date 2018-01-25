@@ -53,7 +53,7 @@ void gb_cpu_add_read_handler (read_handler h)
 	n_read_handlers ++;
 }
 
-static uint8_t read_ram (uint16_t address)
+static uint8_t mem_read (uint16_t address)
 {
 	uint8_t v = ram[address];
 	int stop = 0;
@@ -64,7 +64,7 @@ static uint8_t read_ram (uint16_t address)
 	return v;
 }
 
-#define RAM(a) read_ram(a)
+#define RAM(a) mem_read(a)
 
 typedef int (*store_handler) (uint16_t, uint8_t);
 static store_handler* store_handlers = 0;
@@ -76,7 +76,7 @@ void gb_cpu_add_store_handler (store_handler h)
 	n_store_handlers ++;
 }
 
-static void store_ram (uint16_t address, uint8_t v)
+static void mem_store (uint16_t address, uint8_t v)
 {
 	int stop = 0;
 	for (store_handler* h = store_handlers; h != 0 && !stop; h ++)
@@ -87,7 +87,7 @@ static void store_ram (uint16_t address, uint8_t v)
 		ram[address] = v;
 }
 
-#define STORE(a, v) store_ram(a, v)
+#define STORE(a, v) mem_store(a, v)
 
 /**
  * stack_push pushes the value v to the stack.
@@ -208,10 +208,75 @@ void sbc (uint8_t n)
 
 void and (uint8_t n)
 {
-	A = (A) & n;
+	A &= n;
 	F = F_H;
 	if (A == 0)
 		F |= F_Z;
+}
+
+void or (uint8_t n)
+{
+	A |= n;
+	F = 0;
+	if (A == 0)
+		F |= F_Z;
+}
+
+void xor (uint8_t n)
+{
+	A ^= n;
+	F = 0;
+	if (A == 0)
+		F |= F_Z;
+}
+
+void cp (uint8_t n)
+{
+	uint8_t v = A - n;
+	F = F_N;
+	if (v == 0)
+		F |= F_Z;
+	if (A < n)
+		F |= F_C;
+	// TODO other flags
+}
+
+void inc (uint8_t *n)
+{
+	uint8_t tmp = *n;
+	(*n)++;
+	F &= ~F_N;
+	if (*n == 0)
+		F |= F_Z;
+	if ((tmp & 0x10) == 0 && (*n & 0x10) == 0x10)
+		F |= F_H;
+}
+
+void dec (uint8_t *n)
+{
+	uint8_t tmp = *n;
+	(*n)--;
+	F &= ~F_N;
+	if (*n == 0)
+		F |= F_Z;
+	if (!((tmp & 0x08) == 0 && (*n & 0x08) == 0x08))
+		F |= F_H;
+}
+
+void swap (uint16_t* n)
+{
+	uint16_t tmp = (*n) & 0xff; // lower nibble
+	*n >>= 8;
+	*n |= (tmp << 8);
+	F = 0;
+	if (*n == 0)
+		F |= F_Z;
+}
+
+void add16 (uint16_t n)
+{
+	HL += n;
+	// TODO flags
 }
 
 /**
@@ -239,7 +304,7 @@ operation;
 /**
  * operations maps opcodes to operations.
  */
-const operation operations[16][16] =
+const operation operations[256] =
 {
 
 };
@@ -252,7 +317,7 @@ void gb_cpu_reset ()
 int gb_cpu_step ()
 {
 	uint8_t opcode = RAM (pc);
-	operation op = operations[opcode & 0xF][opcode >> 4];
+	operation op = operations[opcode];
 	op.instruction();
 	pc += op.bytes;
 	return op.cycles;
