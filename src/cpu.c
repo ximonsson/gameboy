@@ -41,6 +41,10 @@ enum flags
 	F_C = 0x10,
 };
 
+static int di_flag = 0;
+static int ei_flag = 0;
+static int interrupt_enabled = 0;
+
 static uint8_t ram[0xFFFF];
 
 typedef int (*read_handler) (uint16_t, uint8_t*);
@@ -277,6 +281,165 @@ void add16 (uint16_t n)
 {
 	HL += n;
 	// TODO flags
+	F &= ~F_N;
+}
+
+void add16sp (uint8_t n)
+{
+	sp += n;
+	F = 0; // reset flags
+	// TODO lookup implementation of other flags
+}
+
+void inc16 (uint16_t *n)
+{
+	(*n)++;
+}
+
+void dec16 (uint16_t *n)
+{
+	(*n)--;
+}
+
+void daa ()
+{
+	// TODO
+}
+
+void cpl ()
+{
+	A = ~A;
+	F |= (F_N | F_H);
+}
+
+void ccf ()
+{
+	uint8_t tmp = F & F_C;
+	F &= ~(F_C | F_N | F_H); // reset N H C flags
+	F |= (~tmp & F_C);
+}
+
+void scf ()
+{
+	F &= ~(F_N | F_H); // reset N H flags
+	F |= F_C;
+}
+
+void nop ()
+{
+	// nada
+}
+
+void halt ()
+{
+	// power down cpu until an interrupt occurs.
+	// nada?
+}
+
+void stop ()
+{
+	// halt cpu & display until button pressed
+	// nada ?
+}
+
+void di ()
+{
+	// TODO not a good solution
+	di_flag = 1;
+}
+
+void ei ()
+{
+	// TODO not a good solution
+	ei_flag = 1;
+}
+
+void rlc (uint8_t *n)
+{
+	uint8_t tmp = ((*n) & 0x80) >> 7;
+	(*n) <<= 1;
+	(*n) |= tmp;
+	// reset flags
+	F &= ~(F_N | F_H | F_C);
+	F |= tmp << 4; // C = old bit 7
+	if ((*n) == 0)
+		F &= ~F_Z;
+}
+#define rlca rlc(reg_a)
+
+void rl (uint8_t *n)
+{
+	uint8_t tmp = ((*n) & 0x80) >> 7;
+	(*n) <<= 1;
+	(*n) |= (F >> 4) & 1; // bit 0 = C
+	// reset flags
+	F &= ~(F_N | F_H | F_C);
+	F |= tmp << 4; // C = old bit 7
+	if ((*n) == 0)
+		F &= ~F_Z;
+}
+#define rla rl(reg_a)
+
+void rrc (uint8_t *n)
+{
+	uint8_t tmp = (*n) & 1;
+	(*n) >>= 1;
+	(*n) |= tmp << 7; // bit 0 = old bit 7
+	// reset flags
+	F &= ~(F_N | F_H | F_C);
+	F |= tmp << 4; // C = old bit 0
+	if ((*n) == 0)
+		F &= ~F_Z;
+}
+#define rrca rrc(reg_a)
+
+void rr (uint8_t *n)
+{
+	uint8_t tmp = (*n) & 1;
+	(*n) >>= 1;
+	(*n) |= (F << 3) & 0x80; // bit 0 = carry
+	// reset flags
+	F &= ~(F_N | F_H | F_C);
+	F |= tmp << 4; // C = old bit 0
+	if ((*n) == 0)
+		F &= ~F_Z;
+}
+#define rra rr(reg_a)
+
+void sla (uint8_t *n)
+{
+	// reset flags
+	F &= ~(F_N | F_H | F_C);
+	F |= ((*n) & 0x80) >> 3; // C = old bit 7
+
+	(*n) <<= 1;
+	if ((*n) == 0)
+		F &= ~F_Z;
+}
+
+void sra (uint8_t* n)
+{
+	// reset flags
+	F &= ~(F_N | F_H | F_C);
+	F |= ((*n) & 1) << 4; // C = old bit 0
+
+	uint8_t msb = (*n) & 0x80;
+	(*n) >>= 1;
+	(*n) |= msb; // MSB does not change
+
+	if ((*n) == 0)
+		F &= ~F_Z;
+}
+
+void srl (uint8_t* n)
+{
+	// reset flags
+	F &= ~(F_N | F_H | F_C);
+	F |= ((*n) & 1) << 4; // C = old bit 0
+
+	(*n) >>= 1;
+	if ((*n) == 0)
+		F &= ~F_Z;
 }
 
 /**
