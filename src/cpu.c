@@ -442,6 +442,103 @@ void srl (uint8_t* n)
 		F &= ~F_Z;
 }
 
+void bit (uint8_t b, uint8_t* r)
+{
+	F &= ~F_N;
+	F |= F_H;
+	if (((1 << b) & *r) == 0)
+		F |= F_Z;
+}
+
+void set(uint8_t b, uint8_t* r)
+{
+	(*r) |= 1 << b;
+}
+
+void res(uint8_t b, uint8_t* r)
+{
+	(*r) &= ~(1 << b);
+}
+
+//void jp (uint16_t nn)
+//
+//pc = nn;
+//
+
+#define jp(nn) pc = nn
+
+enum jump_cc
+{
+	JP_CC_NZ,
+	JP_CC_Z,
+	JP_CC_NC,
+	JP_CC_C,
+};
+
+void jpcc (enum jump_cc cc, uint16_t nn)
+{
+	switch (cc)
+	{
+		case JP_CC_NZ: if (F & F_Z == 0) jp (nn); break;
+		case JP_CC_Z:  if (F & F_Z != 0) jp (nn); break;
+		case JP_CC_NC: if (F & F_C == 0) jp (nn); break;
+		case JP_CC_C:  if (F & F_C != 0) jp (nn); break;
+	}
+}
+
+//void jr (uint8_t n)
+//{
+	//pc += n;
+//}
+
+#define jr(n) pc += n
+
+void jrcc (enum jump_cc cc, uint8_t n)
+{
+	switch (cc)
+	{
+		case JP_CC_NZ: if (F & F_Z == 0) jr (n); break;
+		case JP_CC_Z:  if (F & F_Z != 0) jr (n); break;
+		case JP_CC_NC: if (F & F_C == 0) jr (n); break;
+		case JP_CC_C:  if (F & F_C != 0) jr (n); break;
+	}
+}
+
+//void call (uint16_t nn)
+//{
+//PUSH (pc);
+//pc = nn;
+//}
+
+#define call(nn) PUSH (pc); jp (nn)
+
+void callcc (enum jump_cc cc, uint16_t nn)
+{
+	switch (cc)
+	{
+		case JP_CC_NZ: if (F & F_Z == 0) call (nn); break;
+		case JP_CC_Z:  if (F & F_Z != 0) call (nn); break;
+		case JP_CC_NC: if (F & F_C == 0) call (nn); break;
+		case JP_CC_C:  if (F & F_C != 0) call (nn); break;
+	}
+}
+
+void rst (uint8_t n)
+{
+	call (n);
+}
+
+void ret ()
+{
+	jp (POP ());
+}
+
+void reti ()
+{
+	jp (POP ());
+	interrupt_enabled = 1;
+}
+
 /**
  * operation defines a specific CPU instruction to be excecuted
  * with a fix addressing mode.
