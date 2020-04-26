@@ -1,24 +1,31 @@
 CC=gcc
-CFLAGS=-I./include
-LDFLAGS=
+CFLAGS=-Wall -g3 -I./include
+LDFLAGS=-L./lib -lgameboy
 
 SRC=gb.c file.c cpu.c
 OBJ=$(addprefix build/, $(SRC:.c=.o))
-LIB=
+LIB=lib/libgameboy.a
+ARCMD = rcs
 
 BIN=bin/gameboy
 
 all: bin
 
-bin: $(BIN)
+bin: lib $(BIN)
 
-$(BIN): $(OBJ)
+lib: $(LIB)
+
+$(BIN): main.c
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $@ main.c $^ $(LDFLAGS)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ $(LDFLAGS)
+
+$(LIB): $(OBJ)
+	@mkdir -p $(@D)
+	$(AR) $(ARCMD) $@ $^
 
 build/%.o: src/%.c
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
 
 clean:
-	rm -rf $(OBJ) $(BIN)
+	rm -rf $(OBJ) $(BIN) $(LIB)
