@@ -172,11 +172,13 @@ static int read_header (FILE* fp)
 
 	// ROM size
 	size_t rom_size = 32 << (10 + header[0x48]);
-	printf ("ROM size: %lu B (= %d KB) [%d]\n", rom_size, rom_size >> 10, header[0x48]);
+	printf ("ROM size: %lu B (= %ld KB) [%d]\n", rom_size, rom_size >> 10, header[0x48]);
 
 	// RAM size
 	size_t ram_size = header[0x49];
 	printf ("RAM size: %lu\n", ram_size);
+
+	return 0;
 }
 
 int gb_load_file (const char* file)
