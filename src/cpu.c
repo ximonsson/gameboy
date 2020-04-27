@@ -216,9 +216,9 @@ void addhl (uint16_t n)
 {
 	uint16_t nn_ = HL;
 	HL += n;
-	F &= ~F_N;
+	F &= ~(F_N | F_H | F_C);
 	if ((nn_ & 0x0800) != 0 && (HL & 0x0800) == 0) // half carry
-		F |= F_C;
+		F |= F_H;
 	if ((nn_ & 0x8000) != 0 && (HL & 0x8000) == 0) // carry
 		F |= F_C;
 }
@@ -229,9 +229,9 @@ void addsp ()
 	int8_t n = RAM (pc ++);
 	sp += n;
 
-	F &= ~(F_N | F_Z);
+	F = 0;
 	if ((nn_ & 0x0800) != 0 && (sp & 0x0800) == 0) // half carry
-		F |= F_C;
+		F |= F_H;
 	if ((nn_ & 0x8000) != 0 && (sp & 0x8000) == 0) // carry
 		F |= F_C;
 }
@@ -252,7 +252,7 @@ void adc (uint8_t n)
 void sub (uint8_t n)
 {
 	uint8_t a = A;
-	A = a - n;
+	A -= n;
 
 	F = F_N;
 	if (A == 0)
@@ -263,7 +263,7 @@ void sub (uint8_t n)
 void sbc (uint8_t n)
 {
 	uint8_t a = A;
-	A = a - (n + ((F & F_C) >> 4));
+	A -= n + ((F & F_C) >> 4);
 
 	F = F_N;
 	if (A == 0)
@@ -351,6 +351,7 @@ void swap (uint16_t* n)
 void daa ()
 {
 	// TODO
+	F &= ~(F_Z | F_H);
 }
 
 void cpl ()
@@ -634,7 +635,7 @@ const operation operations[256] =
 void interrupt ()
 {
 	// all interrupts disabled
-	if (!ime) return;
+	if (!ime) return 1;
 
 	// loop over interrupt flags in priority order.
 	// call any interrupts that have been flagged and enabled.
@@ -645,6 +646,7 @@ void interrupt ()
 			ime = 0;
 			PUSH (pc);
 			pc = 0x40 + 0x8 * b;
+			return 0;
 		}
 	}
 }
@@ -665,8 +667,9 @@ void gb_cpu_reset ()
  */
 int gb_cpu_step ()
 {
+	int cc = 0;
 	// first check any interrupts
-	interrupt ();
+	if (interrupt () == 0) cc += 5;
 
 	// load an opcode and perform the operation associated,
 	// step the PC and clock the number of cycles
@@ -674,5 +677,5 @@ int gb_cpu_step ()
 	operation op = operations[opcode];
 	op.instruction ();
 	pc += op.bytes;
-	return op.cycles;
+	return cc + op.cycles;
 }
