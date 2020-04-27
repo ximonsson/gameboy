@@ -128,25 +128,25 @@ POP          BC              C1        12
 POP          DE              D1        12
 POP          HL              E1        12
 # ADD A,n
-ADD          A,A             87         4
-ADD          A,B             80         4
-ADD          A,C             81         4
-ADD          A,D             82         4
-ADD          A,E             83         4
-ADD          A,H             84         4
-ADD          A,L             85         4
-ADD          A,(HL)          86         8
-ADD          A,n             C6         8
+ADD          A               87         4
+ADD          B               80         4
+ADD          C               81         4
+ADD          D               82         4
+ADD          E               83         4
+ADD          H               84         4
+ADD          L               85         4
+ADD          (HL)            86         8
+ADD          n               C6         8
 # ADC A,n
-ADC          A,A             8F         4
-ADC          A,B             88         4
-ADC          A,C             89         4
-ADC          A,D             8A         4
-ADC          A,E             8B         4
-ADC          A,H             8C         4
-ADC          A,L             8D         4
-ADC          A,(HL)          8E         8
-ADC          A,n             CE         8
+ADC          A               8F         4
+ADC          B               88         4
+ADC          C               89         4
+ADC          D               8A         4
+ADC          E               8B         4
+ADC          H               8C         4
+ADC          L               8D         4
+ADC          (HL)            8E         8
+ADC          n               CE         8
 # SUB n
 SUB          A               97         4
 SUB          B               90         4
@@ -158,15 +158,15 @@ SUB          L               95         4
 SUB          (HL)            96         8
 SUB          n               D6         8
 # SBC A,n
-SBC          A,A             9F         4
-SBC          A,B             98         4
-SBC          A,C             99         4
-SBC          A,D             9A         4
-SBC          A,E             9B         4
-SBC          A,H             9C         4
-SBC          A,L             9D         4
-SBC          A,(HL)          9E         8
-SBC          A,n             DE         8 # TODO unsure
+SBC          A               9F         4
+SBC          B               98         4
+SBC          C               99         4
+SBC          D               9A         4
+SBC          E               9B         4
+SBC          H               9C         4
+SBC          L               9D         4
+SBC          (HL)            9E         8
+SBC          n               DE         8 # TODO unsure
 # AND n
 AND          A               A7         4
 AND          B               A0         4
