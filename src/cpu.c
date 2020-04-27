@@ -257,18 +257,25 @@ void sub (uint8_t n)
 	F = F_N;
 	if (A == 0)
 		F |= F_Z;
-	// TODO other flags
+	if (n > a)
+		F |= F_C;
+	if ((a & 0x0F) < (n & 0x0F))
+		F |= F_H;
 }
 
 void sbc (uint8_t n)
 {
 	uint8_t a = A;
-	A -= n + ((F & F_C) >> 4);
+	n += ((F & F_C) >> 4);
+	A -= n;
 
 	F = F_N;
 	if (A == 0)
 		F |= F_Z;
-	// TODO other flags
+	if (a < n)
+		F |= F_C;
+	if ((a & 0x0F) < (n & 0x0F))
+		F |= F_H;
 }
 
 void and (uint8_t n)
@@ -297,13 +304,13 @@ void xor (uint8_t n)
 
 void cp (uint8_t n)
 {
-	uint8_t v = A - n;
 	F = F_N;
-	if (v == 0)
+	if (A == n)
 		F |= F_Z;
 	if (A < n)
 		F |= F_C;
-	// TODO other flags
+	if ((A & 0x0F) < (n & 0x0F))
+		F |= F_H;
 }
 
 void inc (uint8_t *n)
