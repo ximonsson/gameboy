@@ -41,17 +41,41 @@ enum flags
 	F_C = 0x10,
 };
 
-static int di_flag = 0;
-static int ei_flag = 0;
-static int interrupt_enabled = 0;
+/* Interrupt Master Enable flag (IME). */
+static int ime = 0;
 
-static uint8_t ram[0xFFFF];
+/* RAM memory. */
+static uint8_t ram[0xFFFF + 1]; // the +1 is because of the IE register.
 
+/* Interrupt Enable (IE) register. Is located at RAM memory $FFFF. */
+static uint8_t* reg_ie = ram + 0xFFFF;
+#define IE (* reg_ie)
+
+/* Interrupt Flag (IF) register. Is located at RAM memory $FF0F. */
+static uint8_t* reg_if = ram + 0xFF0F;
+#define IF (* reg_if)
+
+/* memory */
+
+/**
+ * Read from RAM handler.
+ *
+ * This is a function that takes the address as first parameter and the current value in memory
+ * at that address.
+ *
+ * In case the handler affects the RAM address and normal execution should be stopped an non-zero
+ * value should be returned by the handler, else zero.
+ */
 typedef int (*read_handler) (uint16_t, uint8_t*);
-static read_handler* read_handlers = 0;
+
+/* Currently registered read handlers. */
+static read_handler read_handlers[8] = { 0 };
 static int n_read_handlers = 0;
 
-void gb_cpu_add_read_handler (read_handler h)
+/**
+ * Add a callback (read_handler) for when trying to read from memory.
+ */
+void gb_cpu_register_read_handler (read_handler h)
 {
 	read_handlers[n_read_handlers] = h;
 	n_read_handlers ++;
@@ -68,18 +92,36 @@ static uint8_t mem_read (uint16_t address)
 	return v;
 }
 
-#define RAM(a) mem_read(a)
+#define RAM(a) mem_read (a)
 
+/**
+ * Store to RAM handler.
+ *
+ * This is a function that takes the address as first parameter and the value that is to be
+ * stored as second.
+ *
+ * In case the handler affects the RAM address and normal execution should be stopped an non-zero
+ * value should be returned by the handler, else zero.
+ */
 typedef int (*store_handler) (uint16_t, uint8_t);
-static store_handler* store_handlers = 0;
+
+/* Current store handlers. */
+static store_handler store_handlers[8] = { 0 };
 static int n_store_handlers = 0;
 
-void gb_cpu_add_store_handler (store_handler h)
+/**
+ * Add a callback when storing to RAM.
+ */
+void gb_cpu_register_store_handler (store_handler h)
 {
 	store_handlers[n_store_handlers] = h;
 	n_store_handlers ++;
 }
 
+/**
+ * Store to memory.
+ * Makes sure the callbacks are run for specific memory addresses.
+ */
 static void mem_store (uint16_t address, uint8_t v)
 {
 	int stop = 0;
@@ -98,10 +140,8 @@ static void mem_store (uint16_t address, uint8_t v)
  */
 void stack_push (uint16_t v)
 {
-	ram[sp] = v >> 8;
-	sp --;
-	ram[sp] = v;
-	sp --;
+	ram[sp] = v >> 8; sp --;
+	ram[sp] = v;      sp --;
 }
 
 #define PUSH(v) stack_push(v)
@@ -111,33 +151,14 @@ void stack_push (uint16_t v)
  */
 uint16_t stack_pop ()
 {
-	sp ++;
-	uint16_t lo = ram[sp];
-	sp ++;
-	uint16_t hi = ram[sp];
+	sp ++; uint16_t lo = ram[sp];
+	sp ++; uint16_t hi = ram[sp];
 	return (hi << 8) | lo;
 }
 
 #define POP() stack_pop()
 
-
-/* CPU Flags (register F) */
-enum cpu_flags
-{
-	zf = 0x80, // zero
-	n  = 0x40, // negative
-	h  = 0x20, // half carry
-	cy = 0x10  // carry
-	// bits 0-3 are unused
-};
-
 /* CPU Instructions */
-
-/**
- * instruction defines a CPU instruction
- * Points to a function to be excecuted.
- */
-typedef void(*instruction)() ;
 
 void ld8 (uint8_t* d, uint8_t v)
 {
@@ -169,9 +190,9 @@ void add (uint8_t n)
 	F = 0; // reset flags
 	if (A == 0)
 		F |= F_Z;
-	if (a & 0x80 != 0 && (A) & 0x80 == 0) // carry
+	if ((a & 0x80) != 0 && ((A) & 0x80) == 0) // carry
 		F |= F_C;
-	if (a & 0x08 != 0 && (A) & 0x08 == 0) // half carry
+	if ((a & 0x08) != 0 && ((A) & 0x08) == 0) // half carry
 		F |= F_H;
 }
 
@@ -182,9 +203,9 @@ void adc (uint8_t n)
 	F = 0; // reset flags
 	if (A == 0)
 		F |= F_Z;
-	if (a & 0x80 != 0 && (A) & 0x80 == 0) // carry
+	if ((a & 0x80) != 0 && ((A) & 0x80) == 0) // carry
 		F |= F_C;
-	if (a & 0x08 != 0 && (A) & 0x08 == 0) // half carry
+	if ((a & 0x08) != 0 && ((A) & 0x08) == 0) // half carry
 		F |= F_H;
 }
 
@@ -344,14 +365,12 @@ void stop ()
 
 void di ()
 {
-	// TODO not a good solution
-	di_flag = 1;
+	ime = 0;
 }
 
 void ei ()
 {
-	// TODO not a good solution
-	ei_flag = 1;
+	ime = 1;
 }
 
 void rlc (uint8_t *n)
@@ -479,10 +498,10 @@ void jpcc (enum jump_cc cc, uint16_t nn)
 {
 	switch (cc)
 	{
-		case JP_CC_NZ: if (F & F_Z == 0) jp (nn); break;
-		case JP_CC_Z:  if (F & F_Z != 0) jp (nn); break;
-		case JP_CC_NC: if (F & F_C == 0) jp (nn); break;
-		case JP_CC_C:  if (F & F_C != 0) jp (nn); break;
+		case JP_CC_NZ: if ((F & F_Z) == 0) jp (nn); break;
+		case JP_CC_Z:  if ((F & F_Z) != 0) jp (nn); break;
+		case JP_CC_NC: if ((F & F_C) == 0) jp (nn); break;
+		case JP_CC_C:  if ((F & F_C) != 0) jp (nn); break;
 	}
 }
 
@@ -497,10 +516,10 @@ void jrcc (enum jump_cc cc, uint8_t n)
 {
 	switch (cc)
 	{
-		case JP_CC_NZ: if (F & F_Z == 0) jr (n); break;
-		case JP_CC_Z:  if (F & F_Z != 0) jr (n); break;
-		case JP_CC_NC: if (F & F_C == 0) jr (n); break;
-		case JP_CC_C:  if (F & F_C != 0) jr (n); break;
+		case JP_CC_NZ: if ((F & F_Z) == 0) jr (n); break;
+		case JP_CC_Z:  if ((F & F_Z) != 0) jr (n); break;
+		case JP_CC_NC: if ((F & F_C) == 0) jr (n); break;
+		case JP_CC_C:  if ((F & F_C) != 0) jr (n); break;
 	}
 }
 
@@ -510,16 +529,16 @@ void jrcc (enum jump_cc cc, uint8_t n)
 //pc = nn;
 //}
 
-#define call(nn) PUSH (pc); jp (nn)
+#define call(nn) { PUSH (pc); jp (nn); }
 
 void callcc (enum jump_cc cc, uint16_t nn)
 {
 	switch (cc)
 	{
-		case JP_CC_NZ: if (F & F_Z == 0) call (nn); break;
-		case JP_CC_Z:  if (F & F_Z != 0) call (nn); break;
-		case JP_CC_NC: if (F & F_C == 0) call (nn); break;
-		case JP_CC_C:  if (F & F_C != 0) call (nn); break;
+		case JP_CC_NZ: if ((F & F_Z) == 0) call (nn); break;
+		case JP_CC_Z:  if ((F & F_Z) != 0) call (nn); break;
+		case JP_CC_NC: if ((F & F_C) == 0) call (nn); break;
+		case JP_CC_C:  if ((F & F_C) != 0) call (nn); break;
 	}
 }
 
@@ -536,15 +555,22 @@ void ret ()
 void reti ()
 {
 	jp (POP ());
-	interrupt_enabled = 1;
+	ime = 1;
 }
+
+/**
+ * instruction defines a CPU instruction
+ * Points to a function to be excecuted.
+ */
+typedef void(*instruction)() ;
 
 /**
  * operation defines a specific CPU instruction to be excecuted
  * with a fix addressing mode.
  * It is identified by it's opcode.
  */
-typedef struct operation
+typedef
+struct operation
 {
 	// name is the debugging name of the operation.
 	const char* name;
@@ -569,16 +595,58 @@ const operation operations[256] =
 
 };
 
+/**
+ * Interrupt.
+ *
+ * From docs:
+ *   1. When an interrupt is generated, the IF flag will be set.
+ *   2. If the IME flag is set & the corresponding IE flag is set, the following 3 steps are performed.
+ *   3. Reset the IME flag and prevent all interrupts.
+ *   4. The PC (program counter) is pushed onto the stack.
+ *   5. Jump to the starting address of the interrupt.
+ */
+void interrupt ()
+{
+	// all interrupts disabled
+	if (!ime) return;
+
+	// loop over interrupt flags in priority order.
+	// call any interrupts that have been flagged and enabled.
+	for (uint8_t b = 0; b < 5; b ++)
+	{
+		if (IF & (1 << b) && IE & (1 << b))
+		{
+			ime = 0;
+			PUSH (pc);
+			pc = 0x40 + 0x8 * b;
+		}
+	}
+}
+
+/**
+ * Reset the CPU.
+ */
 void gb_cpu_reset ()
 {
 	pc = 0x100;
+	sp = 0xFFFE;
 }
 
+/**
+ * Step the CPU, executing one operation.
+ *
+ * Returns the number of CPU cycles it took to perform the operation.
+ */
 int gb_cpu_step ()
 {
+	// first check any interrupts
+	interrupt ();
+
+	// load an opcode and perform the operation associated,
+	// step the PC and clock the number of cycles
 	uint8_t opcode = RAM (pc);
 	operation op = operations[opcode];
-	op.instruction();
+	op.instruction ();
 	pc += op.bytes;
 	return op.cycles;
 }
