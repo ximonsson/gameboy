@@ -17,20 +17,20 @@ uint8_t* reg_h = ((uint8_t *) &reg_hl) + 1;
 uint8_t* reg_l = ((uint8_t *) &reg_hl);
 
 #define AF reg_af
-#define A *reg_a
-#define F *reg_f
+#define A (* reg_a)
+#define F (* reg_f)
 
 #define BC reg_bc
-#define B *reg_b
-#define C *reg_c
+#define B (* reg_b)
+#define C (* reg_c)
 
 #define DE reg_de
-#define D *reg_d
-#define E *reg_e
+#define D (* reg_d)
+#define E (* reg_e)
 
 #define HL reg_hl
-#define H *reg_h
-#define L *reg_l
+#define H (* reg_h)
+#define L (* reg_l)
 
 /* define flags */
 enum flags
@@ -140,8 +140,8 @@ static void mem_store (uint16_t address, uint8_t v)
  */
 void stack_push (uint16_t v)
 {
-	ram[sp] = v >> 8; sp --;
-	ram[sp] = v;      sp --;
+	ram[sp--] = v >> 8;
+	ram[sp--] = v;
 }
 
 #define PUSH(v) stack_push (v)
@@ -151,8 +151,8 @@ void stack_push (uint16_t v)
  */
 uint16_t stack_pop ()
 {
-	sp ++; uint16_t lo = ram[sp];
-	sp ++; uint16_t hi = ram[sp];
+	uint16_t lo = ram[++sp];
+	uint16_t hi = ram[++sp];
 	return (hi << 8) | lo;
 }
 
@@ -160,46 +160,86 @@ uint16_t stack_pop ()
 
 /* CPU Instructions */
 
-void ld8 (uint8_t* d, uint8_t v)
+// TODO these LD instructions will not work for storing to RAM as they will not call the handlers
+// A solution might be to keep it like this and solve it in a wrapper function instead.
+
+#define ld(n, nn) *n = nn
+
+void ldd (uint8_t* n, uint8_t nn)
 {
-	*d = v;
+	ld (n, nn);
+	HL --;
 }
 
-void ld16 (uint8_t* d, uint16_t v)
+void ldi (uint8_t* n, uint8_t nn)
 {
-	uint8_t _v = v;
-	ld8 (d, _v);
-	_v = v >> 8;
-	ld8 (d + 1, _v);
+	ld (n, nn);
+	HL ++;
 }
+
+/*
+void ld8 (uint8_t* n, uint8_t nn)
+{
+	*n = nn;
+}
+
+void ld16 (uint16_t* n, uint16_t nn)
+{
+	*n = nn;
+}
+*/
 
 void push (uint16_t v)
 {
-	stack_push (v);
+	PUSH (v);
 }
 
 void pop (uint16_t *v)
 {
-	stack_pop (v);
+	*v = POP ();
 }
 
-void add (uint8_t n)
+void add (int8_t n)
 {
 	uint8_t a = A;
-	A = a + n;
+	A += n;
 	F = 0; // reset flags
 	if (A == 0)
 		F |= F_Z;
-	if ((a & 0x80) != 0 && ((A) & 0x80) == 0) // carry
+	if ((a & 0x80) != 0 && (A & 0x80) == 0) // carry
 		F |= F_C;
-	if ((a & 0x08) != 0 && ((A) & 0x08) == 0) // half carry
+	if ((a & 0x08) != 0 && (A & 0x08) == 0) // half carry
 		F |= F_H;
+}
+
+void addhl (uint16_t n)
+{
+	uint16_t nn_ = HL;
+	HL += n;
+	F &= ~F_N;
+	if ((nn_ & 0x0800) != 0 && (HL & 0x0800) == 0) // half carry
+		F |= F_C;
+	if ((nn_ & 0x8000) != 0 && (HL & 0x8000) == 0) // carry
+		F |= F_C;
+}
+
+void addsp ()
+{
+	uint16_t nn_ = SP;
+	int8_t n = READ (pc ++);
+	SP += n;
+
+	F &= ~(F_N | F_Z);
+	if ((nn_ & 0x0800) != 0 && (SP & 0x0800) == 0) // half carry
+		F |= F_C;
+	if ((nn_ & 0x8000) != 0 && (SP & 0x8000) == 0) // carry
+		F |= F_C;
 }
 
 void adc (uint8_t n)
 {
 	uint8_t a = A;
-	A = a + n + ((F & F_C) >> 4);
+	A += n + ((F & F_C) >> 4);
 	F = 0; // reset flags
 	if (A == 0)
 		F |= F_Z;
@@ -275,6 +315,16 @@ void inc (uint8_t *n)
 		F |= F_Z;
 	if ((tmp & 0x10) == 0 && (*n & 0x10) == 0x10)
 		F |= F_H;
+}
+
+void inc16 (uint16_t* nn)
+{
+	(* nn) ++;
+}
+
+void dec16 (uint16_t* nn)
+{
+	(* nn) --;
 }
 
 void dec (uint8_t *n)
