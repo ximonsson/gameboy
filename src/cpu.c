@@ -243,9 +243,9 @@ void adc (uint8_t n)
 	F = 0; // reset flags
 	if (A == 0)
 		F |= F_Z;
-	if ((a & 0x80) != 0 && ((A) & 0x80) == 0) // carry
+	if ((a & 0x80) != 0 && (A & 0x80) == 0) // carry
 		F |= F_C;
-	if ((a & 0x08) != 0 && ((A) & 0x08) == 0) // half carry
+	if ((a & 0x08) != 0 && (A & 0x08) == 0) // half carry
 		F |= F_H;
 }
 
@@ -632,7 +632,7 @@ const operation operations[256] =
  *   4. The PC (program counter) is pushed onto the stack.
  *   5. Jump to the starting address of the interrupt.
  */
-void interrupt ()
+int interrupt ()
 {
 	// all interrupts disabled
 	if (!ime) return 1;
@@ -649,6 +649,9 @@ void interrupt ()
 			return 0;
 		}
 	}
+
+	// no interrupt requested
+	return 1;
 }
 
 /**
