@@ -77,7 +77,7 @@ LD           A,(BC)          0A         8
 LD           A,(DE)          1A         8
 LD           A,(HL)          7E         8
 LD           A,(nn)          FA        16
-LD           A,#             3E         8
+LD           A,n             3E         8
 # LD n,A
 LD           A,A             7F         4
 LD           B,A             47         4
@@ -93,7 +93,7 @@ LD           (nn),A          EA        16
 # LD A,(C)
 LD           A,(C)           F2         8
 # LD (C),A
-LD           ($FF00+C),A     E2         8
+LD           (C),A     E2         8
 # LDD A,(HL)
 LDD          A,(HL)          3A         8
 # LDD (HL),A
@@ -103,9 +103,9 @@ LDI          A,(HL)          2A         8
 # LDI (HL),A
 LDI          (HL),A          22         8
 # LDH (n),A
-LD           ($FF00+n),A     E0        12
+LD           (n),A     E0        12
 # LDH A,(n)
-LD           A,($FF00+n)     F0        12
+LD           A,(n)     F0        12
 # LD n,nn
 LD           BC,nn           01        12
 LD           DE,nn           11        12
@@ -136,7 +136,7 @@ ADD          A,E             83         4
 ADD          A,H             84         4
 ADD          A,L             85         4
 ADD          A,(HL)          86         8
-ADD          A,#             C6         8
+ADD          A,n             C6         8
 # ADC A,n
 ADC          A,A             8F         4
 ADC          A,B             88         4
@@ -146,7 +146,7 @@ ADC          A,E             8B         4
 ADC          A,H             8C         4
 ADC          A,L             8D         4
 ADC          A,(HL)          8E         8
-ADC          A,#             CE         8
+ADC          A,n             CE         8
 # SUB n
 SUB          A               97         4
 SUB          B               90         4
@@ -156,7 +156,7 @@ SUB          E               93         4
 SUB          H               94         4
 SUB          L               95         4
 SUB          (HL)            96         8
-SUB          #               D6         8
+SUB          n               D6         8
 # SBC A,n
 SBC          A,A             9F         4
 SBC          A,B             98         4
@@ -166,7 +166,7 @@ SBC          A,E             9B         4
 SBC          A,H             9C         4
 SBC          A,L             9D         4
 SBC          A,(HL)          9E         8
-SBC          A,#             DE         8 # TODO unsure
+SBC          A,n             DE         8 # TODO unsure
 # AND n
 AND          A               A7         4
 AND          B               A0         4
@@ -176,7 +176,7 @@ AND          E               A3         4
 AND          H               A4         4
 AND          L               A5         4
 AND          (HL)            A6         8
-AND          #               E6         8
+AND          n               E6         8
 # OR n
 OR           A               B7         4
 OR           B               B0         4
@@ -186,7 +186,7 @@ OR           E               B3         4
 OR           H               B4         4
 OR           L               B5         4
 OR           (HL)            B6         8
-OR           #               F6         8
+OR           n               F6         8
 # XOR n
 XOR          A               AF         4
 XOR          B               A8         4
@@ -196,7 +196,7 @@ XOR          E               AB         4
 XOR          H               AC         4
 XOR          L               AD         4
 XOR          (HL)            AE         8
-XOR          *               EE         8
+XOR          n               EE         8
 # CP n
 CP           A               BF         4
 CP           B               B8         4
@@ -206,7 +206,7 @@ CP           E               BB         4
 CP           H               BC         4
 CP           L               BD         4
 CP           (HL)            BE         8
-CP           #               FE         8
+CP           n               FE         8
 # INC n
 INC          A               3C         4
 INC          B               04         4
@@ -231,7 +231,7 @@ ADD          HL,DE           19         8
 ADD          HL,HL           29         8
 ADD          HL,SP           39         8
 # ADD SP,n
-ADD          SP,#            E8        16
+ADD          SP,n            E8        16
 # INC nn
 INC          BC              03         8
 INC          DE              13         8
@@ -379,10 +379,10 @@ JP           (HL)            E9         4
 # JR n
 JR           n               18         8
 # JR cc,n
-JR           NZ,*            20         8
-JR           Z,*             28         8
-JR           NC,*            30         8
-JR           C,*             38         8
+JR           NZ,n            20         8
+JR           Z,n             28         8
+JR           NC,n            30         8
+JR           C,n             38         8
 # CALL nn
 CALL         nn              CD        12
 # CALL cc,nn
