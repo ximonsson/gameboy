@@ -225,14 +225,14 @@ void addhl (uint16_t n)
 
 void addsp ()
 {
-	uint16_t nn_ = SP;
-	int8_t n = READ (pc ++);
-	SP += n;
+	uint16_t nn_ = sp;
+	int8_t n = RAM (pc ++);
+	sp += n;
 
 	F &= ~(F_N | F_Z);
-	if ((nn_ & 0x0800) != 0 && (SP & 0x0800) == 0) // half carry
+	if ((nn_ & 0x0800) != 0 && (sp & 0x0800) == 0) // half carry
 		F |= F_C;
-	if ((nn_ & 0x8000) != 0 && (SP & 0x8000) == 0) // carry
+	if ((nn_ & 0x8000) != 0 && (sp & 0x8000) == 0) // carry
 		F |= F_C;
 }
 
@@ -346,30 +346,6 @@ void swap (uint16_t* n)
 	F = 0;
 	if (*n == 0)
 		F |= F_Z;
-}
-
-void add16 (uint16_t n)
-{
-	HL += n;
-	// TODO flags
-	F &= ~F_N;
-}
-
-void add16sp (uint8_t n)
-{
-	sp += n;
-	F = 0; // reset flags
-	// TODO lookup implementation of other flags
-}
-
-void inc16 (uint16_t *n)
-{
-	(*n)++;
-}
-
-void dec16 (uint16_t *n)
-{
-	(*n)--;
 }
 
 void daa ()
