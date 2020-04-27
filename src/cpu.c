@@ -357,8 +357,44 @@ void swap (uint16_t* n)
 
 void daa ()
 {
-	// TODO
+	// this implementation is "inspired" by
+	// https://github.com/taisel/GameBoy-Online/blob/master/js/GameBoyCore.js#L588
+	// as one can see there is a lot of magic and i am afraid of trying to figure
+	// it out myself after 7 weeks of debugging and reading docs.
+	//
+	// I hate this solution though; I have never seen so many if-statements
+
 	F &= ~(F_Z | F_H);
+
+	if ((F & F_N) == 0)
+	{
+		if ((F & F_C) || A > 0x99)
+		{
+			A += 0x60;
+			F |= F_C;
+		}
+		if ((F & F_H) || (A & 0x0F) > 0x9)
+		{
+			A += 0x06;
+			F &= ~F_H;
+		}
+	}
+	else if ((F & (F_C | F_H)) == (F_C | F_H))
+	{
+		A += 0x9A;
+		F &= ~F_H;
+	}
+	else if ((F & F_C) == F_C)
+	{
+		A += 0xA0;
+	}
+	else if ((F & F_H) == F_H)
+	{
+		A += 0xFA;
+		F &= ~F_H;
+	}
+
+	if (A == 0) F |= F_Z;
 }
 
 void cpl ()
