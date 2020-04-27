@@ -133,7 +133,7 @@ static void mem_store (uint16_t address, uint8_t v)
 		ram[address] = v;
 }
 
-#define STORE(a, v) mem_store(a, v)
+#define STORE(a, v) mem_store (a, v)
 
 /**
  * stack_push pushes the value v to the stack.
@@ -144,7 +144,7 @@ void stack_push (uint16_t v)
 	ram[sp] = v;      sp --;
 }
 
-#define PUSH(v) stack_push(v)
+#define PUSH(v) stack_push (v)
 
 /**
  * stack_pop pops the stack and returns the value;
@@ -156,7 +156,7 @@ uint16_t stack_pop ()
 	return (hi << 8) | lo;
 }
 
-#define POP() stack_pop()
+#define POP() stack_pop ()
 
 /* CPU Instructions */
 
