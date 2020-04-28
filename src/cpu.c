@@ -630,6 +630,17 @@ void ret ()
 	jp (POP ());
 }
 
+void retcc (enum jump_cc cc)
+{
+	switch (cc)
+	{
+		case JP_CC_NZ: if ((F & F_Z) == 0) ret (); break;
+		case JP_CC_Z:  if ((F & F_Z) != 0) ret (); break;
+		case JP_CC_NC: if ((F & F_C) == 0) ret (); break;
+		case JP_CC_C:  if ((F & F_C) != 0) ret (); break;
+	}
+}
+
 void reti ()
 {
 	jp (POP ());

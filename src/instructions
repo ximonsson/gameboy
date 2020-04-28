@@ -370,26 +370,26 @@ RES          b,(HL)          CB86      16
 # JP nn
 JP           nn              C3        12
 # JP cc,nn
-JP           NZ,nn           C2        12
-JP           Z,nn            CA        12
-JP           NC,nn           D2        12
-JP           C,nn            DA        12
+JPCC         NZ,nn           C2        12
+JPCC         Z,nn            CA        12
+JPCC         NC,nn           D2        12
+JPCC         C,nn            DA        12
 # JP (HL)
 JP           (HL)            E9         4
 # JR n
 JR           n               18         8
 # JR cc,n
-JR           NZ,n            20         8
-JR           Z,n             28         8
-JR           NC,n            30         8
-JR           C,n             38         8
+JRCC         NZ,n            20         8
+JRCC         Z,n             28         8
+JRCC         NC,n            30         8
+JRCC         C,n             38         8
 # CALL nn
 CALL         nn              CD        12
 # CALL cc,nn
-CALL         NZ,nn           C4        12
-CALL         Z,nn            CC        12
-CALL         NC,nn           D4        12
-CALL         C,nn            DC        12
+CALLCC       NZ,nn           C4        12
+CALLCC       Z,nn            CC        12
+CALLCC       NC,nn           D4        12
+CALLCC       C,nn            DC        12
 # RST n
 RST          00H             C7        32
 RST          08H             CF        32
@@ -402,9 +402,9 @@ RST          38H             FF        32
 # RET
 RET          -/-             C9         8
 # RET cc
-RET          NZ              C0         8
-RET          Z               C8         8
-RET          NC              D0         8
-RET          C               D8         8
+RETCC        NZ              C0         8
+RETCC        Z               C8         8
+RETCC        NC              D0         8
+RETCC        C               D8         8
 # RETI
 RETI         -/-             D9         8

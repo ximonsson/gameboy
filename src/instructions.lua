@@ -12,7 +12,36 @@ end
 
 -- generate code for the parsed parameters
 function params(p)
+	-- special cases
+	direct = {
+		["(n)"] = "READ (0xFF00 | READ (pc ++))",
+		["(nn)"] = "READ ((READ (pc ++) << 8) | READ (pc ++))",
+		["n"] = "READ (pc ++)",
+		["nn"] = "(READ (pc ++) << 8) | READ (pc ++))",
+		["-/-"] = "",
+	}
 
+	function param(p)
+		if direct[p] ~= nil then
+			return direct[p]
+		elseif string.match(p, "%(.+%)") then -- (rr)
+			return "READ(" .. string.match(p, "%((.+)%)") .. ")"
+		else -- r
+			return p
+		end
+	end
+
+	return string.gsub(p, "([^,]+)", param)
+end
+
+-- create the function name
+function fname(i, p)
+	if string.match(p, "-/-") then
+		suffix = ""
+	else
+		suffix = string.gsub(p, "[,%(%)]", "_")
+	end
+	return string.format("%s__%s", i, suffix)
 end
 
 -- turn the information in one line to an instruction
@@ -21,13 +50,28 @@ function instr(line)
 	local tokens = {}
 	for w in string.gmatch(line, '%S+') do tokens[#tokens+1] = w end
 
-	local instr_ = tokens[1]
-	local params = tokens[2]
-	local opcode = tokens[3]
-	local cycle  = tokens[4]
+	-- work each token accordingly
+	local op = tokens[3]
+	local it = string.lower(tokens[1])
 
-	-- parse parameters
+	if string.len(op) > 2 then
+		print(op, ": unsupported for now")
+		return
+	end
 
+	local pm = tokens[2]
+	local cc = tokens[4]
+
+	print(
+		string.format(
+			"void %s() { %s(%s); }; operations[0x%s] = %s;",
+			fname(it, pm),
+			it,
+			params(pm),
+			op,
+			fname(it, pm)
+		)
+	)
 
 end
 
