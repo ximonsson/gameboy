@@ -140,8 +140,8 @@ static void mem_store (uint16_t address, uint8_t v)
  */
 void stack_push (uint16_t v)
 {
-	ram[sp--] = v >> 8;
-	ram[sp--] = v;
+	STORE (sp--, v >> 8);
+	STORE (sp--, v);
 }
 
 #define PUSH(v) stack_push (v)
@@ -151,8 +151,8 @@ void stack_push (uint16_t v)
  */
 uint16_t stack_pop ()
 {
-	uint16_t lo = ram[++sp];
-	uint16_t hi = ram[++sp];
+	uint16_t lo = RAM (++sp);
+	uint16_t hi = RAM (++sp);
 	return (hi << 8) | lo;
 }
 
