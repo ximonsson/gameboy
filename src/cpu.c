@@ -233,7 +233,6 @@ void addsp ()
 	uint32_t sp_ = sp + n;
 
 	F = 0;
-	uint16_t tmp = sp_ ^ n ^ sp;
 	if (sp_ > 0xFFFF)
 		F |= F_H;
 	if (((sp ^ n ^ sp_) & 0x1000) == 0x1000) // half carry
