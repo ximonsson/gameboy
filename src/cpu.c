@@ -203,49 +203,57 @@ void add (int8_t n)
 {
 	uint8_t a = A;
 	A += n;
+
+	uint8_t tmp = a ^ n ^ A;
 	F = 0; // reset flags
 	if (A == 0)
 		F |= F_Z;
-	if ((a & 0x80) != 0 && (A & 0x80) == 0) // carry
+	if ((tmp & 0x80) == 0x80)
 		F |= F_C;
-	if ((a & 0x08) != 0 && (A & 0x08) == 0) // half carry
+	if ((tmp & 0x08) == 0x08) // half carry
 		F |= F_H;
 }
 
 void addhl (uint16_t n)
 {
-	uint16_t nn_ = HL;
+	uint16_t hl = HL;
 	HL += n;
+
+	uint16_t tmp = hl ^ n ^ HL;
 	F &= ~(F_N | F_H | F_C);
-	if ((nn_ & 0x0800) != 0 && (HL & 0x0800) == 0) // half carry
+	if ((tmp & 0x0800) == 0x0800) // half carry
 		F |= F_H;
-	if ((nn_ & 0x8000) != 0 && (HL & 0x8000) == 0) // carry
+	if ((tmp & 0x8000) == 0x8000) // carry
 		F |= F_C;
 }
 
 void addsp ()
 {
-	uint16_t nn_ = sp;
+	uint16_t sp_ = sp;
 	int8_t n = RAM (pc ++);
 	sp += n;
 
 	F = 0;
-	if ((nn_ & 0x0800) != 0 && (sp & 0x0800) == 0) // half carry
+	uint16_t tmp = sp_ ^ n ^ sp;
+	if ((tmp & 0x0800) == 0x0800) // half carry
 		F |= F_H;
-	if ((nn_ & 0x8000) != 0 && (sp & 0x8000) == 0) // carry
+	if ((tmp & 0x8000) == 0x8000) // carry
 		F |= F_C;
 }
 
 void adc (uint8_t n)
 {
 	uint8_t a = A;
-	A += n + ((F & F_C) >> 4);
+	n += ((F & F_C) >> 4);
+	A += n;
+
+	uint8_t tmp = a ^ n ^ A;
 	F = 0; // reset flags
 	if (A == 0)
 		F |= F_Z;
-	if ((a & 0x80) != 0 && (A & 0x80) == 0) // carry
+	if ((tmp & 0x80) == 0x80)
 		F |= F_C;
-	if ((a & 0x08) != 0 && (A & 0x08) == 0) // half carry
+	if ((tmp & 0x08) == 0x08) // half carry
 		F |= F_H;
 }
 
@@ -257,7 +265,7 @@ void sub (uint8_t n)
 	F = F_N;
 	if (A == 0)
 		F |= F_Z;
-	if (n > a)
+	if (a < n)
 		F |= F_C;
 	if ((a & 0x0F) < (n & 0x0F))
 		F |= F_H;
