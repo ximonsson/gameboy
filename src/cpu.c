@@ -201,60 +201,61 @@ void pop (uint16_t *v)
 
 void add (int8_t n)
 {
-	uint8_t a = A;
-	A += n;
+	uint16_t a = A + n;
 
-	uint8_t tmp = a ^ n ^ A;
 	F = 0; // reset flags
-	if (A == 0)
+	if (a == 0)
 		F |= F_Z;
-	if ((tmp & 0x80) == 0x80)
+	if (a > 0xFF)
 		F |= F_C;
-	if ((tmp & 0x08) == 0x08) // half carry
+	if (((A ^ n ^ a) & 0x10) == 0x10) // half carry
 		F |= F_H;
+
+	A = a;
 }
 
 void addhl (uint16_t n)
 {
-	uint16_t hl = HL;
-	HL += n;
+	uint32_t hl = HL + n;
 
-	uint16_t tmp = hl ^ n ^ HL;
 	F &= ~(F_N | F_H | F_C);
-	if ((tmp & 0x0800) == 0x0800) // half carry
+	if (hl > 0xFFFF)
 		F |= F_H;
-	if ((tmp & 0x8000) == 0x8000) // carry
+	if (((HL ^ n ^ hl) & 0x1000) == 0x1000) // half carry
 		F |= F_C;
+
+	HL = n;
 }
 
 void addsp ()
 {
-	uint16_t sp_ = sp;
 	int8_t n = RAM (pc ++);
-	sp += n;
+	uint32_t sp_ = sp + n;
 
 	F = 0;
 	uint16_t tmp = sp_ ^ n ^ sp;
-	if ((tmp & 0x0800) == 0x0800) // half carry
+	if (sp_ > 0xFFFF)
 		F |= F_H;
-	if ((tmp & 0x8000) == 0x8000) // carry
+	if (((sp ^ n ^ sp_) & 0x1000) == 0x1000) // half carry
 		F |= F_C;
+
+	sp = sp_;
 }
 
 void adc (uint8_t n)
 {
-	uint8_t a = A;
 	n += ((F & F_C) >> 4);
-	A += n;
+	uint16_t a = A + n;
 
-	uint8_t tmp = a ^ n ^ A;
 	F = 0; // reset flags
-	if (A == 0)
+	if (a == 0)
 		F |= F_Z;
-	if ((tmp & 0x80) == 0x80)
+	if (a > 0xFF)
 		F |= F_C;
-	if ((tmp & 0x08) == 0x08) // half carry
+	if (((A ^ n ^ a) & 0x10) == 0x10) // half carry
 		F |= F_H;
+
+	A = a;
 }
 
 void sub (uint8_t n)
