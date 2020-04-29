@@ -8,7 +8,6 @@ LD           E,n             1E         8
 LD           H,n             26         8
 LD           L,n             2E         8
 # LD r1,r2
-LD           A,A             7F         4
 LD           A,B             78         4
 LD           A,C             79         4
 LD           A,D             7A         4
@@ -66,16 +65,8 @@ LD           (HL),H          74         8
 LD           (HL),L          75         8
 LD           (HL),n          36        12
 # LD A,n
-LD           A,A             7F         4
-LD           A,B             78         4
-LD           A,C             79         4
-LD           A,D             7A         4
-LD           A,E             7B         4
-LD           A,H             7C         4
-LD           A,L             7D         4
 LD           A,(BC)          0A         8
 LD           A,(DE)          1A         8
-LD           A,(HL)          7E         8
 LD           A,(nn)          FA        16
 LD           A,n             3E         8
 # LD n,A

@@ -59,6 +59,9 @@ function LD(tokens)
 	return ""
 end
 
+local operations = {}
+local opcodes = {}
+
 -- turn the information in one line to an instruction
 function operation(line)
 	-- parse the line for the different tokens
@@ -82,13 +85,16 @@ function operation(line)
 		["dec16"] = true,
 		["inc16"] = true,
 		["swap"] = true,
+		["ld"] = true,
+		["ldi"] = true,
+		["ldd"] = true,
 	}
 
 	-- CBxx operations are special
 	if string.match(op, "CB%w%w") then
 		return CB(tokens)
 	-- handle LD differently
-	elseif string.match(it, "ld") then
+	elseif string.match(it, "ld") and string.match(pm, "%(%w%w%),") then
 		return LD(tokens)
 	-- some instructions take pointers as parameters
 	elseif pointerparams[it] then
@@ -96,9 +102,14 @@ function operation(line)
 	end
 
 	local fn = fname(it, pm)
+	local opcode = tonumber("0x" .. op)
 
-	return
-		string.format(
+	opcodes[#opcodes + 1] = opcode
+
+	operations[opcode] =  {
+		["inst"] = it:upper(),
+		["asm"] = string.format("%s %s", it:upper(), pm),
+		["str"] = string.format(
 			opfmt,
 			fn,
 			it,
@@ -107,7 +118,12 @@ function operation(line)
 			it:upper(),
 			fn,
 			cc
-		)
+		),
+		["cc"] = tonumber(cc),
+		["fn"] = fn,
+	}
+
+	return operations[opcode]["str"]
 end
 
 -----------------------------------------------------------------------------------------------------
@@ -144,16 +160,26 @@ struct operation
 }
 operation;
 
-operation operations[0xFF];
-operation bc_operations[0xFF];
+//operation operations[0xFF];
+//operation bc_operations[0xFF];
 
 ]])
 
 -- iterate over all lines in the file and create an instruction for each
 for line in io.lines("src/instructions") do
 	line = trimline(line)
-	if line ~= "" then io.write("// ", line, "\n", operation(line), "\n") end
+	if line ~= "" then
+		io.write(operation(line), "\n")
+	end
 end
+
+io.write("const operation operations[0xFF] = {\n")
+table.sort(opcodes)
+for _, op in pairs(opcodes) do
+	io.write(string.format("// %.2X: %s\n", op, operations[op]["asm"]))
+	io.write(string.format("{ \"%s\", &%s, 0, %d },\n", operations[op]["asm"], operations[op]["fn"], operations[op]["cc"]))
+end
+io.write("};\n")
 
 io.write("#endif")
 
