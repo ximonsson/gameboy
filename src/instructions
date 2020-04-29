@@ -105,7 +105,7 @@ LD           SP,nn           31        12
 # LD SP,HL
 LD           SP,HL           F9         8
 # LDHL HL,SP+n
-LDHL         SP,n            F8        12
+LDHL         n               F8        12
 # LD (nn),SP
 LD           (nn),SP         08        20
 # PUSH nn

@@ -43,24 +43,31 @@ function fname(i, p)
 	return string.format("__%s__%s__", i, suffix)
 end
 
--- local opfmt = "void %s() { %s(%s); }; operations[0x%s] = { \"%s\", &%s, 0, %s };"
-local opfmt = "void %s() { %s(%s); };"
-
 -- special CBxx operations
 function CB(tokens)
-	print(tokens[3], ": unsupported for now")
+	--	print(tokens[3], ": unsupported for now")
 	return ""
 end
 
 -- LD instructions are a little special because they store the result to RAM
 -- some times
-function LD(tokens)
-	print(tokens[3], ": waiting with LD for now")
+function LD(it, params)
+	if string.match(params, "%(nn%),A") then
+		return "uint16_t nn = RAM(pc++) | (RAM(pc++) << 8); STORE(nn, A);"
+	elseif string.match(params, "%(n%),A") then
+		return "uint16_t nn = 0xFF00 | RAM(pc++); STORE(nn, A);"
+	elseif string.match(params, "%(nn%),SP") then
+		return "uint16_t nn = RAM(pc++) | (RAM(pc++) << 8); STORE(nn, SP); STORE(nn+1, SP >> 8);"
+	end
 	return ""
 end
 
 local operations = {}
 local opcodes = {}
+
+function opstr()
+
+end
 
 -- turn the information in one line to an instruction
 function operation(line)
@@ -93,9 +100,6 @@ function operation(line)
 	-- CBxx operations are special
 	if string.match(op, "CB%w%w") then
 		return CB(tokens)
-	-- handle LD differently
-	elseif string.match(it, "ld") and string.match(pm, "%(%w%w%),") then
-		return LD(tokens)
 	-- some instructions take pointers as parameters
 	elseif pointerparams[it] then
 		p = "&" .. p
@@ -104,21 +108,21 @@ function operation(line)
 	local fn = fname(it, pm)
 	local opcode = tonumber("0x" .. op)
 
-	opcodes[#opcodes + 1] = opcode
+	-- standard format for the function
+	local opfmt = "void %s() { %s };"
 
+	-- handle LD to memory differently
+	if string.match(it, "ld") and string.match(pm, "%(%w%w?%),") then
+		inner = LD(it, pm)
+	else
+		inner = string.format("%s(%s);", it, p)
+	end
+
+	opcodes[#opcodes + 1] = opcode
 	operations[opcode] =  {
 		["inst"] = it:upper(),
 		["asm"] = string.format("%s %s", it:upper(), pm),
-		["str"] = string.format(
-			opfmt,
-			fn,
-			it,
-			p,
-			op,
-			it:upper(),
-			fn,
-			cc
-		),
+		["str"] = string.format(opfmt, fn, inner),
 		["cc"] = tonumber(cc),
 		["fn"] = fn,
 	}
@@ -160,9 +164,6 @@ struct operation
 }
 operation;
 
-//operation operations[0xFF];
-//operation bc_operations[0xFF];
-
 ]])
 
 -- iterate over all lines in the file and create an instruction for each
@@ -177,7 +178,12 @@ io.write("const operation operations[0xFF] = {\n")
 table.sort(opcodes)
 for _, op in pairs(opcodes) do
 	io.write(string.format("// %.2X: %s\n", op, operations[op]["asm"]))
-	io.write(string.format("{ \"%s\", &%s, 0, %d },\n", operations[op]["asm"], operations[op]["fn"], operations[op]["cc"]))
+	io.write(string.format(
+		"{ \"%s\", &%s, 0, %d },\n",
+		operations[op]["asm"],
+		operations[op]["fn"],
+		operations[op]["cc"]
+	))
 end
 io.write("};\n")
 
