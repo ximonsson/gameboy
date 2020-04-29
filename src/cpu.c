@@ -2,19 +2,21 @@
 
 /* CPU Registers */
 
-uint16_t reg_af;
-uint16_t reg_bc;
-uint16_t reg_de;
-uint16_t reg_hl;
-uint16_t sp;
-uint16_t pc;
+static uint16_t reg_af;
+static uint16_t reg_bc;
+static uint16_t reg_de;
+static uint16_t reg_hl;
+static uint16_t sp;
+static uint16_t pc;
 
-uint8_t* reg_a = ((uint8_t *) &reg_af) + 1;
-uint8_t* reg_f = ((uint8_t *) &reg_af);
-uint8_t* reg_b = ((uint8_t *) &reg_bc) + 1;
-uint8_t* reg_c = ((uint8_t *) &reg_bc);
-uint8_t* reg_h = ((uint8_t *) &reg_hl) + 1;
-uint8_t* reg_l = ((uint8_t *) &reg_hl);
+static uint8_t* reg_a = ((uint8_t *) &reg_af) + 1;
+static uint8_t* reg_f = ((uint8_t *) &reg_af);
+static uint8_t* reg_b = ((uint8_t *) &reg_bc) + 1;
+static uint8_t* reg_c = ((uint8_t *) &reg_bc);
+static uint8_t* reg_d = ((uint8_t *) &reg_de) + 1;
+static uint8_t* reg_e = ((uint8_t *) &reg_de);
+static uint8_t* reg_h = ((uint8_t *) &reg_hl) + 1;
+static uint8_t* reg_l = ((uint8_t *) &reg_hl);
 
 #define AF reg_af
 #define A (* reg_a)
@@ -31,6 +33,8 @@ uint8_t* reg_l = ((uint8_t *) &reg_hl);
 #define HL reg_hl
 #define H (* reg_h)
 #define L (* reg_l)
+
+#define SP sp
 
 /* define flags */
 enum flags
@@ -344,20 +348,13 @@ void dec16 (uint16_t* nn)
 
 void dec (uint8_t *n)
 {
-	uint8_t tmp = *n;
-	(*n)--;
-	F &= ~F_N;
-	if (*n == 0)
-		F |= F_Z;
-	if (!((tmp & 0x08) == 0 && (*n & 0x08) == 0x08))
-		F |= F_H;
+	(* n) --;
 }
 
-void swap (uint16_t* n)
+void swap (uint8_t* n)
 {
-	uint16_t tmp = (*n) & 0xff; // lower nibble
-	*n >>= 8;
-	*n |= (tmp << 8);
+	uint16_t tmp = ((*n) & 0xF) << 4; // lower nibble
+	*n = tmp | ((*n) >> 4);
 	F = 0;
 	if (*n == 0)
 		F |= F_Z;
@@ -407,7 +404,8 @@ void daa ()
 
 void cpl ()
 {
-	A = ~A;
+	//A = ~A;
+	A ^= 0xFF;
 	F |= (F_N | F_H);
 }
 
@@ -462,7 +460,7 @@ void rlc (uint8_t *n)
 	if ((*n) == 0)
 		F &= ~F_Z;
 }
-#define rlca rlc(reg_a)
+#define rlca() rlc(&A)
 
 void rl (uint8_t *n)
 {
@@ -475,7 +473,7 @@ void rl (uint8_t *n)
 	if ((*n) == 0)
 		F &= ~F_Z;
 }
-#define rla rl(reg_a)
+#define rla() rl(&A)
 
 void rrc (uint8_t *n)
 {
@@ -488,7 +486,7 @@ void rrc (uint8_t *n)
 	if ((*n) == 0)
 		F &= ~F_Z;
 }
-#define rrca rrc(reg_a)
+#define rrca() rrc(&A)
 
 void rr (uint8_t *n)
 {
@@ -501,7 +499,7 @@ void rr (uint8_t *n)
 	if ((*n) == 0)
 		F &= ~F_Z;
 }
-#define rra rr(reg_a)
+#define rra() rr(&A)
 
 void sla (uint8_t *n)
 {
@@ -650,14 +648,14 @@ void reti ()
 /**
  * instruction defines a CPU instruction
  * Points to a function to be excecuted.
- */
+ *
 typedef void(*instruction)() ;
 
-/**
+**
  * operation defines a specific CPU instruction to be excecuted
  * with a fix addressing mode.
  * It is identified by it's opcode.
- */
+ *
 typedef
 struct operation
 {
@@ -675,14 +673,18 @@ struct operation
 	uint8_t cycles;
 }
 operation;
+*/
 
 /**
  * operations maps opcodes to operations.
- */
+ *
 const operation operations[256] =
 {
 
 };
+*/
+
+#include "gameboy/operations.h"
 
 /**
  * Interrupt.
@@ -741,6 +743,6 @@ int gb_cpu_step ()
 	uint8_t opcode = RAM (pc);
 	operation op = operations[opcode];
 	op.instruction ();
-	pc += op.bytes;
-	return cc + op.cycles;
+	//pc += op.bytes;
+	return cc + op.cc;
 }

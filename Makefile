@@ -19,9 +19,12 @@ $(BIN): main.c
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ $(LDFLAGS)
 
-$(LIB): $(OBJ)
+$(LIB): operations.h $(OBJ)
 	@mkdir -p $(@D)
 	$(AR) $(ARCMD) $@ $^
+
+operations.h: src/instructions.lua
+	lua $^
 
 build/%.o: src/%.c
 	@mkdir -p $(@D)
