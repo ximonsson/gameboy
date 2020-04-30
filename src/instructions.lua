@@ -14,9 +14,9 @@ function fname(i, p)
 	if string.match(p, "-/-") then
 		suffix = ""
 	else
-		suffix = string.gsub(p, "[,%(%)]", "_")
+		suffix = string.gsub(p, "[,%(%)]", "_") .. "__"
 	end
-	return string.format("__%s__%s__", i:lower(), suffix)
+	return string.format("__%s__%s", i:lower(), suffix)
 end
 
 function clean_params(params)
