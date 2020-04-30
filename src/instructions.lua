@@ -26,9 +26,10 @@ function call_ld(instruction, params)
 	-- (n) : $FF00 | RAM (pc ++)
 	if string.match(params, "%(n%)") then
 		c = "uint16_t n = 0xFF00 | RAM (pc ++); "
-	-- (nn) : RAM (pc ++) | (RAM (pc ++) << 8)
+	-- (nn)/nn : RAM (pc ++) | (RAM (pc ++) << 8)
 	elseif string.match(params, "nn") then
 		c = "uint16_t nn = RAM (pc ++); nn |= (RAM (pc ++) << 8); "
+	-- n : RAM (pc ++)
 	elseif string.match(params, "n") then
 		c = "uint8_t n = RAM (pc ++); "
 	end
@@ -40,7 +41,7 @@ function call_ld(instruction, params)
 
 	-- storing to memory or not
 	if string.match(params, "^%(%a%a?%),") then
-		c =  c .. string.format("STORE (%s);", params)
+		c = c .. string.format("STORE (%s);", params)
 	else
 		c = c .. string.gsub(params, "(.+),(.+)", "%1 = %2;")
 	end
@@ -100,6 +101,8 @@ function call(instruction, params)
 	return prefix .. string.format("%s (%s);", instruction:lower(), params);
 end
 
+local operations_CB = {}
+local opcodes_CB = {}
 local operations = {}
 local opcodes = {}
 
@@ -174,8 +177,34 @@ for line in io.lines("src/instructions") do
 	if line ~= "" then io.write(operation(line), "\n") end
 end
 
-io.write("const operation operations[0xFF] = {\n")
+-- create CBxx operations
+table.sort(opcodes_CB)
+io.write("\nconst operation operations_cb[0xFF] = {\n")
+for _, op in pairs(opcodes_CB) do
+	io.write(string.format("// %.2X: %s\n", op, operations_CB[op]["asm"]))
+	io.write(string.format(
+		"{ \"%s\", &%s, 0, %d },\n",
+		operations_CB[op]["asm"],
+		operations_CB[op]["fn"],
+		operations_CB[op]["cc"]
+	))
+end
+io.write("};\n")
+
+-- create the special CB instruction that runs instruction from the `operations_cb` map
+opcodes[#opcodes + 1] = 0xCB
+operations[0xCB] = {
+	["inst"] = "CBXX",
+	["asm"] = " -- CBXX -- ",
+	["str"] = "",
+	["fn"] = "__cbxx__",
+	["cc"] = 8, -- TODO this is not always true!!
+}
+io.write("void __cbxx__() { operations_cb[pc ++].instruction(); }\n")
+
+-- all 8-bit instructions
 table.sort(opcodes)
+io.write("\nconst operation operations[0xFF] = {\n")
 for _, op in pairs(opcodes) do
 	io.write(string.format("// %.2X: %s\n", op, operations[op]["asm"]))
 	io.write(string.format(
