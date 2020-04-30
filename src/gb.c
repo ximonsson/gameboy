@@ -1,9 +1,11 @@
 #include "gameboy/file.h"
 #include "gameboy/cpu.h"
+#include "gameboy/mbc.h"
+#include <stdlib.h>
 
 
-static uint8_t* ROM;
-static uint8_t* RAM;
+static uint8_t* ROM = 0;
+static uint8_t* RAM = 0;
 
 
 static int load_mbc (uint8_t mbc)
@@ -31,9 +33,10 @@ void gb_step ()
 	gb_cpu_step ();
 }
 
-void gb_frame ()
+void gb_stop ()
 {
-
+	free (ROM);
+	free (RAM);
 }
 
 void gb_quit ()
