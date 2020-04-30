@@ -19,7 +19,9 @@ function fname(i, p)
 	return string.format("__%s__%s__", i:lower(), suffix)
 end
 
-function clean_params(params) return string.gsub(params, "[%(%)-/-]", "") end
+function clean_params(params)
+	return string.gsub(params, "[%(%)-/-]", "")
+end
 
 function call_ld(instruction, params)
 	c = ""
@@ -91,15 +93,18 @@ function call(instruction, params)
 		["RL"] = true,
 		["RLC"] = true,
 		["RRC"] = true,
+		["SET"] = true,
+		["RES"] = true,
 	}
 
-	-- special case when it is pointer parameters using (HL) which stores to mem
-	if pointerparams[instruction] and params == "(HL)" then
-		return string.format("uint8_t n = RAM (HL); %s (&n); STORE (HL, n);", instruction:lower())
+	-- special case when it is pointer parameters using (HL) as destination which stores to mem
+	if pointerparams[instruction] and params:match"^%(HL%)" then
+		params = params:gsub("^(%(HL%))", "&n")
+		return string.format("uint8_t n = RAM (HL); %s (%s); STORE (HL, n);", instruction:lower(), params)
 	end
 
-	if params == "(HL)" then
-		params = "RAM (HL)"
+	if params:match"%(HL%)" then
+		params = params:gsub("(%(HL%))", "RAM (HL)")
 	else
 		params = clean_params(params)
 	end
@@ -132,7 +137,6 @@ function operation(line)
 		op = op:gsub("CB(..)", "%1")
 		op_map = operations_CB
 		code_map = opcodes_CB
-		if it == "BIT" or it == "SET" or it == "RES" then return "" end
 	end
 
 	op = tonumber("0x" .. op)
@@ -192,7 +196,7 @@ end
 
 -- create CBxx operations
 table.sort(opcodes_CB)
-io.write("\nconst operation operations_cb[0xFF] = {\n")
+io.write("\nconst operation operations_cb[256] = {\n")
 for _, op in pairs(opcodes_CB) do
 	io.write(string.format("// %.2X: %s\n", op, operations_CB[op]["asm"]))
 	io.write(string.format(
@@ -217,7 +221,7 @@ io.write("void __cbxx__() { operations_cb[pc ++].instruction(); }\n")
 
 -- all 8-bit instructions
 table.sort(opcodes)
-io.write("\nconst operation operations[0xFF] = {\n")
+io.write("\nconst operation operations[256] = {\n")
 for _, op in pairs(opcodes) do
 	io.write(string.format("// %.2X: %s\n", op, operations[op]["asm"]))
 	io.write(string.format(

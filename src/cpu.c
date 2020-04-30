@@ -49,7 +49,7 @@ enum flags
 static int ime = 0;
 
 /* RAM memory. */
-static uint8_t ram[0xFFFF + 1]; // the +1 is because of the IE register.
+static uint8_t ram[1 << 16];
 
 /* Interrupt Enable (IE) register. Is located at RAM memory $FFFF. */
 static uint8_t* reg_ie = ram + 0xFFFF;
@@ -427,6 +427,7 @@ void stop ()
 {
 	// halt cpu & display until button pressed
 	// nada ?
+	pc ++;
 }
 
 void di ()
@@ -527,20 +528,20 @@ void srl (uint8_t* n)
 		F &= ~F_Z;
 }
 
-void bit (uint8_t b, uint8_t* r)
+void bit (uint8_t r, uint8_t b)
 {
 	F &= ~F_N;
 	F |= F_H;
-	if (((1 << b) & *r) == 0)
+	if (((1 << b) & r) == 0)
 		F |= F_Z;
 }
 
-void set(uint8_t b, uint8_t* r)
+void set (uint8_t* r, uint8_t b)
 {
 	(*r) |= 1 << b;
 }
 
-void res(uint8_t b, uint8_t* r)
+void res (uint8_t* r, uint8_t b)
 {
 	(*r) &= ~(1 << b);
 }

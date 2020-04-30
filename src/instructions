@@ -255,7 +255,7 @@ NOP          -/-             00         4
 # HALT
 HALT         -/-             76         4
 # STOP
-STOP         -/-             1000       4
+STOP         -/-             10         4
 # DI
 DI           -/-             F3         4
 # EI
@@ -332,32 +332,221 @@ SRL          H               CB3C       8
 SRL          L               CB3D       8
 SRL          (HL)            CB3E      16
 # BIT b,r
-BIT          b,A             CB47       8
-BIT          b,B             CB40       8
-BIT          b,C             CB41       8
-BIT          b,D             CB42       8
-BIT          b,E             CB43       8
-BIT          b,H             CB44       8
-BIT          b,L             CB45       8
-BIT          b,(HL)          CB46      16
+BIT          A,0             CB47       8
+BIT          A,1             CB4F       8
+BIT          A,2             CB57       8
+BIT          A,3             CB5F       8
+BIT          A,4             CB67       8
+BIT          A,5             CB6F       8
+BIT          A,6             CB77       8
+BIT          A,7             CB7F       8
+
+BIT          B,0             CB40       8
+BIT          B,1             CB48       8
+BIT          B,2             CB50       8
+BIT          B,3             CB58       8
+BIT          B,4             CB60       8
+BIT          B,5             CB68       8
+BIT          B,6             CB70       8
+BIT          B,7             CB78       8
+
+BIT          C,0             CB41       8
+BIT          C,1             CB49       8
+BIT          C,2             CB51       8
+BIT          C,3             CB59       8
+BIT          C,4             CB61       8
+BIT          C,5             CB69       8
+BIT          C,6             CB71       8
+BIT          C,7             CB79       8
+
+BIT          D,0             CB42       8
+BIT          D,1             CB4A       8
+BIT          D,2             CB52       8
+BIT          D,3             CB5A       8
+BIT          D,4             CB62       8
+BIT          D,5             CB6A       8
+BIT          D,6             CB72       8
+BIT          D,7             CB7A       8
+
+BIT          E,0             CB43       8
+BIT          E,1             CB4B       8
+BIT          E,2             CB53       8
+BIT          E,3             CB5B       8
+BIT          E,4             CB63       8
+BIT          E,5             CB6B       8
+BIT          E,6             CB73       8
+BIT          E,7             CB7B       8
+
+BIT          H,0             CB44       8
+BIT          H,1             CB4C       8
+BIT          H,2             CB54       8
+BIT          H,3             CB5C       8
+BIT          H,4             CB64       8
+BIT          H,5             CB6C       8
+BIT          H,6             CB74       8
+BIT          H,7             CB7C       8
+
+BIT          L,0             CB45       8
+BIT          L,1             CB4D       8
+BIT          L,2             CB55       8
+BIT          L,3             CB5D       8
+BIT          L,4             CB65       8
+BIT          L,5             CB6D       8
+BIT          L,6             CB75       8
+BIT          L,7             CB7D       8
+
+BIT          (HL),0          CB46      16
+BIT          (HL),1          CB4E      16
+BIT          (HL),2          CB56      16
+BIT          (HL),3          CB5E      16
+BIT          (HL),4          CB66      16
+BIT          (HL),5          CB6E      16
+BIT          (HL),6          CB76      16
+BIT          (HL),7          CB7E      16
 # SET b,r
-SET          b,A             CBC7       8
-SET          b,B             CBC0       8
-SET          b,C             CBC1       8
-SET          b,D             CBC2       8
-SET          b,E             CBC3       8
-SET          b,H             CBC4       8
-SET          b,L             CBC5       8
-SET          b,(HL)          CBC6      16
+SET          A,0             CBC7       8
+SET          A,1             CBCF       8
+SET          A,2             CBD7       8
+SET          A,3             CBDF       8
+SET          A,4             CBE7       8
+SET          A,5             CBEF       8
+SET          A,6             CBF7       8
+SET          A,7             CBFF       8
+
+SET          B,0             CBC0       8
+SET          B,1             CBC8       8
+SET          B,2             CBD0       8
+SET          B,3             CBD8       8
+SET          B,4             CBE0       8
+SET          B,5             CBE8       8
+SET          B,6             CBF0       8
+SET          B,7             CBF8       8
+
+SET          C,0             CBC1       8
+SET          C,1             CBC9       8
+SET          C,2             CBD1       8
+SET          C,3             CBD9       8
+SET          C,4             CBE1       8
+SET          C,5             CBE9       8
+SET          C,6             CBF1       8
+SET          C,7             CBF9       8
+
+SET          D,0             CBC2       8
+SET          D,1             CBCA       8
+SET          D,2             CBD2       8
+SET          D,3             CBDA       8
+SET          D,4             CBE2       8
+SET          D,5             CBEA       8
+SET          D,6             CBF2       8
+SET          D,7             CBFA       8
+
+SET          E,0             CBC3       8
+SET          E,1             CBCB       8
+SET          E,2             CBD3       8
+SET          E,3             CBDB       8
+SET          E,4             CBE3       8
+SET          E,5             CBEB       8
+SET          E,6             CBF3       8
+SET          E,7             CBFB       8
+
+SET          H,0             CBC4       8
+SET          H,1             CBCC       8
+SET          H,2             CBD4       8
+SET          H,3             CBDC       8
+SET          H,4             CBE4       8
+SET          H,5             CBEC       8
+SET          H,6             CBF4       8
+SET          H,7             CBFC       8
+
+SET          L,0             CBC5       8
+SET          L,1             CBCD       8
+SET          L,2             CBD5       8
+SET          L,3             CBDD       8
+SET          L,4             CBE5       8
+SET          L,5             CBED       8
+SET          L,6             CBF5       8
+SET          L,7             CBFD       8
+
+SET          (HL),0          CBC6      16
+SET          (HL),1          CBCE      16
+SET          (HL),2          CBD6      16
+SET          (HL),3          CBDE      16
+SET          (HL),4          CBE6      16
+SET          (HL),5          CBEE      16
+SET          (HL),6          CBF6      16
+SET          (HL),7          CBFE      16
 # RES b,r
-RES          b,A             CB87       8
-RES          b,B             CB80       8
-RES          b,C             CB81       8
-RES          b,D             CB82       8
-RES          b,E             CB83       8
-RES          b,H             CB84       8
-RES          b,L             CB85       8
-RES          b,(HL)          CB86      16
+RES          A,0             CB87       8
+RES          A,1             CB8F       8
+RES          A,2             CB97       8
+RES          A,3             CB9F       8
+RES          A,4             CBA7       8
+RES          A,5             CBAF       8
+RES          A,6             CBB7       8
+RES          A,7             CBBF       8
+
+RES          B,0             CB80       8
+RES          B,1             CB88       8
+RES          B,2             CB90       8
+RES          B,3             CB98       8
+RES          B,4             CBA0       8
+RES          B,5             CBA8       8
+RES          B,6             CBB0       8
+RES          B,7             CBB8       8
+
+RES          C,0             CB81       8
+RES          C,1             CB89       8
+RES          C,2             CB91       8
+RES          C,3             CB99       8
+RES          C,4             CBA1       8
+RES          C,5             CBA9       8
+RES          C,6             CBB1       8
+RES          C,7             CBB9       8
+
+RES          D,0             CB82       8
+RES          D,1             CB8A       8
+RES          D,2             CB92       8
+RES          D,3             CB9A       8
+RES          D,4             CBA2       8
+RES          D,5             CBAA       8
+RES          D,6             CBB2       8
+RES          D,7             CBBA       8
+
+RES          E,0             CB83       8
+RES          E,1             CB8B       8
+RES          E,2             CB93       8
+RES          E,3             CB9B       8
+RES          E,4             CBA3       8
+RES          E,5             CBAB       8
+RES          E,6             CBB3       8
+RES          E,7             CBBB       8
+
+RES          H,0             CB84       8
+RES          H,1             CB8C       8
+RES          H,2             CB94       8
+RES          H,3             CB9C       8
+RES          H,4             CBA4       8
+RES          H,5             CBAC       8
+RES          H,6             CBB4       8
+RES          H,7             CBBC       8
+
+RES          L,0             CB85       8
+RES          L,1             CB8D       8
+RES          L,2             CB95       8
+RES          L,3             CB9D       8
+RES          L,4             CBA5       8
+RES          L,5             CBAD       8
+RES          L,6             CBB5       8
+RES          L,7             CBBD       8
+
+RES          (HL),0          CB86      16
+RES          (HL),1          CB8E      16
+RES          (HL),2          CB96      16
+RES          (HL),3          CB9E      16
+RES          (HL),4          CBA6      16
+RES          (HL),5          CBAE      16
+RES          (HL),6          CBB6      16
+RES          (HL),7          CBBE      16
 # JP nn
 JP           nn              C3        12
 # JP cc,nn
