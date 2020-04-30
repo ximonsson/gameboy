@@ -114,9 +114,7 @@ function call(instruction, params)
 end
 
 local operations_CB = {}
-local opcodes_CB = {}
 local operations = {}
-local opcodes = {}
 
 -- turn the information in one line to an instruction
 function operation(line)
@@ -131,16 +129,13 @@ function operation(line)
 	local fn = fname(it, pm)
 
 	op_map = operations
-	code_map = opcodes
 
 	if op:match"^CB" then
 		op = op:gsub("CB(..)", "%1")
 		op_map = operations_CB
-		code_map = opcodes_CB
 	end
 
 	op = tonumber("0x" .. op)
-	code_map[#code_map + 1] = op
 	op_map[op] =  {
 		["inst"] = it,
 		["asm"] = string.format("%s %s", it, pm),
@@ -168,6 +163,8 @@ io.write([[/**
 #ifndef GB_CPU_OPERATIONS_H
 #define GB_CPU_OPERATIONS_H
 
+#include <stdio.h>
+
 typedef
 struct operation
 {
@@ -188,6 +185,25 @@ operation;
 
 ]])
 
+-- not all possible opcodes are mapped to an operation.
+-- we fill therefore with an invalid operation at each opcode and then re-assign
+-- as we parse the file.
+-- The CBxx all make exactly 256 operations so no need there.
+
+io.write("void invalid_op() { fprintf (stderr, \"INVALID OPERATION\\n\"); }", "\n")
+
+local invalid_instruction = {
+	["inst"] = "INVALID",
+	["asm"] = "INVALID",
+	["str"] = "",
+	["cc"] = 0,
+	["fn"] = "invalid_op",
+}
+
+for i = 0, 255, 1 do
+	operations[i] = invalid_instruction
+end
+
 -- iterate over all lines in the file and create an instruction for each
 for line in io.lines("src/instructions") do
 	line = trimline(line)
@@ -195,9 +211,8 @@ for line in io.lines("src/instructions") do
 end
 
 -- create CBxx operations
-table.sort(opcodes_CB)
 io.write("\nconst operation operations_cb[256] = {\n")
-for _, op in pairs(opcodes_CB) do
+for op = 0, 255, 1 do
 	io.write(string.format("// %.2X: %s\n", op, operations_CB[op]["asm"]))
 	io.write(string.format(
 		"{ \"%s\", &%s, 0, %d },\n",
@@ -209,7 +224,7 @@ end
 io.write("};\n")
 
 -- create the special CB instruction that runs instruction from the `operations_cb` map
-opcodes[#opcodes + 1] = 0xCB
+io.write("void __cbxx__() { operations_cb[pc ++].instruction(); }\n")
 operations[0xCB] = {
 	["inst"] = "CBXX",
 	["asm"] = "-- CBXX --",
@@ -217,12 +232,10 @@ operations[0xCB] = {
 	["fn"] = "__cbxx__",
 	["cc"] = 8, -- TODO this is not always true!!
 }
-io.write("void __cbxx__() { operations_cb[pc ++].instruction(); }\n")
 
 -- all 8-bit instructions
-table.sort(opcodes)
 io.write("\nconst operation operations[256] = {\n")
-for _, op in pairs(opcodes) do
+for op = 0, 255, 1 do
 	io.write(string.format("// %.2X: %s\n", op, operations[op]["asm"]))
 	io.write(string.format(
 		"{ \"%s\", &%s, 0, %d },\n",
