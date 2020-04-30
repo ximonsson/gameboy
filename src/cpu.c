@@ -79,7 +79,7 @@ static uint8_t mem_read (uint16_t address)
 {
 	uint8_t v = ram[address];
 	int stop = 0;
-	for (read_handler* h = read_handlers; h != 0 && !stop; h ++)
+	for (read_handler* h = read_handlers; (*h) != 0 && !stop; h ++)
 	{
 		stop = (*h)(address, &v);
 	}
@@ -105,7 +105,7 @@ void gb_cpu_register_store_handler (store_handler h)
 static void mem_store (uint16_t address, uint8_t v)
 {
 	int stop = 0;
-	for (store_handler* h = store_handlers; h != 0 && !stop; h ++)
+	for (store_handler* h = store_handlers; (*h) != 0 && !stop; h ++)
 	{
 		stop = (*h)(address, v);
 	}
@@ -643,6 +643,9 @@ int gb_cpu_step ()
 	// step the PC and clock the number of cycles
 	uint8_t opcode = RAM (pc);
 	operation op = operations[opcode];
+#ifdef DEBUG
+	printf ("%s\n", op.name);
+#endif
 	op.instruction ();
 	//pc += op.bytes;
 	return cc + op.cc;
