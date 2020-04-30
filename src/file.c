@@ -1,6 +1,7 @@
+#include "gameboy/file.h"
 #include <stdio.h>
-#include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 
 #define HEADER_LOCATION 0x0100
 #define HEADER_SIZE 0x4F
@@ -72,7 +73,7 @@ static int validate_checksum (uint8_t* header)
 	return header[0x4D] == (x & 0xFF);
 }
 
-static const char* CARTDRIDGE_TYPES[0x100] =
+static const char* MBC[0x100] =
 {
 	"ROM ONLY",
 	"MBC1",
@@ -115,7 +116,7 @@ static const char* CARTDRIDGE_TYPES[0x100] =
 	"HuC1+RAM+BATTERY"
 };
 
-static int read_header (FILE* fp)
+static int read_header (FILE* fp, uint8_t* mbc, uint8_t** rom, uint8_t** ram)
 {
 	fseek (fp, HEADER_LOCATION, SEEK_SET);
 	uint8_t header[HEADER_SIZE];
@@ -168,20 +169,35 @@ static int read_header (FILE* fp)
 	}
 
 	// Cartridge type
-	printf ("Cartridge type [x%.2X]: %s\n", header[0x47], CARTDRIDGE_TYPES[header[0x47]]);
+	*mbc = header[0x47];
+	printf ("Cartridge type (MBC) [x%.2X]: %s\n", *mbc, MBC[*mbc]);
 
 	// ROM size
 	size_t rom_size = 32 << (10 + header[0x48]);
-	printf ("ROM size: %lu B (= %ld KB) [%d]\n", rom_size, rom_size >> 10, header[0x48]);
+	printf ("ROM size: %lu B (= %lu KB) [%d]\n", rom_size, rom_size >> 10, header[0x48]);
+	*rom = (uint8_t *) malloc (rom_size);
+	int ret = fread (*rom, 1, rom_size, fp);
+	if (ret != rom_size)
+	{
+		fprintf (stderr, "Did not manage to read the ROM data!\n");
+		return 1;
+	}
 
 	// RAM size
-	size_t ram_size = header[0x49];
-	printf ("RAM size: %lu\n", ram_size);
+	uint8_t ram_size = header[0x49];
+	printf ("RAM size: 0x%.2X\n", ram_size);
+	*ram = (uint8_t *) malloc (ram_size);
+	ret = fread (*ram, 1, ram_size, fp);
+	if (ret != ram_size)
+	{
+		fprintf (stderr, "Did not manage to read the RAM data!\n");
+		return 1;
+	}
 
 	return 0;
 }
 
-int gb_load_file (const char* file)
+int gb_load_file (const char* file, uint8_t* mbc, uint8_t** rom, uint8_t** ram)
 {
 	// open file for reading
 	FILE* fp = fopen (file, "rb");
@@ -193,10 +209,11 @@ int gb_load_file (const char* file)
 	}
 
 	// read the header
-	if (read_header (fp) != 0)
+	if (read_header (fp, mbc, rom, ram) != 0)
 		ret = 1; // faulty header
 
 	// load PRG and CHR
 	fclose (fp);
+
 	return ret;
 }

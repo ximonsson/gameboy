@@ -1,4 +1,4 @@
-#include <stdint.h>
+#include <gameboy/cpu.h>
 
 /* CPU Registers */
 
@@ -48,6 +48,8 @@ enum flags
 /* Interrupt Master Enable flag (IME). */
 static int ime = 0;
 
+/* Memory ------------------------------------------------------------------------------------------------ */
+
 /* RAM memory. */
 static uint8_t ram[1 << 16];
 
@@ -59,7 +61,7 @@ static uint8_t* reg_ie = ram + 0xFFFF;
 static uint8_t* reg_if = ram + 0xFF0F;
 #define IF (* reg_if)
 
-/* memory */
+uint8_t* gb_cpu_mem (uint16_t p) { return ram + p; }
 
 /**
  * Read from RAM handler.
