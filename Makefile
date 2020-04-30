@@ -31,4 +31,4 @@ build/%.o: src/%.c
 	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
 
 clean:
-	rm -rf $(OBJ) $(BIN) $(LIB)
+	rm -rf $(OBJ) $(BIN) $(LIB) include/gameboy/operations.h

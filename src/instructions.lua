@@ -63,6 +63,16 @@ function call(instruction, params)
 		return call_ld (instruction, params)
 	end
 
+	prefix = ""
+	-- if the instruction reads immediate bytes we need to preprend this to the call
+	if params:match",?nn?$" then
+		if params:match"nn" then
+			prefix = "uint16_t nn = RAM (pc ++); nn |= (RAM (pc ++) << 8); "
+		elseif params:match"n" then
+			prefix = "uint8_t n = RAM (pc ++); "
+		end
+	end
+
 	-- these instructions take pointers
 	local pointerparams = {
 		["POP"] = true,
@@ -74,20 +84,17 @@ function call(instruction, params)
 		["LD"] = true,
 		["LDI"] = true,
 		["LDD"] = true,
+		["SRL"] = true,
+		["SLA"] = true,
+		["SRA"] = true,
+		["RR"] = true,
+		["RL"] = true,
+		["RLC"] = true,
+		["RRC"] = true,
 	}
 
-	prefix = ""
-	-- if the instruction reads immediate bytes we need to preprend this to the call
-	if params:match",?nn?$" then
-		if params:match"nn" then
-			prefix = "uint16_t nn = RAM (pc ++); nn |= (RAM (pc ++) << 8); "
-		elseif params:match"n" then
-			prefix = "uint8_t n = RAM (pc ++); "
-		end
-	end
-
-	-- super special case for INC/DEC (HL) because it needs to store to memory
-	if (instruction == "DEC" or instruction == "INC") and params == "(HL)" then
+	-- special case when it is pointer parameters using (HL) which stores to mem
+	if pointerparams[instruction] and params == "(HL)" then
 		return string.format("uint8_t n = RAM (HL); %s (&n); STORE (HL, n);", instruction:lower())
 	end
 
@@ -118,13 +125,19 @@ function operation(line)
 	local cc = tokens[4]
 	local fn = fname(it, pm)
 
+	op_map = operations
+	code_map = opcodes
+
 	if op:match"^CB" then
-		return ""
+		op = op:gsub("CB(..)", "%1")
+		op_map = operations_CB
+		code_map = opcodes_CB
+		if it == "BIT" or it == "SET" or it == "RES" then return "" end
 	end
 
 	op = tonumber("0x" .. op)
-	opcodes[#opcodes + 1] = op
-	operations[op] =  {
+	code_map[#code_map + 1] = op
+	op_map[op] =  {
 		["inst"] = it,
 		["asm"] = string.format("%s %s", it, pm),
 		["str"] = string.format("void %s () { %s }", fn, call(it, pm)),
@@ -132,7 +145,7 @@ function operation(line)
 		["fn"] = fn,
 	}
 
-	return operations[op]["str"]
+	return op_map[op]["str"]
 end
 
 -----------------------------------------------------------------------------------------------------
@@ -195,7 +208,7 @@ io.write("};\n")
 opcodes[#opcodes + 1] = 0xCB
 operations[0xCB] = {
 	["inst"] = "CBXX",
-	["asm"] = " -- CBXX -- ",
+	["asm"] = "-- CBXX --",
 	["str"] = "",
 	["fn"] = "__cbxx__",
 	["cc"] = 8, -- TODO this is not always true!!
