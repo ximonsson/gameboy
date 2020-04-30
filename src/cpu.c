@@ -63,24 +63,12 @@ static uint8_t* reg_if = ram + 0xFF0F;
 
 uint8_t* gb_cpu_mem (uint16_t p) { return ram + p; }
 
-/**
- * Read from RAM handler.
- *
- * This is a function that takes the address as first parameter and the current value in memory
- * at that address.
- *
- * In case the handler affects the RAM address and normal execution should be stopped an non-zero
- * value should be returned by the handler, else zero.
- */
-typedef int (*read_handler) (uint16_t, uint8_t*);
+#define MAX_HANDLERS
 
 /* Currently registered read handlers. */
-static read_handler read_handlers[8] = { 0 };
+static read_handler read_handlers[MAX_HANDLERS] = { 0 };
 static int n_read_handlers = 0;
 
-/**
- * Add a callback (read_handler) for when trying to read from memory.
- */
 void gb_cpu_register_read_handler (read_handler h)
 {
 	read_handlers[n_read_handlers] = h;
@@ -100,24 +88,10 @@ static uint8_t mem_read (uint16_t address)
 
 #define RAM(a) mem_read (a)
 
-/**
- * Store to RAM handler.
- *
- * This is a function that takes the address as first parameter and the value that is to be
- * stored as second.
- *
- * In case the handler affects the RAM address and normal execution should be stopped an non-zero
- * value should be returned by the handler, else zero.
- */
-typedef int (*store_handler) (uint16_t, uint8_t);
-
 /* Current store handlers. */
-static store_handler store_handlers[8] = { 0 };
+static store_handler store_handlers[MAX_HANDLERS] = { 0 };
 static int n_store_handlers = 0;
 
-/**
- * Add a callback when storing to RAM.
- */
 void gb_cpu_register_store_handler (store_handler h)
 {
 	store_handlers[n_store_handlers] = h;
