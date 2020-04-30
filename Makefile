@@ -21,7 +21,7 @@ $(BIN): main.c
 
 $(LIB): operations.h $(OBJ)
 	@mkdir -p $(@D)
-	$(AR) $(ARCMD) $@ $^
+	$(AR) $(ARCMD) $@ $(OBJ)
 
 operations.h: src/instructions.lua
 	lua $^

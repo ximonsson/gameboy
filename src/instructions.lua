@@ -9,30 +9,6 @@ function trimline(line)
 	return line
 end
 
--- generate code for the parsed parameters
-function params(p)
-	-- special cases
-	direct = {
-		["(n)"] = "RAM(0xFF00 | RAM(pc ++))",
-		["(nn)"] = "RAM((RAM(pc ++) << 8) | RAM(pc ++))",
-		["n"] = "RAM(pc ++)",
-		["nn"] = "((RAM(pc ++) << 8) | RAM(pc ++))",
-		["-/-"] = "",
-	}
-
-	function param(p)
-		if direct[p] ~= nil then
-			return direct[p]
-		elseif string.match(p, "%(.+%)") then -- (rr)
-			return "RAM(" .. string.match(p, "%((.+)%)") .. ")"
-		else -- r
-			return p
-		end
-	end
-
-	return string.gsub(p, "([^,]+)", param)
-end
-
 -- create the function name
 function fname(i, p)
 	if string.match(p, "-/-") then
@@ -40,34 +16,92 @@ function fname(i, p)
 	else
 		suffix = string.gsub(p, "[,%(%)]", "_")
 	end
-	return string.format("__%s__%s__", i, suffix)
+	return string.format("__%s__%s__", i:lower(), suffix)
 end
 
--- special CBxx operations
-function CB(tokens)
-	--	print(tokens[3], ": unsupported for now")
-	return ""
-end
+function clean_params(params) return string.gsub(params, "[%(%)-/-]", "") end
 
--- LD instructions are a little special because they store the result to RAM
--- some times
-function LD(it, params)
-	if string.match(params, "%(nn%),A") then
-		return "uint16_t nn = RAM(pc++) | (RAM(pc++) << 8); STORE(nn, A);"
-	elseif string.match(params, "%(n%),A") then
-		return "uint16_t nn = 0xFF00 | RAM(pc++); STORE(nn, A);"
-	elseif string.match(params, "%(nn%),SP") then
-		return "uint16_t nn = RAM(pc++) | (RAM(pc++) << 8); STORE(nn, SP); STORE(nn+1, SP >> 8);"
+function call_ld(instruction, params)
+	c = ""
+	-- (n) : $FF00 | RAM (pc ++)
+	if string.match(params, "%(n%)") then
+		c = "uint16_t n = 0xFF00 | RAM (pc ++); "
+	-- (nn) : RAM (pc ++) | (RAM (pc ++) << 8)
+	elseif string.match(params, "nn") then
+		c = "uint16_t nn = RAM (pc ++); nn |= (RAM (pc ++) << 8); "
+	elseif string.match(params, "n") then
+		c = "uint8_t n = RAM (pc ++); "
 	end
-	return ""
+
+	-- if source is in memory we need to make a RAM call
+	if string.match(params, ",%(%a%a?%)$") then
+		params = params:gsub("(.+),(%(%a%a?%))", "%1,RAM %2")
+	end
+
+	-- storing to memory or not
+	if string.match(params, "^%(%a%a?%),") then
+		c =  c .. string.format("STORE (%s);", params)
+	else
+		c = c .. string.gsub(params, "(.+),(.+)", "%1 = %2;")
+	end
+
+	-- LDI and LDD special cases
+	if string.match(instruction, "LDI") then
+		c = c .. " HL ++;"
+	elseif string.match(instruction, "LDD") then
+		c = c .. " HL --;"
+	end
+
+	return c
+end
+
+-- the inner code for the function
+function call(instruction, params)
+	-- LD is handled differently
+	if instruction:match"LD[DI]?$" then
+		return call_ld (instruction, params)
+	end
+
+	-- these instructions take pointers
+	local pointerparams = {
+		["POP"] = true,
+		["DEC"] = true,
+		["INC"] = true,
+		["DEC16"] = true,
+		["INC16"] = true,
+		["SWAP"] = true,
+		["LD"] = true,
+		["LDI"] = true,
+		["LDD"] = true,
+	}
+
+	prefix = ""
+	-- if the instruction reads immediate bytes we need to preprend this to the call
+	if params:match",?nn?$" then
+		if params:match"nn" then
+			prefix = "uint16_t nn = RAM (pc ++); nn |= (RAM (pc ++) << 8); "
+		elseif params:match"n" then
+			prefix = "uint8_t n = RAM (pc ++); "
+		end
+	end
+
+	-- super special case for INC/DEC (HL) because it needs to store to memory
+	if (instruction == "DEC" or instruction == "INC") and params == "(HL)" then
+		return string.format("uint8_t n = RAM (HL); %s (&n); STORE (HL, n);", instruction:lower())
+	end
+
+	if params == "(HL)" then
+		params = "RAM (HL)"
+	else
+		params = clean_params(params)
+	end
+
+	if pointerparams[instruction] then params = "&" .. params end
+	return prefix .. string.format("%s (%s);", instruction:lower(), params);
 end
 
 local operations = {}
 local opcodes = {}
-
-function opstr()
-
-end
 
 -- turn the information in one line to an instruction
 function operation(line)
@@ -75,59 +109,27 @@ function operation(line)
 	local tokens = {}
 	for w in string.gmatch(line, '%S+') do tokens[#tokens+1] = w end
 
-	-- work each token accordingly
-	local it = string.lower(tokens[1])
+	local it = tokens[1]
 	local pm = tokens[2]
 	local op = tokens[3]
 	local cc = tokens[4]
-
-	local p = params(pm)
-
-	-- some instructions need some special handling
-
-	local pointerparams = {
-		["pop"] = true,
-		["dec"] = true,
-		["inc"] = true,
-		["dec16"] = true,
-		["inc16"] = true,
-		["swap"] = true,
-		["ld"] = true,
-		["ldi"] = true,
-		["ldd"] = true,
-	}
-
-	-- CBxx operations are special
-	if string.match(op, "CB%w%w") then
-		return CB(tokens)
-	-- some instructions take pointers as parameters
-	elseif pointerparams[it] then
-		p = "&" .. p
-	end
-
 	local fn = fname(it, pm)
-	local opcode = tonumber("0x" .. op)
 
-	-- standard format for the function
-	local opfmt = "void %s() { %s };"
-
-	-- handle LD to memory differently
-	if string.match(it, "ld") and string.match(pm, "%(%w%w?%),") then
-		inner = LD(it, pm)
-	else
-		inner = string.format("%s(%s);", it, p)
+	if op:match"^CB" then
+		return ""
 	end
 
-	opcodes[#opcodes + 1] = opcode
-	operations[opcode] =  {
-		["inst"] = it:upper(),
-		["asm"] = string.format("%s %s", it:upper(), pm),
-		["str"] = string.format(opfmt, fn, inner),
+	op = tonumber("0x" .. op)
+	opcodes[#opcodes + 1] = op
+	operations[op] =  {
+		["inst"] = it,
+		["asm"] = string.format("%s %s", it, pm),
+		["str"] = string.format("void %s () { %s }", fn, call(it, pm)),
 		["cc"] = tonumber(cc),
 		["fn"] = fn,
 	}
 
-	return operations[opcode]["str"]
+	return operations[op]["str"]
 end
 
 -----------------------------------------------------------------------------------------------------
@@ -169,9 +171,7 @@ operation;
 -- iterate over all lines in the file and create an instruction for each
 for line in io.lines("src/instructions") do
 	line = trimline(line)
-	if line ~= "" then
-		io.write(operation(line), "\n")
-	end
+	if line ~= "" then io.write(operation(line), "\n") end
 end
 
 io.write("const operation operations[0xFF] = {\n")
@@ -187,6 +187,6 @@ for _, op in pairs(opcodes) do
 end
 io.write("};\n")
 
-io.write("#endif")
+io.write("#endif\n")
 
 io.close(file)

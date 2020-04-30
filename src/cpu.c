@@ -164,21 +164,11 @@ uint16_t stack_pop ()
 
 /* CPU Instructions */
 
-// TODO these LD instructions will not work for storing to RAM as they will not call the handlers
-// A solution might be to keep it like this and solve it in a wrapper function instead.
+// NOTE : LD instructions are not implemented here; they are all implemented in the autogeneretade code instead.
 
-#define ld(n, nn) *n = nn
-
-void ldd (uint8_t* n, uint8_t nn)
+void ldhl (int8_t n)
 {
-	ld (n, nn);
-	HL --;
-}
-
-void ldi (uint8_t* n, uint8_t nn)
-{
-	ld (n, nn);
-	HL ++;
+	HL = SP + n;
 }
 
 /*
@@ -588,7 +578,7 @@ void jpcc (enum jump_cc cc, uint16_t nn)
 
 #define jr(n) pc += n
 
-void jrcc (enum jump_cc cc, uint8_t n)
+void jrcc (enum jump_cc cc, int8_t n)
 {
 	switch (cc)
 	{
