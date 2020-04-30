@@ -171,18 +171,6 @@ void ldhl (int8_t n)
 	HL = SP + n;
 }
 
-/*
-void ld8 (uint8_t* n, uint8_t nn)
-{
-	*n = nn;
-}
-
-void ld16 (uint16_t* n, uint16_t nn)
-{
-	*n = nn;
-}
-*/
-
 void push (uint16_t v)
 {
 	PUSH (v);
@@ -546,11 +534,6 @@ void res (uint8_t* r, uint8_t b)
 	(*r) &= ~(1 << b);
 }
 
-//void jp (uint16_t nn)
-//
-//pc = nn;
-//
-
 #define jp(nn) pc = nn
 
 enum jump_cc
@@ -572,11 +555,6 @@ void jpcc (enum jump_cc cc, uint16_t nn)
 	}
 }
 
-//void jr (uint8_t n)
-//{
-	//pc += n;
-//}
-
 #define jr(n) pc += n
 
 void jrcc (enum jump_cc cc, int8_t n)
@@ -589,12 +567,6 @@ void jrcc (enum jump_cc cc, int8_t n)
 		case JP_CC_C:  if ((F & F_C) != 0) jr (n); break;
 	}
 }
-
-//void call (uint16_t nn)
-//{
-//PUSH (pc);
-//pc = nn;
-//}
 
 #define call(nn) { PUSH (pc); jp (nn); }
 
@@ -636,45 +608,7 @@ void reti ()
 	ime = 1;
 }
 
-/**
- * instruction defines a CPU instruction
- * Points to a function to be excecuted.
- *
-typedef void(*instruction)() ;
-
-**
- * operation defines a specific CPU instruction to be excecuted
- * with a fix addressing mode.
- * It is identified by it's opcode.
- *
-typedef
-struct operation
-{
-	// name is the debugging name of the operation.
-	const char* name;
-
-	// the instruction to be executed
-	instruction instruction;
-
-	// number of bytes the operation consumes
-	uint8_t bytes;
-
-	// number of cycles the operation needs.
-	// in some cases there might be more in the case of e.g. branching.
-	uint8_t cycles;
-}
-operation;
-*/
-
-/**
- * operations maps opcodes to operations.
- *
-const operation operations[256] =
-{
-
-};
-*/
-
+/* Include generated file with operations. */
 #include "gameboy/operations.h"
 
 /**
