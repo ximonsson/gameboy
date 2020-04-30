@@ -1,8 +1,9 @@
 CC=gcc
-CFLAGS=-Wall -g3 -I./include
+CFLAGS=-Wall -g3 -DDEBUG
 LDFLAGS=-L./lib -lgameboy
+INCLUDES=-I./include
 
-SRC=gb.c file.c cpu.c
+SRC=gb.c file.c cpu.c mbc1.c
 OBJ=$(addprefix build/, $(SRC:.c=.o))
 LIB=lib/libgameboy.a
 ARCMD = rcs
@@ -11,13 +12,13 @@ BIN=bin/gameboy
 
 all: bin
 
-bin: lib $(BIN)
+bin: $(BIN)
 
 lib: $(LIB)
 
-$(BIN): main.c
+$(BIN): $(LIB)
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ $(LDFLAGS)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ main.c $(LDFLAGS)
 
 $(LIB): operations.h $(OBJ)
 	@mkdir -p $(@D)
