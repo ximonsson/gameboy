@@ -1,6 +1,5 @@
 -- instructions.lua
-
-print("Generating source for Game Boy CPU instructions\n")
+-- Generates source code from src/instructions into include/gameboy/operations.h
 
 -- trim the line from comments and whitespace
 function trimline(line)
