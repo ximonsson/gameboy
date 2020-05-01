@@ -62,7 +62,7 @@ static void print_nintendo_logo (uint8_t* logo)
 		printf ("\n");
 	}
 
-	printf ("\n\n");
+	printf ("\n");
 }
 
 static int validate_checksum (uint8_t* header)
@@ -116,10 +116,10 @@ static const char* MBC[0x100] =
 	"HuC1+RAM+BATTERY"
 };
 
-static int read_header (FILE* fp, uint8_t* mbc, uint8_t** rom, uint8_t** ram)
+static int read_header (FILE* fp, uint8_t* mbc, size_t* rom, size_t* ram)
 {
-	fseek (fp, HEADER_LOCATION, SEEK_SET);
 	uint8_t header[HEADER_SIZE];
+	fseek (fp, HEADER_LOCATION, SEEK_SET);
 	fread (header, 1, HEADER_SIZE, fp);
 
 	// print the logo to stdout to make sure all is g00d
@@ -141,9 +141,10 @@ static int read_header (FILE* fp, uint8_t* mbc, uint8_t** rom, uint8_t** ram)
 	// print title of the cartridge
 	char title[16];
 	memcpy (title, header + 0x34, 16);
-	printf ("%s\n", title);
+	printf ("TITLE                > %s\n", title);
 
 	// CGB support
+	printf ("SUPPORT              > ");
 	switch (header[0x43])
 	{
 	case 0x80:
@@ -158,6 +159,7 @@ static int read_header (FILE* fp, uint8_t* mbc, uint8_t** rom, uint8_t** ram)
 	}
 
 	// SGB support
+	printf ("SGB SUPPORT          > ");
 	switch (header[0x46])
 	{
 	case 0x03:
@@ -169,30 +171,16 @@ static int read_header (FILE* fp, uint8_t* mbc, uint8_t** rom, uint8_t** ram)
 	}
 
 	// Cartridge type
-	*mbc = header[0x47];
-	printf ("Cartridge type (MBC) [x%.2X]: %s\n", *mbc, MBC[*mbc]);
+	* mbc = header[0x47];
+	printf ("CARTRIDGE TYPE (MBC) > [x%.2X]: %s\n", *mbc, MBC[*mbc]);
 
 	// ROM size
-	size_t rom_size = 32 << (10 + header[0x48]);
-	printf ("ROM size: %lu B (= %lu KB) [%d]\n", rom_size, rom_size >> 10, header[0x48]);
-	*rom = (uint8_t *) malloc (rom_size);
-	int ret = fread (*rom, 1, rom_size, fp);
-	if (ret != rom_size)
-	{
-		fprintf (stderr, "Did not manage to read the ROM data!\n");
-		return 1;
-	}
+	* rom = 32 << (10 + header[0x48]);
+	printf ("ROM SIZE             > %lu B (= %lu KB) [%d]\n", * rom, (* rom) >> 10, header[0x48]);
 
 	// RAM size
-	uint8_t ram_size = header[0x49];
-	printf ("RAM size: 0x%.2X\n", ram_size);
-	*ram = (uint8_t *) malloc (ram_size);
-	ret = fread (*ram, 1, ram_size, fp);
-	if (ret != ram_size)
-	{
-		fprintf (stderr, "Did not manage to read the RAM data!\n");
-		return 1;
-	}
+	* ram = header[0x49];
+	printf ("RAM SIZE             > 0x%lu\n", * ram);
 
 	return 0;
 }
@@ -209,11 +197,25 @@ int gb_load_file (const char* file, uint8_t* mbc, uint8_t** rom, uint8_t** ram)
 	}
 
 	// read the header
-	if (read_header (fp, mbc, rom, ram) != 0)
+	size_t rom_size, ram_size;
+	if (read_header (fp, mbc, &rom_size, &ram_size) != 0)
 		ret = 1; // faulty header
 
-	// load PRG and CHR
-	fclose (fp);
+	fseek (fp, 0, SEEK_SET);
 
+	// load ROM data
+	*rom = (uint8_t *) malloc (rom_size);
+	ret = fread (*rom, 1, rom_size, fp);
+	if (ret != rom_size)
+	{
+		fprintf (stderr, "Did not manage to read the ROM data! (read only %d B out of %lu) \n", ret, rom_size);
+		return 1;
+	}
+	else ret = 0;
+
+	// allocate RAM
+	*ram = (uint8_t *) malloc (ram_size);
+
+	fclose (fp);
 	return ret;
 }

@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define ROM_BANK_SIZE 0x4000
+
 /**
  * Step the CPU one operation.
  */
@@ -18,6 +20,11 @@ void gb_cpu_reset () ;
  * USE WITH CAUTION!
  */
 uint8_t* gb_cpu_mem (uint16_t /* offset */) ;
+
+/**
+ * Load data into the ROM Bank.
+ */
+void gb_cpu_load_rom (uint8_t /* bank */, uint8_t* /* data */);
 
 /**
  * Read from RAM handler.

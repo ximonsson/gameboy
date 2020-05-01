@@ -1,4 +1,5 @@
-#include <gameboy/cpu.h>
+#include "gameboy/cpu.h"
+#include <string.h>
 
 /* CPU Registers */
 
@@ -62,6 +63,11 @@ static uint8_t* reg_if = ram + 0xFF0F;
 #define IF (* reg_if)
 
 uint8_t* gb_cpu_mem (uint16_t p) { return ram + p; }
+
+void gb_cpu_load_rom (uint8_t b, uint8_t* data)
+{
+	memcpy (ram + ROM_BANK_SIZE * b, data, ROM_BANK_SIZE);
+}
 
 #define MAX_HANDLERS
 
@@ -624,8 +630,20 @@ int interrupt ()
  */
 void gb_cpu_reset ()
 {
-	pc = 0x100;
+	pc = 0x0100;
+	//pc = 0;
 	sp = 0xFFFE;
+
+	AF = 0;
+	BC = 0;
+	DE = 0;
+	HL = 0;
+	//AF = 0x01B0;
+	//BC = 0x0013;
+	//DE = 0x00D8;
+	//HL = 0x014D;
+
+	ime = 0;
 }
 
 /**
@@ -641,10 +659,10 @@ int gb_cpu_step ()
 
 	// load an opcode and perform the operation associated,
 	// step the PC and clock the number of cycles
-	uint8_t opcode = RAM (pc);
+	uint8_t opcode = RAM (pc ++);
 	operation op = operations[opcode];
 #ifdef DEBUG
-	printf ("%s\n", op.name);
+	printf ("$%.4X: %s\n", pc, op.name);
 #endif
 	op.instruction ();
 	//pc += op.bytes;
