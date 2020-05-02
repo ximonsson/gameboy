@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #define ROM_BANK_SIZE 0x4000
+#define OAM_LOC 0xFE00
 
 /**
  * Step the CPU one operation.
@@ -57,5 +58,25 @@ typedef int (*store_handler) (uint16_t, uint8_t);
  * Add a callback when storing to RAM.
  */
 void gb_cpu_register_store_handler (store_handler /* handler */) ;
+
+/**
+ * Bit 0: V-Blank  Interrupt Enable  (INT 40h)  (1=Enable)
+ * Bit 1: LCD STAT Interrupt Enable  (INT 48h)  (1=Enable)
+ * Bit 2: Timer    Interrupt Enable  (INT 50h)  (1=Enable)
+ * Bit 3: Serial   Interrupt Enable  (INT 58h)  (1=Enable)
+ * Bit 4: Joypad   Interrupt Enable  (INT 60h)  (1=Enable)
+*/
+typedef
+enum interrupt_flag
+{
+	INT_FLAG_VBLANK   = 0x01,
+	INT_FLAG_LCD_STAT = 0x02,
+	INT_FLAG_TIMER    = 0x04,
+	INT_FLAG_SERIAL   = 0x08,
+	INT_FLAG_JOYPAD   = 0x10,
+}
+interrupt_flag;
+
+void gb_cpu_flag_interrupt (interrupt_flag /* flag */) ;
 
 #endif

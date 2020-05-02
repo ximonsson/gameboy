@@ -64,9 +64,16 @@ static uint8_t* reg_if = ram + 0xFF0F;
 
 uint8_t* gb_cpu_mem (uint16_t p) { return ram + p; }
 
-void gb_cpu_load_rom (uint8_t b, uint8_t* data)
+void gb_cpu_load_rom (uint8_t b, uint8_t* data) { memcpy (ram + ROM_BANK_SIZE * b, data, ROM_BANK_SIZE); }
+
+/* Transfer memory to OAM location. */
+static void oam_dma_transfer (uint8_t v)
 {
-	memcpy (ram + ROM_BANK_SIZE * b, data, ROM_BANK_SIZE);
+#ifdef DEBUG
+	printf ("OAM transfer\n");
+#endif
+	uint16_t src = ((v & 0x1F) << 8) | 0x9F;
+	memcpy (ram + OAM_LOC, ram + src, 0x9F);
 }
 
 #define MAX_HANDLERS
@@ -120,6 +127,16 @@ static void mem_store (uint16_t address, uint8_t v)
 }
 
 #define STORE(a, v) mem_store (a, v)
+
+/* Define some memory handlers here. */
+
+/* check writes to initiate OAM DMA transfer. */
+static int oam_dma_transf_handler (uint16_t address, uint8_t v)
+{
+	if (address != 0xFF46) return 0;
+	oam_dma_transfer (v);
+	return 1;
+}
 
 /**
  * stack_push pushes the value v to the stack.
@@ -593,6 +610,11 @@ void reti ()
 /* Include generated file with operations. */
 #include "gameboy/operations.h"
 
+void gb_cpu_flag_interrupt (interrupt_flag f)
+{
+	IF |= f;
+}
+
 /**
  * Interrupt.
  *
@@ -644,6 +666,13 @@ void gb_cpu_reset ()
 	//HL = 0x014D;
 
 	ime = 0;
+
+	// reset memory read/write handlers and add the default ones.
+
+	n_store_handlers = 0;
+	gb_cpu_register_store_handler (oam_dma_transf_handler);
+
+	n_read_handlers = 0;
 }
 
 /**

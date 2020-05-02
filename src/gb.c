@@ -1,5 +1,6 @@
 #include "gameboy/file.h"
 #include "gameboy/cpu.h"
+#include "gameboy/ppu.h"
 #include "gameboy/mbc.h"
 #include <stdlib.h>
 
@@ -16,7 +17,7 @@ int gb_load (const char* file)
 	int ret = 0;
 
 	gb_cpu_reset ();
-	// gb_ppu_reset ();
+	gb_ppu_reset ();
 	// gb_apu_reset ();
 
 	uint8_t mbc;
@@ -31,10 +32,15 @@ int gb_load (const char* file)
 
 void gb_step ()
 {
-	int cpucc = 0;
-	for ( ; cpucc < 2000; )
-		cpucc += gb_cpu_step ();
+	for (int cpucc = 0; cpucc < GB_FRAME; )
+	{
+		int cc = gb_cpu_step ();
+		gb_ppu_step (cc);
+		cpucc += cc;
+	}
 }
+
+const uint8_t* gb_lcd () { return gb_ppu_lcd (); }
 
 void gb_stop ()
 {
