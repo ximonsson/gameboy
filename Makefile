@@ -1,14 +1,27 @@
 CC=gcc
-CFLAGS=-Wall -g3 -DDEBUG
-LDFLAGS=-L./lib -lgameboy
+CFLAGS=-Wall
+LDFLAGS=-L./lib -lgameboy -lSDL2 -lpulse -lpulse-simple
 INCLUDES=-I./include
 
 SRC=gb.c file.c cpu.c mbc1.c
 OBJ=$(addprefix build/, $(SRC:.c=.o))
 LIB=lib/libgameboy.a
 ARCMD = rcs
-
 BIN=bin/gameboy
+
+ifdef DEBUG
+CFLAGS += -g3 -DDEBUG
+else
+CFLAGS += -O3
+endif
+
+ifdef GLES
+LDFLAGS += -lGLESv2
+CFLAGS += -DGLES
+else
+LDFLAGS += -lGL
+CFLAGS += -DGL_GLEXT_PROTOTYPES
+endif
 
 all: bin
 
@@ -18,7 +31,7 @@ lib: $(LIB)
 
 $(BIN): $(LIB)
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $@ main.c $(LDFLAGS)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ examples/app/main.c $(LDFLAGS)
 
 $(LIB): operations.h $(OBJ)
 	@mkdir -p $(@D)
