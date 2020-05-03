@@ -70,10 +70,10 @@ static uint8_t* status_;
 #define LYC_EQ_LY ((status & 0x04) == 0x04)
 
 #define STATUS (status & 0x03)
-#define HBLANK STATUS == 0
-#define VBLANK STATUS == 1
-#define SEARCH_OAM STATUS == 2
-#define TRANSFER_LCD STATUS == 3
+#define MODE_HBLANK STATUS == 0
+#define MODE_VBLANK STATUS == 1
+#define MODE_SEARCH_OAM STATUS == 2
+#define MODE_TRANSFER_LCD STATUS == 3
 
 /* switchable screen buffer for rendering. */
 static uint8_t screen_buffer1_[GB_FRAME];
@@ -120,7 +120,8 @@ static void step ()
 	if (ly == 144) {
 		status &= 0xFC;
 		status |= 0x01;
-		gb_cpu_flag_interrupt (INT_FLAG_VBLANK);
+		if (MODE_1_VBLANK_INT)
+			gb_cpu_flag_interrupt (INT_FLAG_VBLANK);
 	}
 
 }
