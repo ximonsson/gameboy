@@ -223,8 +223,8 @@ void quit_opengl ()
 
 void draw ()
 {
-	//const uint8_t* screen = gb_screen_buffer ();
-	//glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, 256, 240, 0, GL_RGB, GL_UNSIGNED_BYTE, screen);
+	const uint8_t* screen = gb_lcd ();
+	glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, 256, 240, 0, GL_RGB, GL_UNSIGNED_BYTE, screen);
 
 	glClear (GL_COLOR_BUFFER_BIT);
 	glDrawArrays (GL_TRIANGLES, 0, 6);
