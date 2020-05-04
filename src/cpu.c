@@ -742,7 +742,7 @@ int gb_cpu_step ()
 	uint8_t opcode = RAM (pc++);
 	operation op = operations[opcode];
 #ifdef DEBUG
-	printf ("$%.4X: %-20s AF = x%.4X BC = x%.4X DE = x%.4X SP = x%.4X HL = x%.4X \n", pc-1, op.name, AF, BC, DE, SP, HL);
+	printf ("$%.4X: %-20s AF = x%.4X BC = x%.4X DE = x%.4X SP = x%.4X HL = x%.4X IF = x%.2X IE = 0x%.2X \n", pc-1, op.name, AF, BC, DE, SP, HL, IF, IE);
 #endif
 	op.instruction ();
 	return cc + op.cc;
