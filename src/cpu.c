@@ -1,5 +1,6 @@
 #include "gameboy/cpu.h"
 #include <string.h>
+#include <assert.h>
 
 #ifdef DEBUG
 #include <stdio.h>
@@ -149,8 +150,11 @@ static int oam_dma_transf_handler (uint16_t address, uint8_t v)
  */
 void stack_push (uint16_t v)
 {
-	STORE (sp--, v >> 8);
-	STORE (sp--, v);
+#ifdef DEBUG
+	printf ("    PUSHing %.4X [%.4X]\n", v, sp);
+#endif
+	STORE (sp--, v >> 8); // msb
+	STORE (sp--, v);      // lsb
 }
 
 #define PUSH(v) stack_push (v)
@@ -162,6 +166,9 @@ uint16_t stack_pop ()
 {
 	uint16_t lo = RAM (++sp);
 	uint16_t hi = RAM (++sp);
+#ifdef DEBUG
+	printf ("    POPed %.4X\n", (hi << 8) | lo);
+#endif
 	return (hi << 8) | lo;
 }
 
@@ -186,8 +193,11 @@ void pop (uint16_t *v)
 	*v = POP ();
 }
 
-void add (int8_t n)
+void add (uint8_t n)
 {
+#ifdef DEBUG
+	printf ("    x%.2X + x%.2X\n", A, n);
+#endif
 	uint16_t a = A + n;
 
 	F = 0; // reset flags
@@ -275,6 +285,9 @@ void sbc (uint8_t n)
 
 void and (uint8_t n)
 {
+#ifdef DEBUG
+	printf ("    x%.2X & x%.2X\n", A, n);
+#endif
 	A &= n;
 	F = F_H;
 	if (A == 0)
@@ -284,7 +297,7 @@ void and (uint8_t n)
 void or (uint8_t n)
 {
 #ifdef DEBUG
-	printf ("     %.2X | %.2X\n", A, n);
+	printf ("    x%.2X | x%.2X\n", A, n);
 #endif
 	A |= n;
 	F = 0;
@@ -303,7 +316,7 @@ void xor (uint8_t n)
 void cp (uint8_t n)
 {
 #ifdef DEBUG
-	printf ("    %.2X == %.2X\n", A, n);
+	printf ("    x%.2X == x%.2X\n", A, n);
 #endif
 	F = F_N;
 	if (A == n)
@@ -337,12 +350,11 @@ void dec16 (uint16_t* nn)
 
 void dec (uint8_t *n)
 {
-	uint8_t n_ = *n;
 	(* n) --;
 	F |= F_N;
 	if ((* n) == 0)
 		F |= F_Z;
-	if ((n_ & 0x0F) < 1)
+	if (((*n) & 0x0F) == 0x0F)
 		F |= F_H;
 }
 
@@ -556,7 +568,7 @@ void res (uint8_t* r, uint8_t b)
 #ifdef DEBUG
 void jp (uint16_t nn)
 {
-	printf ("   JUMP @ %.4X\n", nn);
+	printf ("    JUMP @ %.4X\n", nn);
 	pc = nn;
 }
 #else
@@ -585,7 +597,7 @@ void jpcc (enum jump_cc cc, uint16_t nn)
 #ifdef DEBUG
 void jr (int8_t n)
 {
-	printf ("   JUMP @ PC +/- %d (=> %.4X)\n", n, pc + n);
+	printf ("    JUMP @ PC +/- %d (=> %.4X)\n", n, pc + n);
 	pc += n;
 }
 #else
@@ -723,12 +735,14 @@ int gb_cpu_step ()
 	// first check any interrupts
 	if (interrupt () == 0) cc += 5;
 
+	assert (pc < 0x8000);
+
 	// load an opcode and perform the operation associated,
 	// step the PC and clock the number of cycles
 	uint8_t opcode = RAM (pc++);
 	operation op = operations[opcode];
 #ifdef DEBUG
-	printf ("$%.4X: %s\n", pc-1, op.name);
+	printf ("$%.4X: %-20s AF = x%.4X BC = x%.4X DE = x%.4X SP = x%.4X HL = x%.4X \n", pc-1, op.name, AF, BC, DE, SP, HL);
 #endif
 	op.instruction ();
 	return cc + op.cc;
