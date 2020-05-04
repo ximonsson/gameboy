@@ -13,6 +13,7 @@ static uint8_t* scx_;
 static uint8_t* ly_;
 static uint8_t* lyc_;
 static uint8_t* wy_;
+static uint8_t* wx_;
 static uint8_t* bgp_;
 static uint8_t* obp0_;
 static uint8_t* obp1_;
@@ -22,6 +23,7 @@ static uint8_t* obp1_;
 #define ly (* ly_)
 #define lyc (* lyc_)
 #define wy (* wy_)
+#define wx (* wx_)
 #define bgp (* bgp_)
 #define obp0 (* obp0_)
 #define obp1 (* obp1_)
@@ -108,6 +110,7 @@ void gb_ppu_reset ()
 	ly_     = gb_cpu_mem (0xFF44);
 	lyc_    = gb_cpu_mem (0xFF45);
 	wy_     = gb_cpu_mem (0xFF4A);
+	wx_     = gb_cpu_mem (0xFF4B);
 	bgp_    = gb_cpu_mem (0xFF47);
 	obp0_   = gb_cpu_mem (0xFF48);
 	obp1_   = gb_cpu_mem (0xFF49);
