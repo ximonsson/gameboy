@@ -73,10 +73,10 @@ static uint8_t* lcdc_;
 static uint8_t* status_;
 #define status (* status_)
 
-#define LYC_EQ_LY_INT ((status & 0x40) == 0x60)
-#define MODE_2_OAM_INT ((status & 0x20) == 0x40)
-#define MODE_1_VBLANK_INT ((status & 0x10) == 0x20)
-#define MODE_0_HBLANK_INT ((status & 0x08) == 0x10)
+#define LYC_EQ_LY_INT ((status & 0x40) == 0x40)
+#define MODE_2_OAM_INT ((status & 0x20) == 0x20)
+#define MODE_1_VBLANK_INT ((status & 0x10) == 0x10)
+#define MODE_0_HBLANK_INT ((status & 0x08) == 0x08)
 #define LYC_EQ_LY ((status & 0x04) == 0x04)
 
 #define MODE (status & 0x03)
@@ -214,9 +214,6 @@ static void step ()
 
 		if (MODE_1_VBLANK_INT)
 		{
-#ifdef DEBUG
-			printf ("calling VBLANK interrupt\n");
-#endif
 			gb_cpu_flag_interrupt (INT_FLAG_VBLANK);
 		}
 	}
