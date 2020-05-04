@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+#define GB_LCD_WIDTH 160
+#define GB_LCD_HEIGHT 144
+
 /**
  * Load the file at the given file path.
  *

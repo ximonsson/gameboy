@@ -1,6 +1,10 @@
 #include "gameboy/cpu.h"
 #include <string.h>
 
+#ifdef DEBUG
+#include <stdio.h>
+#endif
+
 /* CPU Registers */
 
 static uint16_t reg_af;
@@ -76,16 +80,17 @@ static void oam_dma_transfer (uint8_t v)
 	memcpy (ram + OAM_LOC, ram + src, 0x9F);
 }
 
-#define MAX_HANDLERS
+#define MAX_HANDLERS 16
 
 /* Currently registered read handlers. */
-static read_handler read_handlers[MAX_HANDLERS] = { 0 };
+static read_handler read_handlers[MAX_HANDLERS];
 static int n_read_handlers = 0;
 
 void gb_cpu_register_read_handler (read_handler h)
 {
 	read_handlers[n_read_handlers] = h;
 	n_read_handlers ++;
+	read_handlers[n_read_handlers] = 0;
 }
 
 static uint8_t mem_read (uint16_t address)
@@ -102,13 +107,14 @@ static uint8_t mem_read (uint16_t address)
 #define RAM(a) mem_read (a)
 
 /* Current store handlers. */
-static store_handler store_handlers[MAX_HANDLERS] = { 0 };
+static store_handler store_handlers[MAX_HANDLERS];
 static int n_store_handlers = 0;
 
 void gb_cpu_register_store_handler (store_handler h)
 {
 	store_handlers[n_store_handlers] = h;
 	n_store_handlers ++;
+	store_handlers[n_store_handlers] = 0;
 }
 
 /**
@@ -277,6 +283,9 @@ void and (uint8_t n)
 
 void or (uint8_t n)
 {
+#ifdef DEBUG
+	printf ("     %.2X | %.2X\n", A, n);
+#endif
 	A |= n;
 	F = 0;
 	if (A == 0)
@@ -293,6 +302,9 @@ void xor (uint8_t n)
 
 void cp (uint8_t n)
 {
+#ifdef DEBUG
+	printf ("    %.2X == %.2X\n", A, n);
+#endif
 	F = F_N;
 	if (A == n)
 		F |= F_Z;
@@ -305,7 +317,7 @@ void cp (uint8_t n)
 void inc (uint8_t *n)
 {
 	uint8_t tmp = *n;
-	(*n)++;
+	(*n) ++;
 	F &= ~F_N;
 	if (*n == 0)
 		F |= F_Z;
@@ -325,7 +337,13 @@ void dec16 (uint16_t* nn)
 
 void dec (uint8_t *n)
 {
+	uint8_t n_ = *n;
 	(* n) --;
+	F |= F_N;
+	if ((* n) == 0)
+		F |= F_Z;
+	if ((n_ & 0x0F) < 1)
+		F |= F_H;
 }
 
 void swap (uint8_t* n)
@@ -402,19 +420,21 @@ void scf ()
 void nop ()
 {
 	// nada
+	//pc ++;
 }
 
 void halt ()
 {
 	// power down cpu until an interrupt occurs.
 	// nada?
+	//pc ++;
 }
 
 void stop ()
 {
 	// halt cpu & display until button pressed
 	// nada ?
-	pc ++;
+	//pc ++;
 }
 
 void di ()
@@ -533,7 +553,15 @@ void res (uint8_t* r, uint8_t b)
 	(*r) &= ~(1 << b);
 }
 
+#ifdef DEBUG
+void jp (uint16_t nn)
+{
+	printf ("   JUMP @ %.4X\n", nn);
+	pc = nn;
+}
+#else
 #define jp(nn) pc = nn
+#endif
 
 enum jump_cc
 {
@@ -554,7 +582,15 @@ void jpcc (enum jump_cc cc, uint16_t nn)
 	}
 }
 
+#ifdef DEBUG
+void jr (int8_t n)
+{
+	printf ("   JUMP @ PC +/- %d (=> %.4X)\n", n, pc + n);
+	pc += n;
+}
+#else
 #define jr(n) pc += n
+#endif
 
 void jrcc (enum jump_cc cc, int8_t n)
 {
@@ -653,7 +689,6 @@ int interrupt ()
 void gb_cpu_reset ()
 {
 	pc = 0x0100;
-	//pc = 0;
 	sp = 0xFFFE;
 
 	AF = 0;
@@ -671,8 +706,10 @@ void gb_cpu_reset ()
 
 	n_store_handlers = 0;
 	gb_cpu_register_store_handler (oam_dma_transf_handler);
+	read_handlers[n_read_handlers] = 0;
 
 	n_read_handlers = 0;
+	read_handlers[n_read_handlers] = 0;
 }
 
 /**
@@ -688,12 +725,11 @@ int gb_cpu_step ()
 
 	// load an opcode and perform the operation associated,
 	// step the PC and clock the number of cycles
-	uint8_t opcode = RAM (pc ++);
+	uint8_t opcode = RAM (pc++);
 	operation op = operations[opcode];
 #ifdef DEBUG
-	printf ("$%.4X: %s\n", pc, op.name);
+	printf ("$%.4X: %s\n", pc-1, op.name);
 #endif
 	op.instruction ();
-	//pc += op.bytes;
 	return cc + op.cc;
 }

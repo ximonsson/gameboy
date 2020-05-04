@@ -1,5 +1,11 @@
 #include "gameboy/ppu.h"
 #include "gameboy/cpu.h"
+#include "gb.h"
+#include <string.h>
+
+#ifdef DEBUG
+#include<stdio.h>
+#endif
 
 /* Registers --------------------------------------------------- */
 static uint8_t* scy_;
@@ -33,7 +39,9 @@ static uint8_t* obp1_;
  * Bit 0 - BG/Window Display/Priority     (0=Off, 1=On)
  */
 
-static uint8_t lcdc;
+#define LCDC_LOC 0xFF40
+static uint8_t* lcdc_;
+#define lcdc (* lcdc_)
 
 #define LCD_ENABLED ((lcdc & 0x80) == 0x80)
 #define WIN_TILE_MAP (0x9800 | ((lcdc & 0x40) << 4))
@@ -77,17 +85,23 @@ static uint8_t* status_;
 
 #define SET_MODE(x) { status &= 0xFC; status |= x; }
 
+/* OAM data pointer */
+static uint8_t* oam;
+
 /* switchable screen buffer for rendering. */
-static uint8_t screen_buffer1_[GB_FRAME];
-static uint8_t screen_buffer2_[GB_FRAME];
+static uint8_t screen_buffer1_[GB_LCD_WIDTH * GB_LCD_HEIGHT * 3];
+static uint8_t screen_buffer2_[GB_LCD_WIDTH * GB_LCD_HEIGHT * 3];
 static uint8_t* lcd;
 
 const uint8_t* gb_ppu_lcd () { return lcd; }
 
 uint8_t* vram;
 
+static uint32_t dot = 0;
+
 void gb_ppu_reset ()
 {
+	lcdc_   = gb_cpu_mem (LCDC_LOC);
 	status_ = gb_cpu_mem (STATUS_LOC);
 	scy_    = gb_cpu_mem (0xFF42);
 	scx_    = gb_cpu_mem (0xFF43);
@@ -100,34 +114,129 @@ void gb_ppu_reset ()
 
 	lcd = screen_buffer1_;
 	vram = gb_cpu_mem (VRAM_LOC);
+	oam = gb_cpu_mem (OAM_LOC);
+	dot = 0;
 }
 
-static uint16_t dot = 0;
+/* monochrome palett. */
+const uint8_t SHADES [4][3] =
+{
+	{ 0xFF, 0xFF, 0xFF },
+	{ 0xAA, 0xAA, 0xAA },
+	{ 0x55, 0x55, 0x55 },
+	{ 0x00, 0x00, 0x00 },
+};
 
-static void draw ()
+
+static void print_sprite (uint8_t* spr)
 {
 
 }
 
+static void draw_obj (uint8_t x, uint8_t y)
+{
+
+}
+
+static void draw_win (uint8_t x, uint8_t y)
+{
+
+}
+
+static void draw_bg (uint8_t x, uint8_t y)
+{
+	// pointer to BG tile map
+	uint8_t* tp = vram + (BG_TILE_MAP - 0x8000);
+
+	// read BG tile map
+	uint8_t bgx = x + scx; uint8_t bgy = y + scy;
+	// TODO wrap around
+	uint16_t t = (bgx & 0xF8) + ((bgy & 0xF8) << 5); // (x - x mod 8) + (y - y mod 8) * 32
+	uint8_t b = tp[t];
+
+	// get tile
+	uint16_t tn = b;
+	if (BG_WIN_TILE == 0x8800)
+		tn = 0x1000 + ((int8_t) b);
+	uint8_t* tile = vram + tn;
+
+	// get color within tile
+	uint8_t tx = x & 0x7, ty = y & 0x7;
+	uint8_t msb = tile[ty << 1]; // y mod 8 mul 2
+	uint8_t lsb = tile[(ty << 1) | 1]; // y mod 8 mul 2 + 1
+	uint8_t c = ((msb >> (tx - 1)) | (lsb >> tx)) & 0x3; // color value 0-3
+	const uint8_t* rgb = SHADES[(bgp >> (c << 1)) & 0x3];
+
+	memcpy(&lcd[(y * GB_LCD_WIDTH + x) * 3], rgb, 3);
+}
+
+/* draw in the LCD at position x, y. */
+static void draw (uint8_t x, uint8_t y)
+{
+	// BG
+	draw_bg (x, y);
+
+	// WIN
+	if (WIN_DISP_ENABLED)
+	{
+		draw_win (x, y);
+	}
+
+	// Sprite
+	if (OBJ_ENABLED)
+	{
+		draw_obj (x, y);
+	}
+}
+
+/* step the PPU one dot. */
 static void step ()
 {
+	// TODO: if we write to LY this will overwrite it. not good
 	ly = dot / GB_SCANLINE;
+	uint16_t x = dot % GB_SCANLINE;
 
+	// LYC=LY
 	if (lyc == ly)
 	{
 		status |= 0x04;
-		if (LYC_EQ_LY_INT)
+		if (x == 0 && LYC_EQ_LY_INT)
 			gb_cpu_flag_interrupt (INT_FLAG_LCD_STAT);
 	}
+	else status &= ~0x04;
 
 	// VBLANK
-	if (ly == 144) {
+	if (ly == 144 && x == 0) {
 		SET_MODE (MODE_VBLANK);
+
 		if (MODE_1_VBLANK_INT)
+		{
+#ifdef DEBUG
+			printf ("calling VBLANK interrupt\n");
+#endif
 			gb_cpu_flag_interrupt (INT_FLAG_VBLANK);
+		}
+	}
+	else if (ly < 144)
+	{
+		if (x == 0)
+		{
+			SET_MODE (MODE_SEARCH_OAM);
+		}
+		else if (x == 80)
+		{
+			SET_MODE (MODE_TRANSFER_LCD);
+		}
+		else if (x > GB_LCD_WIDTH + 80)
+		{
+			SET_MODE (MODE_HBLANK);
+		}
 	}
 
-	draw ();
+	if (LCD_ENABLED && ly < GB_LCD_HEIGHT && (x - 80) < GB_LCD_WIDTH && (x - 80) >= 0)
+	{
+		draw (x - 80, ly);
+	}
 
 	dot ++; dot %= GB_FRAME;
 }

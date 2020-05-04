@@ -224,7 +224,7 @@ void quit_opengl ()
 void draw ()
 {
 	const uint8_t* screen = gb_lcd ();
-	glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, 256, 240, 0, GL_RGB, GL_UNSIGNED_BYTE, screen);
+	glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, GB_LCD_WIDTH, GB_LCD_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, screen);
 
 	glClear (GL_COLOR_BUFFER_BIT);
 	glDrawArrays (GL_TRIANGLES, 0, 6);
@@ -347,7 +347,7 @@ static void handle_events ()
 int main (int argc, char** argv)
 {
 	// init
-	init_screen (256 * 2.5, 240 * 2.5);
+	init_screen (GB_LCD_WIDTH * 2.5, GB_LCD_HEIGHT * 2.5);
 	init_opengl ();
 
 	audio_init (SAMPLE_RATE);
@@ -367,7 +367,7 @@ int main (int argc, char** argv)
 		draw ();
 		audio_play ();
 		handle_events ();
-		running = 0;
+		//running = 0;
 	}
 
 	// deinit
