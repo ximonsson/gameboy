@@ -36,10 +36,10 @@ static uint8_t* obp1_;
 static uint8_t lcdc;
 
 #define LCD_ENABLED ((lcdc & 0x80) == 0x80)
-#define WIN_TILE_MAP (lcdc & 0x40)
+#define WIN_TILE_MAP (0x9800 | ((lcdc & 0x40) << 4))
 #define WIN_DISP_ENABLED ((lcdc & 0x20) == 0x20)
-#define BG_WIN_TILE (lcdc & 0x10)
-#define BG_TILE_MAP (lcdc & 0x08)
+#define BG_WIN_TILE (0x8800 & ~((lcdc & 0x10) << 7))
+#define BG_TILE_MAP (0x9800 | ((lcdc & 0x80) << 7))
 #define OBJ_SIZE (lcdc & 0x04)
 #define OBJ_ENABLED (lcdc & 0x02)
 #define BG_WIN_PRIO (lcdc & 0x01)
@@ -69,11 +69,13 @@ static uint8_t* status_;
 #define MODE_0_HBLANK_INT ((status & 0x08) == 0x10)
 #define LYC_EQ_LY ((status & 0x04) == 0x04)
 
-#define STATUS (status & 0x03)
-#define MODE_HBLANK STATUS == 0
-#define MODE_VBLANK STATUS == 1
-#define MODE_SEARCH_OAM STATUS == 2
-#define MODE_TRANSFER_LCD STATUS == 3
+#define MODE (status & 0x03)
+#define MODE_HBLANK MODE == 0
+#define MODE_VBLANK MODE == 1
+#define MODE_SEARCH_OAM MODE == 2
+#define MODE_TRANSFER_LCD MODE == 3
+
+#define SET_MODE(x) { status &= 0xFC; status |= x; }
 
 /* switchable screen buffer for rendering. */
 static uint8_t screen_buffer1_[GB_FRAME];
@@ -102,28 +104,32 @@ void gb_ppu_reset ()
 
 static uint16_t dot = 0;
 
+static void draw ()
+{
+
+}
+
 static void step ()
 {
-	dot ++; dot += GB_FRAME;
-
-	scx ++;
+	ly = dot / GB_SCANLINE;
 
 	if (lyc == ly)
 	{
 		status |= 0x04;
-		gb_cpu_flag_interrupt (INT_FLAG_LCD_STAT);
+		if (LYC_EQ_LY_INT)
+			gb_cpu_flag_interrupt (INT_FLAG_LCD_STAT);
 	}
-
-	ly %= GB_SCANLINE;
 
 	// VBLANK
 	if (ly == 144) {
-		status &= 0xFC;
-		status |= 0x01;
+		SET_MODE (MODE_VBLANK);
 		if (MODE_1_VBLANK_INT)
 			gb_cpu_flag_interrupt (INT_FLAG_VBLANK);
 	}
 
+	draw ();
+
+	dot ++; dot %= GB_FRAME;
 }
 
 void gb_ppu_step (int cc)
