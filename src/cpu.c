@@ -214,27 +214,23 @@ void add (uint8_t n)
 void addhl (uint16_t n)
 {
 	uint32_t hl = HL + n;
-
 	F &= ~(F_N | F_H | F_C);
 	if (hl > 0xFFFF)
-		F |= F_H;
-	if (((HL ^ n ^ hl) & 0x1000) == 0x1000) // half carry
 		F |= F_C;
-
-	HL = n;
+	if (((HL ^ n ^ hl) & 0x1000) == 0x1000) // half carry
+		F |= F_H;
+	HL = hl;
 }
 
 void addsp ()
 {
 	int8_t n = RAM (pc ++);
 	uint32_t sp_ = sp + n;
-
 	F = 0;
 	if (sp_ > 0xFFFF)
-		F |= F_H;
-	if (((sp ^ n ^ sp_) & 0x1000) == 0x1000) // half carry
 		F |= F_C;
-
+	if (((sp ^ n ^ sp_) & 0x1000) == 0x1000) // half carry
+		F |= F_H;
 	sp = sp_;
 }
 
@@ -746,12 +742,13 @@ int gb_cpu_step ()
 	printf ("$%.4X: ", pc);
 #endif
 	assert (pc < 0x8000 || pc >= 0xFF80);
-	uint8_t opcode = RAM (pc++);
-	operation op = operations[opcode];
+	uint8_t opcode = RAM (pc ++);
+	const operation* op = &operations[opcode];
 #ifdef DEBUG
+	if (opcode == 0xCB) op = &operations_cb[RAM (pc ++)]; // hijack in debug mode so we can print the operation
 	printf ("%-20s AF = x%.4X BC = x%.4X DE = x%.4X SP = x%.4X HL = x%.4X IF = x%.2X IE = 0x%.2X IME = %d\n",
-			op.name, AF, BC, DE, SP, HL, IF, IE, ime);
+			op->name, AF, BC, DE, SP, HL, IF, IE, ime);
 #endif
-	op.instruction ();
-	return cc + op.cc;
+	op->instruction ();
+	return cc + op->cc;
 }
