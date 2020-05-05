@@ -151,7 +151,7 @@ static int oam_dma_transf_handler (uint16_t address, uint8_t v)
 void stack_push (uint16_t v)
 {
 #ifdef DEBUG
-	printf ("    PUSHing %.4X [%.4X]\n", v, sp);
+	printf ("    PUSH %.4X @ %.4X\n", v, sp);
 #endif
 	STORE (sp--, v >> 8); // msb
 	STORE (sp--, v);      // lsb
@@ -167,7 +167,7 @@ uint16_t stack_pop ()
 	uint16_t lo = RAM (++sp);
 	uint16_t hi = RAM (++sp);
 #ifdef DEBUG
-	printf ("    POPed %.4X\n", (hi << 8) | lo);
+	printf ("    POP %.4X\n", (hi << 8) | lo);
 #endif
 	return (hi << 8) | lo;
 }
@@ -331,7 +331,7 @@ void inc (uint8_t *n)
 {
 	uint8_t tmp = *n;
 	(*n) ++;
-	F &= ~F_N;
+	F &= ~(F_N | F_Z);
 	if (*n == 0)
 		F |= F_Z;
 	if ((tmp & 0x10) == 0 && (*n & 0x10) == 0x10)
@@ -352,6 +352,7 @@ void dec (uint8_t *n)
 {
 	(* n) --;
 	F |= F_N;
+	F &= ~F_Z;
 	if ((* n) == 0)
 		F |= F_Z;
 	if (((*n) & 0x0F) == 0x0F)
@@ -549,7 +550,7 @@ void srl (uint8_t* n)
 
 void bit (uint8_t r, uint8_t b)
 {
-	F &= ~F_N;
+	F &= ~(F_N | F_Z);
 	F |= F_H;
 	if (((1 << b) & r) == 0)
 		F |= F_Z;
@@ -633,10 +634,7 @@ void rst (uint8_t n)
 	call (n);
 }
 
-void ret ()
-{
-	jp (POP ());
-}
+#define ret() jp (POP ())
 
 void retcc (enum jump_cc cc)
 {
@@ -660,6 +658,9 @@ void reti ()
 
 void gb_cpu_flag_interrupt (interrupt_flag f)
 {
+#ifdef DEBUG
+	printf ("Interrupt x%.4X requested\n", f);
+#endif
 	IF |= f;
 }
 
@@ -685,8 +686,12 @@ int interrupt ()
 		if (IF & (1 << b) && IE & (1 << b))
 		{
 			ime = 0;
+			IF &= ~(1 << b);
 			PUSH (pc);
 			pc = 0x40 + 0x8 * b;
+#ifdef DEBUG
+			printf (" [interrupt] > calling handler @ $%.4X\n", pc);
+#endif
 			return 0;
 		}
 	}
@@ -735,14 +740,17 @@ int gb_cpu_step ()
 	// first check any interrupts
 	if (interrupt () == 0) cc += 5;
 
-	assert (pc < 0x8000);
-
 	// load an opcode and perform the operation associated,
 	// step the PC and clock the number of cycles
+#ifdef DEBUG
+	printf ("$%.4X: ", pc);
+#endif
+	assert (pc < 0x8000 || pc >= 0xFF80);
 	uint8_t opcode = RAM (pc++);
 	operation op = operations[opcode];
 #ifdef DEBUG
-	printf ("$%.4X: %-20s AF = x%.4X BC = x%.4X DE = x%.4X SP = x%.4X HL = x%.4X IF = x%.2X IE = 0x%.2X \n", pc-1, op.name, AF, BC, DE, SP, HL, IF, IE);
+	printf ("%-20s AF = x%.4X BC = x%.4X DE = x%.4X SP = x%.4X HL = x%.4X IF = x%.2X IE = 0x%.2X IME = %d\n",
+			op.name, AF, BC, DE, SP, HL, IF, IE, ime);
 #endif
 	op.instruction ();
 	return cc + op.cc;
