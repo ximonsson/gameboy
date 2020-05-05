@@ -4,7 +4,7 @@
 #include <string.h>
 
 #ifdef DEBUG
-#include<stdio.h>
+#include <stdio.h>
 #endif
 
 /* Registers --------------------------------------------------- */
@@ -146,6 +146,38 @@ static void draw_win (uint8_t x, uint8_t y)
 
 }
 
+static uint8_t color (uint16_t tilen, uint8_t x, uint8_t y)
+{
+	uint8_t* tile = vram + tilen;
+	// get color within tile
+	y <<= 1;
+	uint8_t msb = tile[y]; // y mod 8 mul 2
+	uint8_t lsb = tile[y | 1]; // y mod 8 mul 2 + 1
+	uint8_t c = ((msb >> (x - 1)) | (lsb >> x)) & 0x3; // color value 0-3
+	return c;
+}
+
+#ifdef DEBUG
+static void print_tile (uint16_t t)
+{
+	uint8_t c;
+	for (uint8_t y = 0; y < 8; y ++)
+	{
+		for (uint8_t x = 0; x < 8; x ++)
+		{
+			c = color (t, x, y);
+			switch (c)
+			{
+				case 0: printf ("."); break;
+				default: printf ("%d", c); break;
+			}
+		}
+		printf ("\n");
+	}
+	printf ("\n");
+}
+#endif
+
 static void draw_bg (uint8_t x, uint8_t y)
 {
 	// pointer to BG tile map
@@ -161,13 +193,8 @@ static void draw_bg (uint8_t x, uint8_t y)
 	uint16_t tn = b;
 	if (BG_WIN_TILE == 0x8800)
 		tn = 0x1000 + ((int8_t) b);
-	uint8_t* tile = vram + tn;
 
-	// get color within tile
-	uint8_t tx = x & 0x7, ty = y & 0x7;
-	uint8_t msb = tile[ty << 1]; // y mod 8 mul 2
-	uint8_t lsb = tile[(ty << 1) | 1]; // y mod 8 mul 2 + 1
-	uint8_t c = ((msb >> (tx - 1)) | (lsb >> tx)) & 0x3; // color value 0-3
+	uint8_t c = color (tn, x & 0x7, y & 0x7);
 	const uint8_t* rgb = SHADES[(bgp >> (c << 1)) & 0x3];
 
 	memcpy(&lcd[(y * GB_LCD_WIDTH + x) * 3], rgb, 3);
@@ -211,11 +238,8 @@ static void step ()
 	// VBLANK
 	if (ly == 144 && x == 0) {
 		SET_MODE (MODE_VBLANK);
-
 		if (MODE_1_VBLANK_INT)
-		{
 			gb_cpu_flag_interrupt (INT_FLAG_VBLANK);
-		}
 	}
 	else if (ly < 144)
 	{
