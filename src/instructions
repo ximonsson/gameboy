@@ -555,7 +555,7 @@ JPCC         JP_CC_Z,nn      CA        12
 JPCC         JP_CC_NC,nn     D2        12
 JPCC         JP_CC_C,nn      DA        12
 # JP (HL)
-JP           (HL)            E9         4
+JP           HL              E9         4
 # JR n
 JR           n               18         8
 # JR cc,n
