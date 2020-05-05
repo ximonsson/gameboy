@@ -229,7 +229,7 @@ end
 io.write("};\n")
 
 -- create the special CB instruction that runs instruction from the `operations_cb` map
-io.write("void __cbxx__() { operations_cb[pc ++].instruction(); }\n")
+io.write("void __cbxx__() { uint8_t op = RAM (pc ++); operations_cb[op].instruction(); }\n")
 operations[0xCB] = {
 	["inst"] = "CBXX",
 	["asm"] = "-- CBXX --",
