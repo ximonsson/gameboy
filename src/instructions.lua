@@ -27,6 +27,10 @@ function call_ld(instruction, params)
 	-- (n) : $FF00 | RAM (pc ++)
 	if string.match(params, "%(n%)") then
 		c = "uint16_t n = 0xFF00 | RAM (pc ++); "
+	-- (r) : $FF00 | r
+	elseif string.match(params, "%(%a%)") then
+		c = "uint16_t nn = 0xFF00 | C; "
+		params = string.gsub(params, "(%(%a%))", "(nn)")
 	-- (nn)/nn : RAM (pc ++) | (RAM (pc ++) << 8)
 	elseif string.match(params, "nn") then
 		c = "uint16_t nn = RAM (pc ++); nn |= (RAM (pc ++) << 8); "
@@ -38,6 +42,8 @@ function call_ld(instruction, params)
 	-- if source is in memory we need to make a RAM call
 	if string.match(params, ",%(%a%a?%)$") then
 		params = params:gsub("(.+),(%(%a%a?%))", "%1,RAM %2")
+	--elseif string.match(params, ",%(%a%)$") then
+		--params = params:gsub("(.+),(%(%a)%))", "%1,RAM(0xFF00 | %2)")
 	end
 
 	-- storing to memory or not
