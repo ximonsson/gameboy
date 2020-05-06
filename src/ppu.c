@@ -147,7 +147,7 @@ static void draw_win (uint8_t x, uint8_t y)
 static uint8_t color (uint8_t n, uint8_t x, uint8_t y)
 {
 	uint8_t* tile = vram + (n << 4);
-	/*
+	//*
 	if (BG_WIN_TILE == 0x8800)
 	{
 		int16_t n_ = ((int8_t) n) << 4;
@@ -228,6 +228,8 @@ static void draw (uint8_t x, uint8_t y)
 /* step the PPU one dot. */
 static void step ()
 {
+	if (!LCD_ENABLED) return;
+
 	// TODO: if we write to LY this will overwrite it. not good
 	ly = dot / GB_SCANLINE;
 	uint16_t x = dot % GB_SCANLINE;
@@ -263,7 +265,7 @@ static void step ()
 		}
 	}
 
-	if (LCD_ENABLED && ly < GB_LCD_HEIGHT && (x - 80) < GB_LCD_WIDTH && (x - 80) >= 0)
+	if (ly < GB_LCD_HEIGHT && (x - 80) < GB_LCD_WIDTH && (x - 80) >= 0)
 	{
 		draw (x - 80, ly);
 	}
