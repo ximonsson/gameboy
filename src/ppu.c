@@ -49,7 +49,7 @@ static uint8_t* lcdc_;
 #define WIN_TILE_MAP (0x9800 | ((lcdc & 0x40) << 4))
 #define WIN_DISP_ENABLED ((lcdc & 0x20) == 0x20)
 #define BG_WIN_TILE (0x8800 & ~((lcdc & 0x10) << 7))
-#define BG_TILE_MAP (0x9800 | ((lcdc & 0x80) << 7))
+#define BG_TILE_MAP (0x9800 | ((lcdc & 0x08) << 7))
 #define OBJ_SIZE (lcdc & 0x04)
 #define OBJ_ENABLED (lcdc & 0x02)
 #define BG_WIN_PRIO (lcdc & 0x01)
@@ -176,6 +176,11 @@ static void print_tile (uint16_t t)
 	}
 	printf ("\n");
 }
+
+static void print_bg (uint8_t bg)
+{
+
+}
 #endif
 
 static void draw_bg (uint8_t x, uint8_t y)
@@ -184,7 +189,7 @@ static void draw_bg (uint8_t x, uint8_t y)
 	uint8_t* tp = vram + (BG_TILE_MAP - 0x8000);
 
 	// read BG tile map
-	uint8_t bgx = x + scx; uint8_t bgy = y + scy;
+	uint8_t bgx = x + scx, bgy = y + scy;
 	// TODO wrap around
 	uint16_t t = (bgx & 0xF8) + ((bgy & 0xF8) << 5); // (x - x mod 8) + (y - y mod 8) * 32
 	uint8_t b = tp[t];
