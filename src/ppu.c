@@ -91,9 +91,8 @@ static uint8_t* status_;
 static uint8_t* oam;
 
 /* switchable screen buffer for rendering. */
-static uint8_t screen_buffer1_[GB_LCD_WIDTH * GB_LCD_HEIGHT * 3];
-static uint8_t screen_buffer2_[GB_LCD_WIDTH * GB_LCD_HEIGHT * 3];
-static uint8_t* lcd;
+static uint8_t lcd_buffer[GB_LCD_WIDTH * GB_LCD_HEIGHT * 3];
+static uint8_t lcd[GB_LCD_WIDTH * GB_LCD_HEIGHT * 3];
 
 const uint8_t* gb_ppu_lcd () { return lcd; }
 
@@ -115,7 +114,6 @@ void gb_ppu_reset ()
 	obp0_   = gb_cpu_mem (0xFF48);
 	obp1_   = gb_cpu_mem (0xFF49);
 
-	lcd = screen_buffer1_;
 	vram = gb_cpu_mem (VRAM_LOC);
 	oam = gb_cpu_mem (OAM_LOC);
 	dot = 0;
@@ -146,14 +144,22 @@ static void draw_win (uint8_t x, uint8_t y)
 
 }
 
-static uint8_t color (uint16_t tilen, uint8_t x, uint8_t y)
+static uint8_t color (uint8_t n, uint8_t x, uint8_t y)
 {
-	uint8_t* tile = vram + tilen;
+	uint8_t* tile = vram + (n << 4);
+	/*
+	if (BG_WIN_TILE == 0x8800)
+	{
+		int16_t n_ = ((int8_t) n) << 4;
+		tile = vram + 0x1000 + n_;
+	}
+	//*/
+
 	// get color within tile
 	y <<= 1;
-	uint8_t msb = tile[y]; // y mod 8 mul 2
-	uint8_t lsb = tile[y | 1]; // y mod 8 mul 2 + 1
-	uint8_t c = ((msb >> (x - 1)) | (lsb >> x)) & 0x3; // color value 0-3
+	uint8_t msb = tile[y]; // y mul 2
+	uint8_t lsb = tile[y | 1]; // y mul 2 add 1
+	uint8_t c = ((msb >> (6 - x)) | (lsb >> (7 - x))) & 0x3; // color value 0-3
 	return c;
 }
 
@@ -191,18 +197,13 @@ static void draw_bg (uint8_t x, uint8_t y)
 	// read BG tile map
 	uint8_t bgx = x + scx, bgy = y + scy;
 	// TODO wrap around
-	uint16_t t = (bgx & 0xF8) + ((bgy & 0xF8) << 5); // (x - x mod 8) + (y - y mod 8) * 32
-	uint8_t b = tp[t];
-
-	// get tile
-	uint16_t tn = b;
-	if (BG_WIN_TILE == 0x8800)
-		tn = 0x1000 + ((int8_t) b);
+	uint16_t t = (bgx >> 3) + ((bgy & ~0x7) << 2); // (x div 8) + (y div 8) * 32
+	uint8_t tn = tp[t];
 
 	uint8_t c = color (tn, x & 0x7, y & 0x7);
 	const uint8_t* rgb = SHADES[(bgp >> (c << 1)) & 0x3];
 
-	memcpy(&lcd[(y * GB_LCD_WIDTH + x) * 3], rgb, 3);
+	memcpy (&lcd_buffer[(y * GB_LCD_WIDTH + x) * 3], rgb, 3);
 }
 
 /* draw in the LCD at position x, y. */
@@ -267,7 +268,13 @@ static void step ()
 		draw (x - 80, ly);
 	}
 
-	dot ++; dot %= GB_FRAME;
+	dot ++;
+	if (dot > GB_FRAME)
+	{
+		memcpy (lcd, lcd_buffer, GB_LCD_HEIGHT * GB_LCD_WIDTH * 3);
+		dot %= GB_FRAME;
+	}
+
 }
 
 void gb_ppu_step (int cc)
