@@ -240,8 +240,7 @@ void adc (uint8_t n)
 #ifdef DEBUG
 	printf ("    $%.2X + $%.2X + %d\n", A, n, ((F & F_C) >> 4));
 #endif
-	n += ((F & F_C) >> 4);
-	uint16_t a = A + n;
+	uint16_t a = A + n + ((F & F_C) >> 4);
 
 	F = 0; // reset flags
 
@@ -274,17 +273,17 @@ void sbc (uint8_t n)
 #ifdef DEBUG
 	printf ("    $%.2X - $%.2X - %d\n", A, n, ((F & F_C) >> 4));
 #endif
-	uint8_t a = A;
-	n += ((F & F_C) >> 4);
-	A -= n;
+	uint16_t a = A - n - ((F & F_C) >> 4);
 
 	F = F_N;
+	if (a & 0xFF00)
+		F |= F_C;
+	if (((A ^ n ^ a) & 0x10) == 0x10) // half carry
+		F |= F_H;
+
+	A = a;
 	if (A == 0)
 		F |= F_Z;
-	if (a < n)
-		F |= F_C;
-	if ((a & 0x0F) < (n & 0x0F))
-		F |= F_H;
 }
 
 void and (uint8_t n)
@@ -335,10 +334,10 @@ void inc (uint8_t *n)
 {
 	uint8_t tmp = *n;
 	(*n) ++;
-	F &= ~(F_N | F_Z);
+	F &= ~(F_N | F_Z | F_H);
 	if (*n == 0)
 		F |= F_Z;
-	if ((tmp & 0x10) == 0 && (*n & 0x10) == 0x10)
+	if (((tmp ^ (*n) ^ 1) & 0x10) == 0x10) // half carry
 		F |= F_H;
 }
 
@@ -356,7 +355,7 @@ void dec (uint8_t *n)
 {
 	(* n) --;
 	F |= F_N;
-	F &= ~F_Z;
+	F &= ~(F_Z | F_H);
 	if ((* n) == 0)
 		F |= F_Z;
 	if (((*n) & 0x0F) == 0x0F)
