@@ -481,13 +481,15 @@ void rl (uint8_t *n)
 	uint8_t tmp = ((*n) & 0x80) >> 7;
 	(*n) <<= 1;
 	(*n) |= (F >> 4) & 1; // bit 0 = C
+
 	// reset flags
-	F &= ~(F_N | F_H | F_C);
+	F = 0;
 	F |= tmp << 4; // C = old bit 7
 	if ((*n) == 0)
 		F &= ~F_Z;
 }
-#define rla() rl(&A)
+
+#define rla() rl (&A)
 
 void rrc (uint8_t *n)
 {
