@@ -70,6 +70,11 @@ function call(instruction, params)
 		return call_ld (instruction, params)
 	end
 
+	-- POP AF is another special case that needs to always unset last 3 bits of F
+	if instruction == "POP" and params == "AF" then
+		return "pop (&AF); F &= 0xF0;"
+	end
+
 	prefix = ""
 	-- if the instruction reads immediate bytes we need to preprend this to the call
 	if params:match",?nn?$" then
@@ -114,7 +119,9 @@ function call(instruction, params)
 		params = clean_params(params)
 	end
 
-	if pointerparams[instruction] then params = "&" .. params end
+	if pointerparams[instruction] then
+		params = "&" .. params
+	end
 	return prefix .. string.format("%s (%s);", instruction:lower(), params);
 end
 
