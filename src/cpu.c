@@ -151,7 +151,7 @@ static int oam_dma_transf_handler (uint16_t address, uint8_t v)
 void stack_push (uint16_t v)
 {
 #ifdef DEBUG
-	printf ("    PUSH %.4X @ %.4X\n", v, sp);
+	printf ("    PUSH %.4X @ $%.4X\n", v, sp);
 #endif
 	STORE (sp--, v >> 8); // msb
 	STORE (sp--, v);      // lsb
@@ -201,14 +201,15 @@ void add (uint8_t n)
 	uint16_t a = A + n;
 
 	F = 0; // reset flags
-	if (a == 0)
-		F |= F_Z;
+
 	if (a > 0xFF)
 		F |= F_C;
 	if (((A ^ n ^ a) & 0x10) == 0x10) // half carry
 		F |= F_H;
 
 	A = a;
+	if (A == 0)
+		F |= F_Z;
 }
 
 void addhl (uint16_t n)
@@ -236,18 +237,22 @@ void addsp ()
 
 void adc (uint8_t n)
 {
+#ifdef DEBUG
+	printf ("    $%.2X + $%.2X + %d\n", A, n, ((F & F_C) >> 4));
+#endif
 	n += ((F & F_C) >> 4);
 	uint16_t a = A + n;
 
 	F = 0; // reset flags
-	if (a == 0)
-		F |= F_Z;
+
 	if (a > 0xFF)
 		F |= F_C;
 	if (((A ^ n ^ a) & 0x10) == 0x10) // half carry
 		F |= F_H;
 
 	A = a;
+	if (A == 0)
+		F |= F_Z;
 }
 
 void sub (uint8_t n)
@@ -266,6 +271,9 @@ void sub (uint8_t n)
 
 void sbc (uint8_t n)
 {
+#ifdef DEBUG
+	printf ("    $%.2X - $%.2X - %d\n", A, n, ((F & F_C) >> 4));
+#endif
 	uint8_t a = A;
 	n += ((F & F_C) >> 4);
 	A -= n;
@@ -723,6 +731,8 @@ void gb_cpu_reset ()
 
 	n_read_handlers = 0;
 	read_handlers[n_read_handlers] = 0;
+
+	memset (ram, 0, 1 << 16);
 }
 
 /**
@@ -741,7 +751,7 @@ int gb_cpu_step ()
 #ifdef DEBUG
 	printf ("$%.4X: ", pc);
 #endif
-	assert (pc < 0x8000 || pc >= 0xFF80);
+	//assert (pc < 0x8000 || pc >= 0xFF80);
 	uint8_t opcode = RAM (pc ++);
 	const operation* op = &operations[opcode];
 #ifdef DEBUG
