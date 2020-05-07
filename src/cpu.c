@@ -468,13 +468,13 @@ void rlc (uint8_t *n)
 	uint8_t tmp = ((*n) & 0x80) >> 7;
 	(*n) <<= 1;
 	(*n) |= tmp;
+
 	// reset flags
-	F &= ~(F_N | F_H | F_C);
+	F = 0;
 	F |= tmp << 4; // C = old bit 7
-	if ((*n) == 0)
-		F &= ~F_Z;
 }
-#define rlca() rlc(&A)
+
+#define rlca() rlc (&A)
 
 void rl (uint8_t *n)
 {
