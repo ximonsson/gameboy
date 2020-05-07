@@ -153,8 +153,8 @@ void stack_push (uint16_t v)
 #ifdef DEBUG
 	printf ("    PUSH %.4X @ $%.4X\n", v, sp);
 #endif
-	STORE (sp--, v >> 8); // msb
-	STORE (sp--, v);      // lsb
+	STORE (--sp, v >> 8); // msb
+	STORE (--sp, v);      // lsb
 }
 
 #define PUSH(v) stack_push (v)
@@ -164,8 +164,8 @@ void stack_push (uint16_t v)
  */
 uint16_t stack_pop ()
 {
-	uint16_t lo = RAM (++sp);
-	uint16_t hi = RAM (++sp);
+	uint16_t lo = RAM (sp++);
+	uint16_t hi = RAM (sp++);
 #ifdef DEBUG
 	printf ("    POP %.4X\n", (hi << 8) | lo);
 #endif
@@ -371,6 +371,7 @@ void swap (uint8_t* n)
 		F |= F_Z;
 }
 
+// TODO this one seems impossible
 void daa ()
 {
 	// this implementation is "inspired" by
@@ -380,21 +381,35 @@ void daa ()
 	//
 	// I hate this solution though; I have never seen so many if-statements
 
-	F &= ~(F_Z | F_H);
+	//*
 
-	if ((F & F_N) == 0)
+	uint16_t a = A;
+
+	F &= ~(F_Z | F_H | F_C);
+
+	if (F & F_N)
 	{
-		if ((F & F_C) || A > 0x99)
-		{
-			A += 0x60;
-			F |= F_C;
-		}
+		if (F & F_H)
+			a = (a - 0x06) & 0xFF;
+		if (F & F_C)
+			a -= 0x60;
+	}
+	else
+	{
 		if ((F & F_H) || (A & 0x0F) > 0x9)
 		{
-			A += 0x06;
-			F &= ~F_H;
+			a += 0x06;
+			//F &= ~F_H;
+		}
+		if ((F & F_C) || A > 0x9F)
+		{
+			a += 0x60;
+			//F |= F_C;
+			//F &= ~F_C;
 		}
 	}
+
+	/*
 	else if ((F & (F_C | F_H)) == (F_C | F_H))
 	{
 		A += 0x9A;
@@ -407,10 +422,46 @@ void daa ()
 	else if ((F & F_H) == F_H)
 	{
 		A += 0xFA;
-		F &= ~F_H;
 	}
+	//*/
 
+	if (a & 0x100) F |= F_C;
+	A = a;
 	if (A == 0) F |= F_Z;
+
+	/*
+	D1 = R_A >> 4;
+	D2 = R_A & 0x0F;
+	if (F_N)
+	{
+		if (F_H) D2 -= 6;
+		if (F_C) D1 -= 6;
+		if (D2>9) D2 -= 6;
+		if (D1 > 9)
+		{
+			D1 -= 6;
+			F_C = 1;
+		}
+	}
+	else
+	{
+		if (F_H) D2 += 6;
+		if (F_C) D1 += 6;
+		if (D2 > 9)
+		{
+			D2 -= 10;
+			D1++;
+		}
+		if (D1 > 9)
+		{
+			D1 -= 10;
+			F_C = 1;
+		}
+	}
+	R_A = ((D1 << 4) & 0xF0) | (D2 & 0x0F);
+	F_Z = (R_A == 0);
+	F_H = 0;
+	//*/
 }
 
 void cpl ()
@@ -567,7 +618,7 @@ void res (uint8_t* r, uint8_t b)
 #ifdef DEBUG
 void jp (uint16_t nn)
 {
-	printf ("    JUMP @ %.4X\n", nn);
+	printf ("    JUMP @ $%.4X\n", nn);
 	pc = nn;
 }
 #else
@@ -596,7 +647,7 @@ void jpcc (enum jump_cc cc, uint16_t nn)
 #ifdef DEBUG
 void jr (int8_t n)
 {
-	printf ("    JUMP @ PC +/- %d (=> %.4X)\n", n, pc + n);
+	printf ("    JUMP @ PC +/- %d (=> $%.4X)\n", n, pc + n);
 	pc += n;
 }
 #else
@@ -688,7 +739,7 @@ int interrupt ()
 			PUSH (pc);
 			pc = 0x40 + 0x8 * b;
 #ifdef DEBUG
-			printf (" [interrupt] > calling handler @ $%.4X\n", pc);
+			printf ("[interrupt] ==> calling handler @ $%.4X\n", pc);
 #endif
 			return 0;
 		}
@@ -703,7 +754,7 @@ int interrupt ()
  */
 void gb_cpu_reset ()
 {
-	pc = 0x0100;
+	pc = 0x100;
 	sp = 0xFFFE;
 
 	AF = 0;
