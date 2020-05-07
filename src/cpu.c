@@ -51,21 +51,10 @@ enum flags
 	F_C = 0x10,
 };
 
-/* Interrupt Master Enable flag (IME). */
-static int ime = 0;
-
 /* Memory ------------------------------------------------------------------------------------------------ */
 
 /* RAM memory. */
 static uint8_t ram[1 << 16];
-
-/* Interrupt Enable (IE) register. Is located at RAM memory $FFFF. */
-static uint8_t* reg_ie = ram + 0xFFFF;
-#define IE (* reg_ie)
-
-/* Interrupt Flag (IF) register. Is located at RAM memory $FF0F. */
-static uint8_t* reg_if = ram + 0xFF0F;
-#define IF (* reg_if)
 
 uint8_t* gb_cpu_mem (uint16_t p) { return ram + p; }
 
@@ -174,7 +163,77 @@ uint16_t stack_pop ()
 
 #define POP() stack_pop ()
 
-/* CPU Instructions */
+/* Special Registers ---------------------------------------------------------------- */
+
+/* HALT flag. */
+static uint8_t f_halt = 0;
+
+/* Interrupt Master Enable flag (IME). */
+static int ime = 0;
+
+/* Interrupt Enable (IE) register. Is located at RAM memory $FFFF. */
+static uint8_t* reg_ie = ram + 0xFFFF;
+#define IE (* reg_ie)
+
+/* Interrupt Flag (IF) register. Is located at RAM memory $FF0F. */
+static uint8_t* reg_if = ram + 0xFF0F;
+#define IF (* reg_if)
+
+/* Divider register */
+#define DIV_LOC 0xFF04
+static uint8_t* reg_div = ram + DIV_LOC;
+#define DIV (* reg_div)
+
+/* writing to the DIV register resets it. */
+static int write_div_h (uint16_t addr, uint8_t n)
+{
+	if (addr == DIV_LOC)
+	{
+		DIV = 0;
+		return 1;
+	}
+	return 0;
+}
+
+static void inc_div (int cc)
+{
+	// TODO check timing
+	DIV ++;
+}
+
+/* Time counter register. */
+static uint8_t* reg_tima = ram + 0xFF05;
+#define TIMA (* reg_tima)
+
+/* Timer Modulo register. */
+static uint8_t* reg_tma = ram + 0xFF06;
+#define TMA (* reg_tma)
+
+/* Timer Control register. */
+static uint8_t* reg_tac = ram + 0xFF07;
+#define TAC (* reg_tac)
+
+static uint16_t timer_cc[4] = { 1024, 16, 64, 256 };
+
+static void inc_tima (int cc)
+{
+	if (TAC & 0x04)
+	{
+		uint16_t cc = timer_cc[TAC & 0x3];
+
+		// TODO
+		// check timing
+
+		if (++TIMA == 0)
+		{
+			TIMA = TMA;
+			gb_cpu_flag_interrupt (INT_FLAG_TIMER);
+		}
+	}
+
+}
+
+/* CPU Instructions ----------------------------------------------------------------- */
 
 // NOTE : LD instructions are not implemented here; they are all implemented in the autogeneretade code instead.
 
@@ -493,7 +552,7 @@ void nop ()
 void halt ()
 {
 	// power down cpu until an interrupt occurs.
-	// nada?
+	f_halt = 1;
 }
 
 void stop ()
@@ -651,7 +710,7 @@ void jr (int8_t n)
 	pc += n;
 }
 #else
-#define jr(n) pc += n
+#define jr(n) pc += (int8_t) n
 #endif
 
 void jrcc (enum jump_cc cc, int8_t n)
@@ -734,7 +793,7 @@ int interrupt ()
 	{
 		if (IF & (1 << b) && IE & (1 << b))
 		{
-			ime = 0;
+			ime = f_halt = 0;
 			IF &= ~(1 << b);
 			PUSH (pc);
 			pc = 0x40 + 0x8 * b;
@@ -766,7 +825,7 @@ void gb_cpu_reset ()
 	//DE = 0x00D8;
 	//HL = 0x014D;
 
-	ime = 0;
+	ime = f_halt = 0;
 
 	// reset memory read/write handlers and add the default ones.
 
@@ -791,19 +850,25 @@ int gb_cpu_step ()
 	// first check any interrupts
 	if (interrupt () == 0) cc += 5;
 
+	if (f_halt) return 1;
+
 	// load an opcode and perform the operation associated,
 	// step the PC and clock the number of cycles
 #ifdef DEBUG
 	printf ("$%.4X: ", pc);
 #endif
-	//assert (pc < 0x8000 || pc >= 0xFF80);
 	uint8_t opcode = RAM (pc ++);
 	const operation* op = &operations[opcode];
-#ifdef DEBUG
 	if (opcode == 0xCB) op = &operations_cb[RAM (pc ++)]; // hijack in debug mode so we can print the operation
+#ifdef DEBUG
 	printf ("%-20s AF = x%.4X BC = x%.4X DE = x%.4X SP = x%.4X HL = x%.4X IF = x%.2X IE = 0x%.2X IME = %d\n",
 			op->name, AF, BC, DE, SP, HL, IF, IE, ime);
 #endif
 	op->instruction ();
-	return cc + op->cc;
+	cc += op->cc;
+
+	inc_div (cc);
+	inc_tima (cc);
+
+	return cc;
 }
