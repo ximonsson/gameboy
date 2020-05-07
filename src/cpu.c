@@ -443,14 +443,12 @@ void halt ()
 {
 	// power down cpu until an interrupt occurs.
 	// nada?
-	//pc ++;
 }
 
 void stop ()
 {
 	// halt cpu & display until button pressed
 	// nada ?
-	//pc ++;
 }
 
 void di ()
@@ -463,19 +461,6 @@ void ei ()
 	ime = 1;
 }
 
-void rlc (uint8_t *n)
-{
-	uint8_t tmp = ((*n) & 0x80) >> 7;
-	(*n) <<= 1;
-	(*n) |= tmp;
-
-	// reset flags
-	F = 0;
-	F |= tmp << 4; // C = old bit 7
-}
-
-#define rlca() rlc (&A)
-
 void rl (uint8_t *n)
 {
 	uint8_t tmp = ((*n) & 0x80) >> 7;
@@ -483,13 +468,26 @@ void rl (uint8_t *n)
 	(*n) |= (F >> 4) & 1; // bit 0 = C
 
 	// reset flags
-	F = 0;
-	F |= tmp << 4; // C = old bit 7
+	F = tmp << 4; // C = old bit 7
 	if ((*n) == 0)
-		F &= ~F_Z;
+		F |= F_Z;
 }
 
-#define rla() rl (&A)
+#define rla() { rl (&A); F &= ~F_Z; }
+
+void rlc (uint8_t *n)
+{
+	uint8_t tmp = ((*n) & 0x80) >> 7;
+	(*n) <<= 1;
+	(*n) |= tmp;
+
+	// reset flags
+	F = tmp << 4; // C = old bit 7
+	if ((*n) == 0)
+		F |= F_Z;
+}
+
+#define rlca() { rlc (&A); F &= ~F_Z; }
 
 void rrc (uint8_t *n)
 {
@@ -497,12 +495,12 @@ void rrc (uint8_t *n)
 	(*n) >>= 1;
 	(*n) |= tmp << 7; // bit 0 = old bit 7
 	// reset flags
-	F &= ~(F_N | F_H | F_C);
-	F |= tmp << 4; // C = old bit 0
+	F = tmp << 4; // C = old bit 0
 	if ((*n) == 0)
-		F &= ~F_Z;
+		F |= F_Z;
 }
-#define rrca() rrc(&A)
+
+#define rrca() { rrc (&A); F &= ~F_Z; }
 
 void rr (uint8_t *n)
 {
@@ -510,47 +508,42 @@ void rr (uint8_t *n)
 	(*n) >>= 1;
 	(*n) |= (F << 3) & 0x80; // bit 0 = carry
 	// reset flags
-	F &= ~(F_N | F_H | F_C);
-	F |= tmp << 4; // C = old bit 0
+	F = tmp << 4; // C = old bit 0
 	if ((*n) == 0)
-		F &= ~F_Z;
+		F |= F_Z;
 }
-#define rra() rr(&A)
+
+#define rra() { rr (&A); F &= ~F_Z; }
 
 void sla (uint8_t *n)
 {
 	// reset flags
-	F &= ~(F_N | F_H | F_C);
-	F |= ((*n) & 0x80) >> 3; // C = old bit 7
-
+	F = ((*n) & 0x80) >> 3; // C = old bit 7
 	(*n) <<= 1;
 	if ((*n) == 0)
-		F &= ~F_Z;
+		F |= F_Z;
 }
 
 void sra (uint8_t* n)
 {
 	// reset flags
-	F &= ~(F_N | F_H | F_C);
-	F |= ((*n) & 1) << 4; // C = old bit 0
+	F = ((*n) & 1) << 4; // C = old bit 0
 
 	uint8_t msb = (*n) & 0x80;
 	(*n) >>= 1;
 	(*n) |= msb; // MSB does not change
 
 	if ((*n) == 0)
-		F &= ~F_Z;
+		F |= F_Z;
 }
 
 void srl (uint8_t* n)
 {
 	// reset flags
-	F &= ~(F_N | F_H | F_C);
-	F |= ((*n) & 1) << 4; // C = old bit 0
-
+	F = ((*n) & 1) << 4; // C = old bit 0
 	(*n) >>= 1;
 	if ((*n) == 0)
-		F &= ~F_Z;
+		F |= F_Z;
 }
 
 void bit (uint8_t r, uint8_t b)
