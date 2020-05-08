@@ -78,8 +78,7 @@ static int n_read_handlers = 0;
 
 void gb_cpu_register_read_handler (read_handler h)
 {
-	read_handlers[n_read_handlers] = h;
-	n_read_handlers ++;
+	read_handlers[n_read_handlers ++] = h;
 	read_handlers[n_read_handlers] = 0;
 }
 
@@ -102,8 +101,7 @@ static int n_store_handlers = 0;
 
 void gb_cpu_register_store_handler (store_handler h)
 {
-	store_handlers[n_store_handlers] = h;
-	n_store_handlers ++;
+	store_handlers[n_store_handlers ++] = h;
 	store_handlers[n_store_handlers] = 0;
 }
 
@@ -239,7 +237,15 @@ static void inc_tima (int cc)
 
 void ldhl (int8_t n)
 {
-	HL = SP + n;
+	uint32_t hl = SP + n;
+
+	F = 0;
+	if (hl > 0xFFFF)
+		F |= F_C;
+	if (((HL ^ n ^ hl) & 0x1000) == 0x1000) // half carry
+		F |= F_H;
+
+	HL = hl;
 }
 
 void push (uint16_t v)
@@ -274,7 +280,7 @@ void add (uint8_t n)
 void addhl (uint16_t n)
 {
 	uint32_t hl = HL + n;
-	F &= ~(F_N | F_H | F_C);
+	F &= F_Z;
 	if (hl > 0xFFFF)
 		F |= F_C;
 	if (((HL ^ n ^ hl) & 0x1000) == 0x1000) // half carry
@@ -282,9 +288,8 @@ void addhl (uint16_t n)
 	HL = hl;
 }
 
-void addsp ()
+void addsp (int8_t n)
 {
-	int8_t n = RAM (pc ++);
 	uint32_t sp_ = sp + n;
 	F = 0;
 	if (sp_ > 0xFFFF)
@@ -315,16 +320,17 @@ void adc (uint8_t n)
 
 void sub (uint8_t n)
 {
-	uint8_t a = A;
-	A -= n;
+	uint16_t a = A - n;
 
 	F = F_N;
+	if (a & 0xFF00)
+		F |= F_C;
+	if (((A ^ n ^ a) & 0x10) == 0x10) // half carry
+		F |= F_H;
+
+	A = a;
 	if (A == 0)
 		F |= F_Z;
-	if (a < n)
-		F |= F_C;
-	if ((a & 0x0F) < (n & 0x0F))
-		F |= F_H;
 }
 
 void sbc (uint8_t n)
@@ -831,7 +837,7 @@ void gb_cpu_reset ()
 
 	n_store_handlers = 0;
 	gb_cpu_register_store_handler (oam_dma_transf_handler);
-	read_handlers[n_read_handlers] = 0;
+	gb_cpu_register_store_handler (write_div_h);
 
 	n_read_handlers = 0;
 	read_handlers[n_read_handlers] = 0;
