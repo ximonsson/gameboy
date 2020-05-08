@@ -49,6 +49,9 @@ function call_ld(instruction, params)
 	-- storing to memory or not
 	if string.match(params, "^%(%a%a?%),") then
 		c = c .. string.format("STORE (%s);", params)
+		if params == "(nn),SP" then
+			c = c .. " STORE (nn + 1, SP >> 8);"
+		end
 	else
 		c = c .. string.gsub(params, "(.+),(.+)", "%1 = %2;")
 	end
