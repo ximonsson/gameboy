@@ -235,15 +235,17 @@ static void inc_tima (int cc)
 
 // NOTE : LD instructions are not implemented here; they are all implemented in the autogeneretade code instead.
 
-void ldhl (int8_t n)
+void ldhl (uint8_t n)
 {
-	uint32_t hl = SP + n;
+	uint16_t hl = SP + (int8_t) n;
 
 	F = 0;
-	if (hl > 0xFFFF)
-		F |= F_C;
-	if (((HL ^ n ^ hl) & 0x1000) == 0x1000) // half carry
+
+	if ((n ^ SP ^ hl) & 0x10)
 		F |= F_H;
+
+	if (n + (SP & 0xFF) > 0xFF)
+		F |= F_C;
 
 	HL = hl;
 }
@@ -267,7 +269,7 @@ void add (uint8_t n)
 
 	F = 0; // reset flags
 
-	if (a > 0xFF)
+	if (a & 0xFF00)
 		F |= F_C;
 	if (((A ^ n ^ a) & 0x10) == 0x10) // half carry
 		F |= F_H;
@@ -288,15 +290,19 @@ void addhl (uint16_t n)
 	HL = hl;
 }
 
-void addsp (int8_t n)
+void addsp (uint8_t n)
 {
-	uint32_t sp_ = sp + n;
-	F = 0;
-	if (sp_ > 0xFFFF)
-		F |= F_C;
-	if (((sp ^ n ^ sp_) & 0x1000) == 0x1000) // half carry
+	F = 0; // reset flags
+
+	uint16_t sp_ = SP + (int8_t) n;
+
+	if ((n ^ SP ^ sp_) & 0x10)
 		F |= F_H;
-	sp = sp_;
+
+	if (n + (SP & 0xFF) > 0xFF)
+		F |= F_C;
+
+	SP = sp_;
 }
 
 void adc (uint8_t n)
