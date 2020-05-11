@@ -112,27 +112,6 @@ uint8_t* vram;
 
 static uint32_t dot = 0;
 
-void gb_ppu_reset ()
-{
-	lcdc_   = gb_cpu_mem (LCDC_LOC);
-	status_ = gb_cpu_mem (STATUS_LOC);
-	scy_    = gb_cpu_mem (0xFF42);
-	scx_    = gb_cpu_mem (0xFF43);
-	ly_     = gb_cpu_mem (0xFF44);
-	lyc_    = gb_cpu_mem (0xFF45);
-	wy_     = gb_cpu_mem (0xFF4A);
-	wx_     = gb_cpu_mem (0xFF4B);
-	bgp_    = gb_cpu_mem (0xFF47);
-	obp0_   = gb_cpu_mem (0xFF48);
-	obp1_   = gb_cpu_mem (0xFF49);
-
-	vram = gb_cpu_mem (VRAM_LOC);
-	oam = gb_cpu_mem (OAM_LOC);
-	dot = 0;
-
-	gb_cpu_register_store_handler (write_status_h);
-}
-
 /* monochrome palett. */
 const uint8_t SHADES [4][3] =
 {
@@ -202,13 +181,14 @@ static void print_bg (uint8_t bg)
 
 static void draw_bg (uint8_t x, uint8_t y)
 {
-	// pointer to BG tile map
-	uint8_t* tp = vram + (BG_TILE_MAP - 0x8000);
-
 	// read BG tile map
 	uint8_t bgx = x + scx, bgy = y + scy;
+
 	// TODO wrap around
 	uint16_t t = (bgx >> 3) + ((bgy & ~0x7) << 2); // (x div 8) + (y div 8) * 32
+
+	// pointer to BG tile map
+	uint8_t* tp = vram + (BG_TILE_MAP - 0x8000);
 	uint8_t tn = tp[t];
 
 	uint8_t c = color_bg (tn, x & 0x7, y & 0x7);
@@ -317,13 +297,14 @@ static void step ()
 			{
 				uint8_t y = sprite[0];
 				uint8_t x = sprite[1];
+
 				// hidden sprite (outside of screen)?
-				if (y >= 16 && y < (GB_LCD_HEIGHT + 16) && x >= 8 && x < (GB_LCD_WIDTH + 8))
-				{
-					int16_t dy = ly - (y - 16);
-					if (dy < OBJ_SIZE && dy >= 0)
-						line_sprites[n++] = i;
-				}
+				if (y == 0 || y >= (GB_LCD_HEIGHT + 16) || x == 0 || x >= (GB_LCD_WIDTH + 8))
+					continue;
+
+				int16_t dy = ly - (y - 16);
+				if (dy < OBJ_SIZE && dy >= 0)
+					line_sprites[n++] = i;
 				sprite += 4;
 			}
 		}
@@ -346,6 +327,29 @@ static void step ()
 	dot ++;
 	dot %= GB_FRAME;
 	ly = dot / GB_SCANLINE;
+}
+
+void gb_ppu_reset ()
+{
+	lcdc_   = gb_cpu_mem (LCDC_LOC);
+	status_ = gb_cpu_mem (STATUS_LOC);
+	scy_    = gb_cpu_mem (0xFF42);
+	scx_    = gb_cpu_mem (0xFF43);
+	ly_     = gb_cpu_mem (0xFF44);
+	lyc_    = gb_cpu_mem (0xFF45);
+	wy_     = gb_cpu_mem (0xFF4A);
+	wx_     = gb_cpu_mem (0xFF4B);
+	bgp_    = gb_cpu_mem (0xFF47);
+	obp0_   = gb_cpu_mem (0xFF48);
+	obp1_   = gb_cpu_mem (0xFF49);
+
+	vram = gb_cpu_mem (VRAM_LOC);
+	oam = gb_cpu_mem (OAM_LOC);
+	dot = 0;
+
+	memset (line_sprites, 0xFF, 10);
+
+	gb_cpu_register_store_handler (write_status_h);
 }
 
 void gb_ppu_step (int cc)
