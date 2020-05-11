@@ -80,12 +80,22 @@ static uint8_t* status_;
 #define LYC_EQ_LY ((status & 0x04) == 0x04)
 
 #define MODE (status & 0x03)
-#define MODE_HBLANK MODE == 0
-#define MODE_VBLANK MODE == 1
-#define MODE_SEARCH_OAM MODE == 2
-#define MODE_TRANSFER_LCD MODE == 3
+#define MODE_HBLANK 0
+#define MODE_VBLANK 1
+#define MODE_SEARCH_OAM 2
+#define MODE_TRANSFER_LCD 3
 
-#define SET_MODE(x) { status &= 0xFC; status |= x; }
+#define SET_MODE(x) { status = (status & 0xFC) | x; }
+
+static int write_status_h (uint16_t addr, uint8_t v)
+{
+	if (addr != STATUS_LOC) return 0;
+
+	// do not overwrite mode bits and LY=LYC
+	status = v & 0xF8;
+
+	return 1;
+}
 
 /* OAM data pointer */
 static uint8_t* oam;
@@ -117,6 +127,8 @@ void gb_ppu_reset ()
 	vram = gb_cpu_mem (VRAM_LOC);
 	oam = gb_cpu_mem (OAM_LOC);
 	dot = 0;
+
+	gb_cpu_register_store_handler (write_status_h);
 }
 
 /* monochrome palett. */
@@ -128,11 +140,6 @@ const uint8_t SHADES [4][3] =
 	{ 0x00, 0x00, 0x00 },
 };
 
-
-static void print_sprite (uint8_t* spr)
-{
-
-}
 
 static void draw_obj (uint8_t x, uint8_t y)
 {
@@ -147,7 +154,7 @@ static void draw_win (uint8_t x, uint8_t y)
 static uint8_t color (uint8_t n, uint8_t x, uint8_t y)
 {
 	uint8_t* tile = vram + (n << 4);
-	//*
+	///*
 	if (BG_WIN_TILE == 0x8800)
 	{
 		int16_t n_ = ((int8_t) n) << 4;
@@ -164,6 +171,11 @@ static uint8_t color (uint8_t n, uint8_t x, uint8_t y)
 }
 
 #ifdef DEBUG
+static void print_sprite (uint8_t* spr)
+{
+
+}
+
 static void print_tile (uint16_t t)
 {
 	uint8_t c;
@@ -225,13 +237,16 @@ static void draw (uint8_t x, uint8_t y)
 	}
 }
 
+static void draw_line ()
+{
+
+}
+
 /* step the PPU one dot. */
 static void step ()
 {
 	if (!LCD_ENABLED) return;
 
-	// TODO: if we write to LY this will overwrite it. not good
-	ly = dot / GB_SCANLINE;
 	uint16_t x = dot % GB_SCANLINE;
 
 	// LYC=LY
@@ -271,12 +286,12 @@ static void step ()
 	}
 
 	dot ++;
-	if (dot > GB_FRAME)
+	if (dot >= GB_FRAME)
 	{
 		memcpy (lcd, lcd_buffer, GB_LCD_HEIGHT * GB_LCD_WIDTH * 3);
 		dot %= GB_FRAME;
 	}
-
+	ly = dot / GB_SCANLINE;
 }
 
 void gb_ppu_step (int cc)
