@@ -140,7 +140,7 @@ static int read_header (FILE* fp, uint8_t* mbc, size_t* rom, size_t* ram)
 
 	// print title of the cartridge
 	char title[16];
-	memcpy (title, header + 0x34, 16);
+	memcpy (title, header + 0x34, 16); title[15] = 0;
 	printf ("TITLE                > %s\n", title);
 
 	// CGB support
