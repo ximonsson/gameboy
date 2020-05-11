@@ -161,6 +161,24 @@ uint16_t stack_pop ()
 
 #define POP() stack_pop ()
 
+static int write_unused_ram_h (uint16_t address, uint8_t v)
+{
+	if (address >= 0xFEA0 && address <= 0xFEFF)
+		return 1;
+	return 0;
+}
+
+static int read_unused_ram_h (uint16_t address, uint8_t* v)
+{
+	if (address >= 0xFEA0 && address <= 0xFEFF)
+	{
+		*v = 0xFF;
+		return 1;
+	}
+	return 0;
+}
+
+
 /* Special Registers ---------------------------------------------------------------- */
 
 /* HALT flag. */
@@ -222,7 +240,7 @@ static void inc_tima (int cc)
 		// TODO
 		// check timing
 
-		if (++TIMA == 0)
+		if (++TIMA == 0) // overflow
 		{
 			TIMA = TMA;
 			gb_cpu_flag_interrupt (INT_FLAG_TIMER);
@@ -844,8 +862,10 @@ void gb_cpu_reset ()
 	n_store_handlers = 0;
 	gb_cpu_register_store_handler (oam_dma_transf_handler);
 	gb_cpu_register_store_handler (write_div_h);
+	gb_cpu_register_store_handler (write_unused_ram_h);
 
 	n_read_handlers = 0;
+	gb_cpu_register_read_handler (read_unused_ram_h);
 	read_handlers[n_read_handlers] = 0;
 
 	memset (ram, 0, 1 << 16);
