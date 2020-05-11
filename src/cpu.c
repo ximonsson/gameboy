@@ -178,6 +178,26 @@ static int read_unused_ram_h (uint16_t address, uint8_t* v)
 	return 0;
 }
 
+static int write_echo_ram_h (uint16_t address, uint8_t v)
+{
+	if (address >= 0xE000 && address <= 0xFDFF)
+	{
+		ram[address - 0x2000] = v;
+		return 1;
+	}
+	return 0;
+}
+
+static int read_echo_ram_h (uint16_t address, uint8_t* v)
+{
+	if (address >= 0xE000 && address <= 0xFDFF)
+	{
+		*v = ram[address - 0x2000];
+		return 1;
+	}
+	return 0;
+}
+
 
 /* Special Registers ---------------------------------------------------------------- */
 
@@ -185,7 +205,7 @@ static int read_unused_ram_h (uint16_t address, uint8_t* v)
 static uint8_t f_halt = 0;
 
 /* Interrupt Master Enable flag (IME). */
-static int ime = 0;
+static uint8_t ime = 0;
 
 /* Interrupt Enable (IE) register. Is located at RAM memory $FFFF. */
 static uint8_t* reg_ie = ram + 0xFFFF;
@@ -460,102 +480,39 @@ void swap (uint8_t* n)
 		F |= F_Z;
 }
 
-// TODO this one seems impossible
 void daa ()
 {
 	// this implementation is "inspired" by
-	// https://github.com/taisel/GameBoy-Online/blob/master/js/GameBoyCore.js#L588
-	// as one can see there is a lot of magic and i am afraid of trying to figure
-	// it out myself after 7 weeks of debugging and reading docs.
-	//
-	// I hate this solution though; I have never seen so many if-statements
-
-	//*
+	// https://github.com/deltabeard/Peanut-GB/blob/master/peanut_gb.h#L1786
 
 	uint16_t a = A;
-
-	F &= ~(F_Z | F_H | F_C);
 
 	if (F & F_N)
 	{
 		if (F & F_H)
 			a = (a - 0x06) & 0xFF;
+
 		if (F & F_C)
 			a -= 0x60;
 	}
 	else
 	{
-		if ((F & F_H) || (A & 0x0F) > 0x9)
-		{
+		if ((F & F_H) || (a & 0x0F) > 0x9)
 			a += 0x06;
-			//F &= ~F_H;
-		}
-		if ((F & F_C) || A > 0x9F)
-		{
+
+		if ((F & F_C) || a > 0x9F)
 			a += 0x60;
-			//F |= F_C;
-			//F &= ~F_C;
-		}
 	}
 
-	/*
-	else if ((F & (F_C | F_H)) == (F_C | F_H))
-	{
-		A += 0x9A;
-		F &= ~F_H;
-	}
-	else if ((F & F_C) == F_C)
-	{
-		A += 0xA0;
-	}
-	else if ((F & F_H) == F_H)
-	{
-		A += 0xFA;
-	}
-	//*/
+	F &= ~(F_Z | F_H);
 
 	if (a & 0x100) F |= F_C;
 	A = a;
 	if (A == 0) F |= F_Z;
-
-	/*
-	D1 = R_A >> 4;
-	D2 = R_A & 0x0F;
-	if (F_N)
-	{
-		if (F_H) D2 -= 6;
-		if (F_C) D1 -= 6;
-		if (D2>9) D2 -= 6;
-		if (D1 > 9)
-		{
-			D1 -= 6;
-			F_C = 1;
-		}
-	}
-	else
-	{
-		if (F_H) D2 += 6;
-		if (F_C) D1 += 6;
-		if (D2 > 9)
-		{
-			D2 -= 10;
-			D1++;
-		}
-		if (D1 > 9)
-		{
-			D1 -= 10;
-			F_C = 1;
-		}
-	}
-	R_A = ((D1 << 4) & 0xF0) | (D2 & 0x0F);
-	F_Z = (R_A == 0);
-	F_H = 0;
-	//*/
 }
 
 void cpl ()
 {
-	//A = ~A;
 	A ^= 0xFF;
 	F |= (F_N | F_H);
 }
@@ -797,7 +754,7 @@ void reti ()
 void gb_cpu_flag_interrupt (interrupt_flag f)
 {
 #ifdef DEBUG
-	printf ("Interrupt x%.4X requested\n", f);
+	printf ("                           >>> IRQ x%.4X \n", f);
 #endif
 	IF |= f;
 }
@@ -821,14 +778,14 @@ int interrupt ()
 	// call any interrupts that have been flagged and enabled.
 	for (uint8_t b = 0; b < 5; b ++)
 	{
-		if (IF & (1 << b) && IE & (1 << b))
+		if ((1 << b) & IF & IE)
 		{
 			ime = f_halt = 0;
 			IF &= ~(1 << b);
 			PUSH (pc);
 			pc = 0x40 + 0x8 * b;
 #ifdef DEBUG
-			printf ("[interrupt] ==> calling handler @ $%.4X\n", pc);
+			printf ("                        >>> interrupt ==> calling handler @ $%.4X\n", pc);
 #endif
 			return 0;
 		}
@@ -863,9 +820,11 @@ void gb_cpu_reset ()
 	gb_cpu_register_store_handler (oam_dma_transf_handler);
 	gb_cpu_register_store_handler (write_div_h);
 	gb_cpu_register_store_handler (write_unused_ram_h);
+	gb_cpu_register_store_handler (write_echo_ram_h);
 
 	n_read_handlers = 0;
 	gb_cpu_register_read_handler (read_unused_ram_h);
+	gb_cpu_register_read_handler (read_echo_ram_h);
 	read_handlers[n_read_handlers] = 0;
 
 	memset (ram, 0, 1 << 16);
@@ -891,8 +850,8 @@ int gb_cpu_step ()
 #endif
 	uint8_t opcode = RAM (pc ++);
 	const operation* op = &operations[opcode];
-	if (opcode == 0xCB) op = &operations_cb[RAM (pc ++)]; // hijack in debug mode so we can print the operation
 #ifdef DEBUG
+	if (opcode == 0xCB) op = &operations_cb[RAM (pc ++)]; // hijack in debug mode so we can print the operation
 	printf ("%-20s AF = x%.4X BC = x%.4X DE = x%.4X SP = x%.4X HL = x%.4X IF = x%.2X IE = 0x%.2X IME = %d\n",
 			op->name, AF, BC, DE, SP, HL, IF, IE, ime);
 #endif
