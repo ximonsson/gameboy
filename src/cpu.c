@@ -533,7 +533,6 @@ void scf ()
 void nop ()
 {
 	// nada
-	//pc ++;
 }
 
 void halt ()
@@ -812,7 +811,8 @@ void gb_cpu_reset ()
 	//DE = 0x00D8;
 	//HL = 0x014D;
 
-	ime = f_halt = 0;
+	ime = 1;
+	f_halt = 0;
 
 	// reset memory read/write handlers and add the default ones.
 
