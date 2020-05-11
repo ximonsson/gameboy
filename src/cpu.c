@@ -64,10 +64,10 @@ void gb_cpu_load_rom (uint8_t b, uint8_t* data) { memcpy (ram + ROM_BANK_SIZE * 
 static void oam_dma_transfer (uint8_t v)
 {
 #ifdef DEBUG
-	printf ("OAM transfer\n");
+	printf ("                   >>> OAM transfer\n");
 #endif
 	uint16_t src = ((v & 0x1F) << 8) | 0x9F;
-	memcpy (ram + OAM_LOC, ram + src, 0x9F);
+	memcpy (ram + OAM_LOC, ram + src, 0xA0);
 }
 
 #define MAX_HANDLERS 16
@@ -255,7 +255,7 @@ static void inc_tima (int cc)
 {
 	if (TAC & 0x04)
 	{
-		uint16_t cc = timer_cc[TAC & 0x3];
+		uint16_t cc_ = timer_cc[TAC & 0x3];
 
 		// TODO
 		// check timing
@@ -802,14 +802,14 @@ void gb_cpu_reset ()
 	pc = 0x100;
 	sp = 0xFFFE;
 
-	AF = 0;
-	BC = 0;
-	DE = 0;
-	HL = 0;
-	//AF = 0x01B0;
-	//BC = 0x0013;
-	//DE = 0x00D8;
-	//HL = 0x014D;
+	//AF = 0;
+	//BC = 0;
+	//DE = 0;
+	//HL = 0;
+	AF = 0x01B0;
+	BC = 0x0013;
+	DE = 0x00D8;
+	HL = 0x014D;
 
 	ime = 1;
 	f_halt = 0;
