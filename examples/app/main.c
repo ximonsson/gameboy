@@ -1,6 +1,6 @@
 /** -----------------------------------------------------------------------------------------------
  *  File: main.c
- *  Description: Test application to run the nes emulator. Runs with OpenGL ES.
+ *  Description: Test application to run the Game Boy emulator. Runs with OpenGL (ES).
  *  ----------------------------------------------------------------------------------------------- */
 #include "gb.h"
 #include <stdio.h>
@@ -154,17 +154,18 @@ int init_screen (int w, int h)
 	}
 
 	SDL_GL_SetAttribute (SDL_GL_DOUBLEBUFFER, 1);
-	SDL_GL_SetAttribute (SDL_GL_DEPTH_SIZE,  24);
+#ifdef GLES
 	SDL_GL_SetAttribute (SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-	SDL_GL_SetAttribute (SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-	SDL_GL_SetAttribute (SDL_GL_CONTEXT_MINOR_VERSION, 0);
+#endif
 
-	sdl_window  = SDL_CreateWindow (TITLE,
-									SDL_WINDOWPOS_UNDEFINED,
-									SDL_WINDOWPOS_UNDEFINED,
-									width,
-									height,
-									SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+	sdl_window  = SDL_CreateWindow (
+		TITLE,
+		SDL_WINDOWPOS_UNDEFINED,
+		SDL_WINDOWPOS_UNDEFINED,
+		width,
+		height,
+		SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN
+	);
 	sdl_context = SDL_GL_CreateContext (sdl_window);
 	SDL_GL_SetSwapInterval (1);
 	return 0;
@@ -173,6 +174,15 @@ int init_screen (int w, int h)
 
 int init_opengl ()
 {
+	const GLubyte* renderer_name = glGetString (GL_RENDERER);
+	printf (" > OpenGL renderer: %s\n", renderer_name);
+
+	const GLubyte* opengl_version = glGetString (GL_VERSION);
+	printf (" > OpenGL version: %s\n", opengl_version);
+
+	const GLubyte* glsl_versions = glGetString (GL_SHADING_LANGUAGE_VERSION);
+	printf (" > GLSL version: %s\n", glsl_versions);
+
 	if (compile_shaders () != 0)
 		return 1;
 
@@ -347,7 +357,7 @@ static void handle_events ()
 int main (int argc, char** argv)
 {
 	// init
-	init_screen (GB_LCD_WIDTH * 2.5, GB_LCD_HEIGHT * 2.5);
+	init_screen (GB_LCD_WIDTH * 3, GB_LCD_HEIGHT * 3);
 	init_opengl ();
 
 	audio_init (SAMPLE_RATE);
@@ -367,7 +377,6 @@ int main (int argc, char** argv)
 		draw ();
 		audio_play ();
 		handle_events ();
-		//running = 0;
 	}
 
 	// deinit

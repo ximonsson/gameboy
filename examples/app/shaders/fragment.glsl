@@ -1,4 +1,4 @@
-#version 300 es
+#version 460
 precision highp float;
 
 uniform sampler2D tex;
@@ -10,5 +10,6 @@ layout (location = 0) out vec4 frag_color;
 
 void main ()
 {
-	frag_color = texture2D (tex, texture_coords) * color;
+	vec4 bg = vec4 (1.0, 1.0, 1.0, 1.0);
+	frag_color = texture2D (tex, texture_coords) * color * bg;
 }
