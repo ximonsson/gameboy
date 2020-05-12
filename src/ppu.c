@@ -124,10 +124,13 @@ const uint8_t SHADES [4][3] =
 
 static uint8_t color (uint8_t* tile, uint8_t x, uint8_t y)
 {
-	y <<= 1;
-	uint8_t lsb = tile[y]; // y mul 2
-	uint8_t msb = tile[y | 1]; // y mul 2 add 1
-	uint8_t c = ((msb >> (6 - x)) | (lsb >> (7 - x))) & 0x3; // color value 0-3
+	uint8_t mask = 0x80 >> x;
+	y <<= 1; // y mul 2
+
+	uint8_t lsb = tile[y] & mask;
+	uint8_t msb = tile[y | 1] & mask;
+
+	uint8_t c = (((msb << 1) | lsb) >> (7 - x)) & 0x3; // color value 0-3
 	return c;
 }
 
