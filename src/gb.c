@@ -2,6 +2,7 @@
 #include "gameboy/cpu.h"
 #include "gameboy/ppu.h"
 #include "gameboy/mbc.h"
+#include "gameboy/io.h"
 #include <stdlib.h>
 
 static uint8_t* ROM = 0;
@@ -18,6 +19,7 @@ int gb_load (const char* file)
 
 	gb_cpu_reset ();
 	gb_ppu_reset ();
+	gb_io_reset ();
 	// gb_apu_reset ();
 
 	uint8_t mbc;

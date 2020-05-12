@@ -794,25 +794,6 @@ int interrupt ()
 	return 1;
 }
 
-static int write_joypad_h (uint16_t address, uint8_t v)
-{
-	if (address != 0xFF00) return 0;
-
-	ram[address] = (ram[address] & 0xCF) | (v & 0x30);
-
-	return 1;
-}
-
-static int read_joypad_h (uint16_t address, uint8_t* v)
-{
-	if (address != 0xFF00) return 0;
-
-	*v &= 0x30;
-	*v |= 0xCF;
-
-	return 1;
-}
-
 /**
  * Reset the CPU.
  */
@@ -840,12 +821,10 @@ void gb_cpu_reset ()
 	gb_cpu_register_store_handler (write_div_h);
 	gb_cpu_register_store_handler (write_unused_ram_h);
 	gb_cpu_register_store_handler (write_echo_ram_h);
-	gb_cpu_register_store_handler (write_joypad_h);
 
 	n_read_handlers = 0;
 	gb_cpu_register_read_handler (read_unused_ram_h);
 	gb_cpu_register_read_handler (read_echo_ram_h);
-	gb_cpu_register_read_handler (read_joypad_h);
 	read_handlers[n_read_handlers] = 0;
 
 	memset (ram, 0, 1 << 16);
