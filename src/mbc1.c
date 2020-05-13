@@ -3,6 +3,7 @@
  */
 #include "gameboy/mbc1.h"
 #include "gameboy/cpu.h"
+#include <string.h>
 
 uint8_t* ROM;
 uint8_t* RAM;
@@ -27,29 +28,25 @@ static uint8_t select_mode;
 static uint8_t bank_lo;
 static uint8_t bank_hi;
 
-static void reload_rom ()
-{
-
-
-}
-
-static void reload_ram ()
-{
-	if (ROM_SELECT_MODE) return;
-}
-
 static void reload_banks ()
 {
-	//if (ROM_SELECT_MODE) memcpy ();
+	if (ROM_SELECT_MODE)
+	{
+		uint32_t b = (bank_hi << 4 | bank_lo) << 14;
+		memcpy (cpu_ram + 0x4000, ROM + b, ROM_BANK_SIZE);
+	}
+	else
+	{
+		memcpy (cpu_ram + 0x4000, ROM + (bank_lo << 14), ROM_BANK_SIZE);
+		memcpy (cpu_ram + 0xD000, RAM + (bank_hi << 12), RAM_BANK_SIZE);
+	}
 }
-
-#define RELOAD_BANKS { reload_rom (); reload_ram (); }
 
 static int write_select_mode_h (uint16_t adr, uint8_t v)
 {
 	if (!(adr >= 0x6000 && adr < 0x8000)) return 0;
 	select_mode = v & 1;
-	RELOAD_BANKS;
+	reload_banks ();
 	return 1;
 }
 
@@ -59,7 +56,7 @@ static int write_bank_number_h (uint16_t adr, uint8_t v)
 	{
 		// low ROM bank
 		bank_lo = (v & 0xF) | 1;
-		reload_rom ();
+		reload_banks ();
 		return 1;
 	}
 	else if (adr >= 0x4000 && adr < 0x6000)
@@ -67,7 +64,7 @@ static int write_bank_number_h (uint16_t adr, uint8_t v)
 		// high ROM bank or RAM
 		v &= 0x3;
 		bank_hi = v;
-		RELOAD_BANKS;
+		reload_banks ();
 		return 1;
 	}
 	return 0;

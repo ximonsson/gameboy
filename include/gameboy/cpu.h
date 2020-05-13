@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #define ROM_BANK_SIZE 0x4000
+#define RAM_BANK_SIZE 0x1000
 #define OAM_LOC 0xFE00
 
 /**
