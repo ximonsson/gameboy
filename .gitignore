@@ -6,3 +6,8 @@ bin*
 *.gbc
 *.gba
 *.out
+*.log
+roms
+tests
+# this file auto-generated using make
+include/gameboy/operations.h
