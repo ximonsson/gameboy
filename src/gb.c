@@ -8,6 +8,49 @@
 static uint8_t* ROM = 0;
 static uint8_t* RAM = 0;
 
+static const void (*MBC[0x100]) (uint8_t*, uint8_t*) =
+{
+	0, //  "ROM ONLY",
+	gb_mbc1_load, // "MBC1",
+	0, // "MBC1+RAM",
+	0, // "MBC1+RAM+BATTERY",
+	0, // "0x04 unsupported",
+	0, // "MBC2",
+	0, // "MBC2+BATTERY",
+	0, // "0x07 unsupported",
+	0, // "ROM+RAM",
+	0, // "ROM+RAM+BATTERY",
+	0, // "0x0A unsupported",
+	0, // "MMM01",
+	0, // "MMM01+RAM",
+	0, // "MMM01+RAM+BATTERY",
+	0, // "0x0E unsupported",
+	0, // "MBC3+TIMER+BATTERY",
+	0, // "MBC3+TIMER+RAM+BATTERY",
+	0, // "MBC3",
+	0, // "MBC3+RAM",
+	0, // "MBC3+RAM+BATTERY",
+	0, // "0x14 Unsupported",
+	0, // "MBC4",
+	0, // "MBC4+RAM",
+	0, // "MBC4+RAM+BATTERY",
+	0, // "0x18 Unsupported",
+	0, // "MBC5",
+	0, // "MBC5+RAM",
+	0, // "MBC5+RAM+BATTERY",
+	0, // "MBC5+RUMBLE",
+	0, // "MBC5+RUMBLE+RAM",
+	0, // "MBC5+RUMBLE+RAM+BATTERY",
+	0, // "0x21 Unsupported",
+	0, // "MBC6",
+	0, // "MBC7+SENSOR+RUMBLE+RAM+BATTERY",
+	// 0x23 -> 0xFB unsupported TODO
+	0, // "POCKET CAMERA",
+	0, // "BANDAI TAMA5",
+	0, // "HuC3",
+	0, // "HuC1+RAM+BATTERY"
+};
+
 static int load_mbc (uint8_t mbc)
 {
 	return 0;
