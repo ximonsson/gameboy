@@ -152,12 +152,6 @@ static uint8_t color_bg (uint8_t n, uint8_t x, uint8_t y)
 }
 
 #ifdef DEBUG_PPU
-static void print_sprite (uint8_t* spr)
-{
-	uint8_t* tile = vram + (sprite[2]);
-	print_tile (tile);
-}
-
 static void print_tile (uint8_t* t)
 {
 	uint8_t c;
@@ -178,6 +172,12 @@ static void print_tile (uint8_t* t)
 		printf ("\n");
 	}
 	printf ("\n");
+}
+
+static void print_sprite (uint8_t* spr)
+{
+	uint8_t* tile = vram + (spr[2]);
+	print_tile (tile);
 }
 
 static void print_bg (uint8_t bg)
