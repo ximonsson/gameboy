@@ -3,7 +3,7 @@
 #include "gb.h"
 #include <string.h>
 
-#ifdef DEBUG
+#ifdef DEBUG_PPU
 #include <stdio.h>
 #endif
 
@@ -124,13 +124,13 @@ const uint8_t SHADES [4][3] =
 
 static uint8_t color (uint8_t* tile, uint8_t x, uint8_t y)
 {
-	uint8_t mask = 0x80 >> x;
+	uint8_t shift = 7 - x;
 	y <<= 1; // y mul 2
 
-	uint8_t lsb = tile[y] & mask;
-	uint8_t msb = tile[y | 1] & mask;
+	uint8_t lsb = (tile[y] >> shift) & 1;
+	uint8_t msb = (tile[y | 1] >> shift) & 1;
 
-	uint8_t c = ((msb << 1) | lsb) >> (7 - x); // color value 0-3
+	uint8_t c = (msb << 1) | lsb; // color value 0-3
 	return c;
 }
 
@@ -151,10 +151,11 @@ static uint8_t color_bg (uint8_t n, uint8_t x, uint8_t y)
 	return color (tile, x, y);
 }
 
-#ifdef DEBUG
+#ifdef DEBUG_PPU
 static void print_sprite (uint8_t* spr)
 {
-
+	uint8_t* tile = vram + (sprite[2]);
+	print_tile (tile);
 }
 
 static void print_tile (uint8_t* t)
@@ -167,7 +168,10 @@ static void print_tile (uint8_t* t)
 			c = color (t, x, y);
 			switch (c)
 			{
-				case 0: printf ("."); break;
+				case 0: printf (" "); break;
+				case 3: printf ("█"); break;
+				case 1: printf ("□"); break;
+				case 2: printf ("●"); break;
 				default: printf ("%d", c); break;
 			}
 		}
