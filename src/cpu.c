@@ -67,7 +67,7 @@ static void oam_dma_transfer (uint8_t v)
 #ifdef DEBUG_CPU
 	printf ("                   >>> OAM transfer\n");
 #endif
-	uint16_t src = ((v & 0x1F) << 8) | 0x9F;
+	uint16_t src = v << 8;
 	memcpy (ram + OAM_LOC, ram + src, 0xA0);
 }
 
