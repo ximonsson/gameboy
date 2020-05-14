@@ -33,12 +33,12 @@ static void reload_banks ()
 	if (ROM_SELECT_MODE)
 	{
 		uint32_t b = (bank_hi << 4 | bank_lo) << 14;
-		memcpy (cpu_ram + 0x4000, ROM + b, ROM_BANK_SIZE);
+		gb_cpu_load_rom (1, ROM + b);
 	}
 	else
 	{
-		memcpy (cpu_ram + 0x4000, ROM + (bank_lo << 14), ROM_BANK_SIZE);
-		memcpy (cpu_ram + 0xD000, RAM + (bank_hi << 12), RAM_BANK_SIZE);
+		gb_cpu_load_rom (1, ROM + (bank_lo << 14));
+		gb_cpu_load_ram (RAM + (bank_hi << 12));
 	}
 }
 

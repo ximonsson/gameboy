@@ -26,7 +26,12 @@ uint8_t* gb_cpu_mem (uint16_t /* offset */) ;
 /**
  * Load data into the ROM Bank.
  */
-void gb_cpu_load_rom (uint8_t /* bank */, uint8_t* /* data */);
+void gb_cpu_load_rom (uint8_t /* bank */, uint8_t* /* data */) ;
+
+/**
+ * Load data into RAM bank.
+ */
+void gb_cpu_load_ram (uint8_t* /* data */) ;
 
 /**
  * Read from RAM handler.

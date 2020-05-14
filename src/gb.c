@@ -4,15 +4,17 @@
 #include "gameboy/mbc.h"
 #include "gameboy/io.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 static uint8_t* ROM = 0;
 static uint8_t* RAM = 0;
 
-typedef void (* mbc_loader) (uint8_t*, uint8_t*) ;
-
+/**
+ * Map MBC identifiers to loader functions.
+ */
 static const void (*MBC[0x100]) (uint8_t*, uint8_t*) =
 {
-	0, //  "ROM ONLY",
+	gb_mbc0_load, // "ROM ONLY",
 	gb_mbc1_load, // "MBC1",
 	0, // "MBC1+RAM",
 	0, // "MBC1+RAM+BATTERY",
@@ -56,7 +58,14 @@ static const void (*MBC[0x100]) (uint8_t*, uint8_t*) =
 static int load_mbc (uint8_t mbc)
 {
 	mbc_loader l = MBC[mbc];
-	if (l) l (ROM, RAM);
+
+	if (!l)
+	{
+		fprintf (stderr, "MBC [%.2X] not supported\n", mbc);
+		return 1;
+	}
+
+	l (ROM, RAM);
 	return 0;
 }
 

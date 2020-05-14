@@ -59,6 +59,7 @@ static uint8_t ram[1 << 16];
 uint8_t* gb_cpu_mem (uint16_t p) { return ram + p; }
 
 void gb_cpu_load_rom (uint8_t b, uint8_t* data) { memcpy (ram + ROM_BANK_SIZE * b, data, ROM_BANK_SIZE); }
+void gb_cpu_load_ram (uint8_t* data) { memcpy (ram + 0xA000, data, RAM_BANK_SIZE); }
 
 /* Transfer memory to OAM location. */
 static void oam_dma_transfer (uint8_t v)
