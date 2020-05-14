@@ -102,6 +102,13 @@ static int write_status_h (uint16_t addr, uint8_t v)
 /* OAM data pointer */
 static uint8_t* oam;
 
+#define SPRITE_BG_PRIO(sprite) ((sprite[3] & 0x80) == 0x80)
+#define SPRITE_YFLIP(sprite) ((sprite[3] & 0x40) == 0x40)
+#define SPRITE_XFLIP(sprite) ((sprite[3] & 0x20) == 0x20)
+#define SPRITE_PALETTE(sprite) ((sprite[3] & 0x10) >> 4)
+#define SPRITE_VRAM(sprite) ((sprite[3] & 0x08) >> 3)
+#define SPRITE_PALETTE_CGB(sprite) (sprite[3] & 0x07)
+
 /* switchable screen buffer for rendering. */
 static uint8_t lcd_buffer[GB_LCD_WIDTH * GB_LCD_HEIGHT * 3];
 static uint8_t lcd[GB_LCD_WIDTH * GB_LCD_HEIGHT * 3];
@@ -163,9 +170,9 @@ static void print_tile (uint8_t* t)
 			switch (c)
 			{
 				case 0: printf (" "); break;
+				case 1: printf ("░"); break;
+				case 2: printf ("▒"); break;
 				case 3: printf ("█"); break;
-				case 1: printf ("□"); break;
-				case 2: printf ("●"); break;
 				default: printf ("%d", c); break;
 			}
 		}
@@ -174,10 +181,28 @@ static void print_tile (uint8_t* t)
 	printf ("\n");
 }
 
-static void print_sprite (uint8_t* spr)
+static void print_sprite (uint8_t s)
 {
-	uint8_t* tile = vram + (spr[2]);
+	uint8_t* sprite = oam + (s << 2);
+
+	printf (" SPRITE @ (%d - 8, %d - 16)\n", sprite[1], sprite[0]);
+	printf (" > Tile N: %d\n", sprite[2]);
+	printf (" > BG prio: %d\n", SPRITE_BG_PRIO (sprite));
+	printf (" > Y-flip: %d\n", SPRITE_YFLIP (sprite));
+	printf (" > X-flip: %d\n", SPRITE_XFLIP (sprite));
+	printf (" > Palette: %d\n", SPRITE_PALETTE (sprite));
+	printf (" > VRAM: %d\n", SPRITE_VRAM (sprite));
+	printf (" > Palette (CGB): %d\n", SPRITE_PALETTE_CGB (sprite));
+	printf ("\n");
+
+	uint8_t* tile = vram + (sprite[2] << 4);
 	print_tile (tile);
+}
+
+static void print_oam ()
+{
+	for (int i = 0; i < 40; i ++)
+		print_sprite (i);
 }
 
 static void print_bg (uint8_t bg)
@@ -189,7 +214,7 @@ static void print_bg (uint8_t bg)
 static void draw_bg (uint8_t x, uint8_t y)
 {
 	// read BG tile map
-	uint8_t bgx = x + scx, bgy = y + scy;
+	uint8_t bgx = (x + scx) % 256, bgy = (y + scy) % 256;
 
 	// TODO wrap around
 	uint16_t t = (bgx >> 3) + ((bgy & ~0x7) << 2); // (x div 8) + (y div 8) * 32
@@ -204,24 +229,32 @@ static void draw_bg (uint8_t x, uint8_t y)
 	memcpy (&lcd_buffer[(y * GB_LCD_WIDTH + x) * 3], rgb, 3);
 }
 
+#define SPRITES_PER_LINE 10
+
 /* Indices of the sprites that are visible on this line. */
-static uint8_t line_sprites[10];
+static uint8_t line_sprites[SPRITES_PER_LINE];
+
+#define RESET_LINE_SPRITES memset (line_sprites, 0xFF, SPRITES_PER_LINE)
 
 static void draw_obj (uint8_t x, uint8_t y)
 {
 	uint8_t* sprite;
-	for (int i = 0; i < 10 && line_sprites[i] != 0xFF; i ++)
+	for (int i = 0; i < SPRITES_PER_LINE && line_sprites[i] != 0xFF; i ++)
 	{
 		sprite = oam + (line_sprites[i] << 2);
 		uint8_t sx = sprite[1] - 8;
 		int16_t dx = x - sx;
+		uint8_t pal = *(obp0_ + SPRITE_PALETTE (sprite));
 		if (dx >= 0 && dx < 8)
 		{
 			uint8_t sy = sprite[0] - 16;
 			uint8_t tn = sprite[2];
 			uint8_t c = color_sprite (tn, dx, ly - sy);
-			const uint8_t* rgb = SHADES[(bgp >> (c << 1)) & 0x3];
-			memcpy (&lcd_buffer[(y * GB_LCD_WIDTH + x) * 3], rgb, 3);
+			if (c)
+			{
+				const uint8_t* rgb = SHADES[(pal >> (c << 1)) & 0x3];
+				memcpy (&lcd_buffer[(y * GB_LCD_WIDTH + x) * 3], rgb, 3);
+			}
 			return;
 		}
 	}
@@ -290,19 +323,21 @@ static void step ()
 		// OAM search
 		if (x == 0)
 		{
-			// TODO
 			// Load sprites on this line.
 			SET_MODE (MODE_SEARCH_OAM);
 			if (MODE_2_OAM_INT)
 				gb_cpu_flag_interrupt (INT_FLAG_LCD_STAT);
 
-			memset (line_sprites, 0xFF, 10); // 0xFF means there is no sprite
+			RESET_LINE_SPRITES;
+
 			if (OBJ_ENABLED)
 			{
 				uint8_t* sprite;
-				for (int i = 0, n = 0; i < 40 && n < 10; i ++)
+				for (int i = 0, n = 0; i < 40 && n < SPRITES_PER_LINE; i ++)
 				{
+					// every 4 B is a sprite
 					sprite = oam + (i << 2);
+
 					uint8_t y = sprite[0];
 					uint8_t x = sprite[1];
 
@@ -310,6 +345,7 @@ static void step ()
 					if (y == 0 || y >= (GB_LCD_HEIGHT + 16) || x == 0 || x >= (GB_LCD_WIDTH + 8))
 						continue;
 
+					// visible sprite on the current line
 					int16_t dy = ly - (y - 16);
 					if (dy < OBJ_SIZE && dy >= 0)
 						line_sprites[n++] = i;
@@ -332,6 +368,7 @@ static void step ()
 		}
 	}
 
+	// step the dot counter and line
 	dot ++;
 	dot %= GB_FRAME;
 	ly = dot / GB_SCANLINE;
@@ -355,7 +392,7 @@ void gb_ppu_reset ()
 	oam = gb_cpu_mem (OAM_LOC);
 	dot = 0;
 
-	memset (line_sprites, 0xFF, 10);
+	RESET_LINE_SPRITES;
 
 	gb_cpu_register_store_handler (write_status_h);
 }
