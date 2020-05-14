@@ -363,6 +363,7 @@ int main (int argc, char** argv)
 	audio_init (SAMPLE_RATE);
 	//gb_audio_set_sample_rate (SAMPLE_RATE);
 
+	printf ("\n");
 	if (gb_load (argv[1]) != 0)
 	{
 		fprintf (stderr, "error opening game file\n");

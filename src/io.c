@@ -4,7 +4,6 @@
 static uint8_t* p1;
 #define P1 (*p1)
 
-
 static int write_joypad_h (uint16_t address, uint8_t v)
 {
 	if (address != GB_IO_P1_LOC) return 0;
@@ -24,7 +23,6 @@ static int read_joypad_h (uint16_t address, uint8_t* v)
 
 	return 1;
 }
-
 
 void gb_io_reset ()
 {
