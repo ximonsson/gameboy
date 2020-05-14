@@ -2,7 +2,7 @@
 #include <string.h>
 #include <assert.h>
 
-#ifdef DEBUG
+#ifdef DEBUG_CPU
 #include <stdio.h>
 #endif
 
@@ -64,7 +64,7 @@ void gb_cpu_load_ram (uint8_t* data) { memcpy (ram + 0xA000, data, RAM_BANK_SIZE
 /* Transfer memory to OAM location. */
 static void oam_dma_transfer (uint8_t v)
 {
-#ifdef DEBUG
+#ifdef DEBUG_CPU
 	printf ("                   >>> OAM transfer\n");
 #endif
 	uint16_t src = ((v & 0x1F) << 8) | 0x9F;
@@ -138,7 +138,7 @@ static int oam_dma_transf_handler (uint16_t address, uint8_t v)
  */
 void stack_push (uint16_t v)
 {
-#ifdef DEBUG
+#ifdef DEBUG_CPU
 	printf ("    PUSH %.4X @ $%.4X\n", v, sp);
 #endif
 	STORE (--sp, v >> 8); // msb
@@ -154,7 +154,7 @@ uint16_t stack_pop ()
 {
 	uint16_t lo = RAM (sp++);
 	uint16_t hi = RAM (sp++);
-#ifdef DEBUG
+#ifdef DEBUG_CPU
 	printf ("    POP %.4X\n", (hi << 8) | lo);
 #endif
 	return (hi << 8) | lo;
@@ -301,7 +301,7 @@ void pop (uint16_t *v)
 
 void add (uint8_t n)
 {
-#ifdef DEBUG
+#ifdef DEBUG_CPU
 	printf ("    x%.2X + x%.2X\n", A, n);
 #endif
 	uint16_t a = A + n;
@@ -346,7 +346,7 @@ void addsp (uint8_t n)
 
 void adc (uint8_t n)
 {
-#ifdef DEBUG
+#ifdef DEBUG_CPU
 	printf ("    $%.2X + $%.2X + %d\n", A, n, ((F & F_C) >> 4));
 #endif
 	uint16_t a = A + n + ((F & F_C) >> 4);
@@ -380,7 +380,7 @@ void sub (uint8_t n)
 
 void sbc (uint8_t n)
 {
-#ifdef DEBUG
+#ifdef DEBUG_CPU
 	printf ("    $%.2X - $%.2X - %d\n", A, n, ((F & F_C) >> 4));
 #endif
 	uint16_t a = A - n - ((F & F_C) >> 4);
@@ -398,7 +398,7 @@ void sbc (uint8_t n)
 
 void and (uint8_t n)
 {
-#ifdef DEBUG
+#ifdef DEBUG_CPU
 	printf ("    x%.2X & x%.2X\n", A, n);
 #endif
 	A &= n;
@@ -409,7 +409,7 @@ void and (uint8_t n)
 
 void or (uint8_t n)
 {
-#ifdef DEBUG
+#ifdef DEBUG_CPU
 	printf ("    x%.2X | x%.2X\n", A, n);
 #endif
 	A |= n;
@@ -428,7 +428,7 @@ void xor (uint8_t n)
 
 void cp (uint8_t n)
 {
-#ifdef DEBUG
+#ifdef DEBUG_CPU
 	printf ("    x%.2X == x%.2X\n", A, n);
 #endif
 	F = F_N;
@@ -661,7 +661,7 @@ void res (uint8_t* r, uint8_t b)
 	(*r) &= ~(1 << b);
 }
 
-#ifdef DEBUG
+#ifdef DEBUG_CPU
 void jp (uint16_t nn)
 {
 	printf ("    JUMP @ $%.4X\n", nn);
@@ -690,7 +690,7 @@ void jpcc (enum jump_cc cc, uint16_t nn)
 	}
 }
 
-#ifdef DEBUG
+#ifdef DEBUG_CPU
 void jr (int8_t n)
 {
 	printf ("    JUMP @ PC +/- %d (=> $%.4X)\n", n, pc + n);
@@ -753,7 +753,7 @@ void reti ()
 
 void gb_cpu_flag_interrupt (interrupt_flag f)
 {
-#ifdef DEBUG
+#ifdef DEBUG_CPU
 	printf ("                           >>> IRQ x%.4X \n", f);
 #endif
 	IF |= f;
@@ -784,7 +784,7 @@ int interrupt ()
 			IF &= ~(1 << b);
 			PUSH (pc);
 			pc = 0x40 + 0x8 * b;
-#ifdef DEBUG
+#ifdef DEBUG_CPU
 			printf ("                        >>> interrupt ==> calling handler @ $%.4X\n", pc);
 #endif
 			return 0;
@@ -846,12 +846,12 @@ int gb_cpu_step ()
 
 	// load an opcode and perform the operation associated,
 	// step the PC and clock the number of cycles
-#ifdef DEBUG
+#ifdef DEBUG_CPU
 	printf ("$%.4X: ", pc);
 #endif
 	uint8_t opcode = RAM (pc ++);
 	const operation* op = &operations[opcode];
-#ifdef DEBUG
+#ifdef DEBUG_CPU
 	if (opcode == 0xCB) op = &operations_cb[RAM (pc ++)]; // hijack in debug mode so we can print the operation
 	printf ("%-20s AF = x%.4X BC = x%.4X DE = x%.4X SP = x%.4X HL = x%.4X IF = x%.2X IE = 0x%.2X IME = %d\n",
 			op->name, AF, BC, DE, SP, HL, IF, IE, ime);

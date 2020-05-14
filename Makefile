@@ -10,9 +10,9 @@ ARCMD = rcs
 BIN=bin/gameboy
 
 ifdef DEBUG
-CFLAGS += -g3 -DDEBUG
+CFLAGS += -g3 -DDEBUG_PPU
 else
-CFLAGS += -O3
+CFLAGS += -g3
 endif
 
 ifdef GLES
