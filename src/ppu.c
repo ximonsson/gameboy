@@ -235,20 +235,18 @@ static void draw_win (uint8_t x, uint8_t y)
 /* draw in the LCD at position x, y. */
 static void draw (uint8_t x, uint8_t y)
 {
-	// BG
-	draw_bg (x, y);
-
-	// WIN
-	if (WIN_DISP_ENABLED)
+	// Background
+	if (BG_WIN_PRIO)
 	{
-		draw_win (x, y);
+		// BG
+		draw_bg (x, y);
+		// WIN
+		if (WIN_DISP_ENABLED)
+			draw_win (x, y);
 	}
-
 	// Sprite
 	if (OBJ_ENABLED)
-	{
 		draw_obj (x, y);
-	}
 }
 
 /* step the PPU one dot. */
@@ -299,20 +297,23 @@ static void step ()
 				gb_cpu_flag_interrupt (INT_FLAG_LCD_STAT);
 
 			memset (line_sprites, 0xFF, 10); // 0xFF means there is no sprite
-			uint8_t* sprite = oam;
-			for (int i = 0, n = 0; i < 40 && n < 10; i ++)
+			if (OBJ_ENABLED)
 			{
-				uint8_t y = sprite[0];
-				uint8_t x = sprite[1];
+				uint8_t* sprite;
+				for (int i = 0, n = 0; i < 40 && n < 10; i ++)
+				{
+					sprite = oam + (i << 2);
+					uint8_t y = sprite[0];
+					uint8_t x = sprite[1];
 
-				// hidden sprite (outside of screen)?
-				if (y == 0 || y >= (GB_LCD_HEIGHT + 16) || x == 0 || x >= (GB_LCD_WIDTH + 8))
-					continue;
+					// hidden sprite (outside of screen)?
+					if (y == 0 || y >= (GB_LCD_HEIGHT + 16) || x == 0 || x >= (GB_LCD_WIDTH + 8))
+						continue;
 
-				int16_t dy = ly - (y - 16);
-				if (dy < OBJ_SIZE && dy >= 0)
-					line_sprites[n++] = i;
-				sprite += 4;
+					int16_t dy = ly - (y - 16);
+					if (dy < OBJ_SIZE && dy >= 0)
+						line_sprites[n++] = i;
+				}
 			}
 		}
 		// H-BLANK
