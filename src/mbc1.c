@@ -67,6 +67,21 @@ static int write_bank_number_h (uint16_t adr, uint8_t v)
 		reload_banks ();
 		return 1;
 	}
+
+	if (adr >= 0x2000 && adr < 0x6000)
+	{
+		if (adr < 0x4000)
+			bank_lo = (v & 0x0F) | 1;
+		else
+			bank_hi = v & 0x03;
+
+
+		reload_banks ();
+		return 1;
+	}
+
+
+
 	return 0;
 }
 
