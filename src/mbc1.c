@@ -32,7 +32,7 @@ static void reload_banks ()
 {
 	if (ROM_SELECT_MODE)
 	{
-		uint32_t b = (bank_hi << 4 | bank_lo) << 14;
+		uint32_t b = ((bank_hi << 5) | bank_lo) << 14;
 		gb_cpu_load_rom (1, ROM + b);
 	}
 	else
@@ -44,7 +44,7 @@ static void reload_banks ()
 
 static int write_select_mode_h (uint16_t adr, uint8_t v)
 {
-	if (!(adr >= 0x6000 && adr < 0x8000)) return 0;
+	if (adr < 0x6000 || adr >= 0x8000) return 0;
 	select_mode = v & 1;
 	reload_banks ();
 	return 1;
@@ -52,36 +52,19 @@ static int write_select_mode_h (uint16_t adr, uint8_t v)
 
 static int write_bank_number_h (uint16_t adr, uint8_t v)
 {
-	if (adr >= 0x2000 && adr < 0x4000)
-	{
-		// low ROM bank
-		bank_lo = (v & 0xF) | 1;
-		reload_banks ();
-		return 1;
-	}
-	else if (adr >= 0x4000 && adr < 0x6000)
-	{
-		// high ROM bank or RAM
-		v &= 0x3;
-		bank_hi = v;
-		reload_banks ();
-		return 1;
-	}
-
 	if (adr >= 0x2000 && adr < 0x6000)
 	{
 		if (adr < 0x4000)
-			bank_lo = (v & 0x0F) | 1;
+		{
+			bank_lo = v & 0x1F;
+			if (bank_lo == 0)
+				bank_lo = 1;
+		}
 		else
 			bank_hi = v & 0x03;
-
-
 		reload_banks ();
 		return 1;
 	}
-
-
-
 	return 0;
 }
 
