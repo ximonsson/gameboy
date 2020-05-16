@@ -216,7 +216,6 @@ static void draw_bg (uint8_t x, uint8_t y)
 	// read BG tile map
 	uint8_t bgx = (x + scx) % 256, bgy = (y + scy) % 256;
 
-	// TODO wrap around
 	uint16_t t = (bgx >> 3) + ((bgy & ~0x7) << 2); // (x div 8) + (y div 8) * 32
 
 	// pointer to BG tile map
@@ -282,6 +281,29 @@ static void draw (uint8_t x, uint8_t y)
 		draw_obj (x, y);
 }
 
+static void inline find_line_sprites ()
+{
+	uint8_t* sprite;
+	uint8_t x, y;
+	for (uint8_t i = 0, n = 0; i < 40 && n < SPRITES_PER_LINE; i ++)
+	{
+		// every 4 B is a sprite
+		sprite = oam + (i << 2);
+
+		y = sprite[0];
+		x = sprite[1];
+
+		// hidden sprite (outside of screen)?
+		if (y == 0 || y >= (GB_LCD_HEIGHT + 16) || x == 0 || x >= (GB_LCD_WIDTH + 8))
+			continue;
+
+		// visible sprite on the current line
+		int16_t dy = ly - (y - 16);
+		if (dy < OBJ_SIZE && dy >= 0)
+			line_sprites[n++] = i;
+	}
+}
+
 /* step the PPU one dot. */
 static void step ()
 {
@@ -329,28 +351,7 @@ static void step ()
 				gb_cpu_flag_interrupt (INT_FLAG_LCD_STAT);
 
 			RESET_LINE_SPRITES;
-
-			if (OBJ_ENABLED)
-			{
-				uint8_t* sprite;
-				for (int i = 0, n = 0; i < 40 && n < SPRITES_PER_LINE; i ++)
-				{
-					// every 4 B is a sprite
-					sprite = oam + (i << 2);
-
-					uint8_t y = sprite[0];
-					uint8_t x = sprite[1];
-
-					// hidden sprite (outside of screen)?
-					if (y == 0 || y >= (GB_LCD_HEIGHT + 16) || x == 0 || x >= (GB_LCD_WIDTH + 8))
-						continue;
-
-					// visible sprite on the current line
-					int16_t dy = ly - (y - 16);
-					if (dy < OBJ_SIZE && dy >= 0)
-						line_sprites[n++] = i;
-				}
-			}
+			find_line_sprites ();
 		}
 		// H-BLANK
 		else if (x == GB_LCD_WIDTH + OAM_CC)
