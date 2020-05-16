@@ -294,7 +294,7 @@ static int running = 0;
 static void handle_events ()
 {
 	SDL_Event event;
-	//void (*key_func) (unsigned int, gb_controller_key);
+	void (*key_func) (gb_button);
 
 	while (SDL_PollEvent (&event))
 	{
@@ -306,41 +306,39 @@ static void handle_events ()
 
 			case SDL_KEYDOWN:
 			case SDL_KEYUP:
-				//key_func =
-					//event.type == SDL_KEYUP ?
-						//&gb_release_button : &gb_press_button;
+				key_func = event.type == SDL_KEYUP ? &gb_release_button : &gb_press_button;
 				switch (event.key.keysym.sym)
 				{
 					case SDLK_a:
-						//key_func (0, gb_button_left);
+						key_func (gb_io_b_left);
 						break;
 
 					case SDLK_s:
-						//key_func (0, gb_button_down);
+						key_func (gb_io_b_down);
 						break;
 
 					case SDLK_d:
-						//key_func (0, gb_button_right);
+						key_func (gb_io_b_right);
 						break;
 
 					case SDLK_w:
-						//key_func (0, gb_button_up);
+						key_func (gb_io_b_up);
 						break;
 
 					case SDLK_j:
-						//key_func (0, gb_button_a);
+						key_func (gb_io_b_a);
 						break;
 
 					case SDLK_k:
-						//key_func (0, gb_button_b);
+						key_func (gb_io_b_b);
 						break;
 
 					case SDLK_SPACE:
-						//key_func (0, gb_button_start);
+						key_func (gb_io_b_start);
 						break;
 
 					case SDLK_x:
-						//key_func (0, gb_button_select);
+						key_func (gb_io_b_select);
 						break;
 
 					case SDLK_q:
@@ -356,21 +354,25 @@ static void handle_events ()
 
 int main (int argc, char** argv)
 {
-	// init
-	init_screen (GB_LCD_WIDTH * 3, GB_LCD_HEIGHT * 3);
-	init_opengl ();
-
-	audio_init (SAMPLE_RATE);
-	//gb_audio_set_sample_rate (SAMPLE_RATE);
-
 	printf ("\n");
 	if (gb_load (argv[1]) != 0)
 	{
 		fprintf (stderr, "error opening game file\n");
 		return 1;
 	}
+	printf ("\n");
+
+	// init
+	printf ("initializing sdl with opengl.\n");
+	init_screen (GB_LCD_WIDTH * 3, GB_LCD_HEIGHT * 3);
+	init_opengl ();
+
+	printf ("initializing pulse audio output.\n");
+	audio_init (SAMPLE_RATE);
+	//gb_audio_set_sample_rate (SAMPLE_RATE);
 
 	// run game
+	printf ("starting game.\n");
 	running = 1;
 	while (running)
 	{

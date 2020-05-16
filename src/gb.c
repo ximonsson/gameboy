@@ -3,6 +3,7 @@
 #include "gameboy/ppu.h"
 #include "gameboy/mbc.h"
 #include "gameboy/io.h"
+#include "gb.h"
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -16,8 +17,8 @@ static const void (*MBC[0x100]) (uint8_t*, uint8_t*) =
 {
 	gb_mbc0_load, // "ROM ONLY",
 	gb_mbc1_load, // "MBC1",
-	0, // "MBC1+RAM",
-	0, // "MBC1+RAM+BATTERY",
+	gb_mbc1_load, // "MBC1+RAM",
+	gb_mbc1_load, // "MBC1+RAM+BATTERY",
 	0, // "0x04 unsupported",
 	0, // "MBC2",
 	0, // "MBC2+BATTERY",
@@ -87,6 +88,10 @@ int gb_load (const char* file)
 
 	return load_mbc (mbc);
 }
+
+void gb_press_button (gb_button b) { gb_io_press_button (b); }
+
+void gb_release_button (gb_button b) { gb_io_release_button (b); }
 
 void gb_step ()
 {

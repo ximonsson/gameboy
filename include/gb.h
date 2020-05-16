@@ -2,6 +2,7 @@
 #define GB_H
 
 #include <stdint.h>
+#include "gameboy/io.h"
 
 #define GB_LCD_WIDTH 160
 #define GB_LCD_HEIGHT 144
@@ -32,5 +33,11 @@ void gb_quit () ;
  * right before drawing to screen.
  */
 const uint8_t* gb_lcd () ;
+
+typedef gb_io_button gb_button;
+
+void gb_press_button (gb_button) ;
+
+void gb_release_button (gb_button) ;
 
 #endif /* GB_H */
