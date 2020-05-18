@@ -185,7 +185,7 @@ static void print_sprite (uint8_t s)
 {
 	uint8_t* sprite = oam + (s << 2);
 
-	printf (" SPRITE @ (%d - 8, %d - 16)\n", sprite[1], sprite[0]);
+	printf (" SPRITE @ (%d - 8 [%d], %d - 16 [%d])\n", sprite[1], sprite[1] - 8, sprite[0], sprite[0] - 16);
 	printf (" > Tile N: %d\n", sprite[2]);
 	printf (" > BG prio: %d\n", SPRITE_BG_PRIO (sprite));
 	printf (" > Y-flip: %d\n", SPRITE_YFLIP (sprite));
@@ -257,9 +257,9 @@ static void draw_obj (uint8_t x, uint8_t y)
 				dx = 7 - dx;
 
 			if (SPRITE_YFLIP (sprite))
-				dy = 7 - dy;
+				dy = OBJ_SIZE - 1 - dy;
 
-			uint8_t c = color_sprite (tn, dx, ly - sy);
+			uint8_t c = color_sprite (tn, dx, dy);
 
 			if (c)
 			{
