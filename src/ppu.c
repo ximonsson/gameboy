@@ -214,7 +214,7 @@ static void print_bg (uint8_t bg)
 static void draw_bg (uint8_t x, uint8_t y)
 {
 	// read BG tile map
-	uint8_t bgx = (x + scx) % 256, bgy = (y + scy) % 256;
+	uint8_t bgx = (x + scx), bgy = (y + scy);
 
 	uint16_t t = (bgx >> 3) + ((bgy & ~0x7) << 2); // (x div 8) + (y div 8) * 32
 
@@ -222,7 +222,7 @@ static void draw_bg (uint8_t x, uint8_t y)
 	uint8_t* tp = vram + (BG_TILE_MAP - 0x8000);
 	uint8_t tn = tp[t];
 
-	uint8_t c = color_bg (tn, x & 0x7, y & 0x7);
+	uint8_t c = color_bg (tn, bgx & 0x7, bgy & 0x7);
 	const uint8_t* rgb = SHADES[(bgp >> (c << 1)) & 0x3];
 
 	memcpy (&lcd_buffer[(y * GB_LCD_WIDTH + x) * 3], rgb, 3);
@@ -238,19 +238,32 @@ static uint8_t line_sprites[SPRITES_PER_LINE];
 static void draw_obj (uint8_t x, uint8_t y)
 {
 	uint8_t* sprite;
+	uint8_t sx;
+	int16_t dx;
+
 	for (int i = 0; i < SPRITES_PER_LINE && line_sprites[i] != 0xFF; i ++)
 	{
 		sprite = oam + (line_sprites[i] << 2);
-		uint8_t sx = sprite[1] - 8;
-		int16_t dx = x - sx;
-		uint8_t pal = *(obp0_ + SPRITE_PALETTE (sprite));
+		sx = sprite[1] - 8;
+		dx = x - sx;
+
 		if (dx >= 0 && dx < 8)
 		{
 			uint8_t sy = sprite[0] - 16;
+			uint8_t dy = ly - sy;
 			uint8_t tn = sprite[2];
+
+			if (SPRITE_XFLIP (sprite))
+				dx = 7 - dx;
+
+			if (SPRITE_YFLIP (sprite))
+				dy = 7 - dy;
+
 			uint8_t c = color_sprite (tn, dx, ly - sy);
+
 			if (c)
 			{
+				uint8_t pal = *(obp0_ + SPRITE_PALETTE (sprite));
 				const uint8_t* rgb = SHADES[(pal >> (c << 1)) & 0x3];
 				memcpy (&lcd_buffer[(y * GB_LCD_WIDTH + x) * 3], rgb, 3);
 			}
