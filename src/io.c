@@ -34,6 +34,7 @@ static int read_joypad_h (uint16_t address, uint8_t* v)
 void gb_io_press_button (gb_io_button b)
 {
 	key_states &= ~(1 << b);
+	// TODO should check it the key is activated in P1
 	gb_cpu_flag_interrupt (INT_FLAG_JOYPAD);
 }
 
