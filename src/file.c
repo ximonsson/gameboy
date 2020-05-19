@@ -1,4 +1,5 @@
 #include "gameboy/file.h"
+#include "gameboy/cpu.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -180,7 +181,16 @@ static int read_header (FILE* fp, uint8_t* mbc, size_t* rom, size_t* ram)
 
 	// RAM size
 	* ram = header[0x49];
-	printf ("RAM SIZE             > 0x%lu\n", * ram);
+	printf ("RAM SIZE             > 0x%lu", * ram);
+	switch (*ram)
+	{
+		case 1: * ram = 2 << 10; break;
+		case 2: * ram = 8 << 10; break;
+		case 3: * ram = 32 << 10; break;
+		case 4: * ram = 128 << 10; break;
+		case 5: * ram = 64 << 10; break;
+	}
+	printf (" [%ld kB]\n", (*ram) >> 10);
 
 	return 0;
 }
@@ -214,7 +224,7 @@ int gb_load_file (const char* file, uint8_t* mbc, uint8_t** rom, uint8_t** ram)
 	else ret = 0;
 
 	// allocate RAM
-	*ram = (uint8_t *) malloc (ram_size);
+	*ram = (uint8_t *) calloc (ram_size, sizeof (uint8_t));
 
 	fclose (fp);
 	return ret;

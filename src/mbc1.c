@@ -37,7 +37,7 @@ static void reload_banks ()
 	else
 	{
 		gb_cpu_load_rom (1, ROM + (bank_lo << 14));
-		gb_cpu_load_ram (RAM + (bank_hi << 12));
+		gb_cpu_load_ram (RAM + (bank_hi << 13));
 	}
 }
 
