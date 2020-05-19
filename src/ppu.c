@@ -115,8 +115,10 @@ static uint8_t lcd[GB_LCD_WIDTH * GB_LCD_HEIGHT * 3];
 
 const uint8_t* gb_ppu_lcd () { return lcd; }
 
-uint8_t* vram;
+/* VRAM */
+static uint8_t* vram;
 
+/* Dot counter within frame. */
 static uint32_t dot = 0;
 
 /* monochrome palett. */
@@ -129,6 +131,7 @@ const uint8_t SHADES [4][3] =
 };
 
 
+/* get color within tile @ (x, y). */
 static uint8_t color (uint8_t* tile, uint8_t x, uint8_t y)
 {
 	uint8_t shift = 7 - x;
@@ -141,12 +144,14 @@ static uint8_t color (uint8_t* tile, uint8_t x, uint8_t y)
 	return c;
 }
 
+/* get color within sprite. */
 static uint8_t color_sprite (uint8_t n, uint8_t x, uint8_t y)
 {
 	uint8_t* tile = vram + (n << 4);
 	return color (tile, x, y);
 }
 
+/* get color within background. */
 static uint8_t color_bg (uint8_t n, uint8_t x, uint8_t y)
 {
 	uint8_t* tile = vram + (n << 4); // #tile x 16B
@@ -211,6 +216,12 @@ static void print_bg (uint8_t bg)
 }
 #endif
 
+#define LCD_COLOR(x, y, c, pal) { \
+	const uint8_t* rgb = SHADES[(pal >> (c << 1)) & 0x3];\
+	memcpy (&lcd_buffer[(y * GB_LCD_WIDTH + x) * 3], rgb, 3);\
+}
+
+
 static void draw_bg (uint8_t x, uint8_t y)
 {
 	// read BG tile map
@@ -219,13 +230,21 @@ static void draw_bg (uint8_t x, uint8_t y)
 	uint16_t t = (bgx >> 3) + ((bgy & ~0x7) << 2); // (x div 8) + (y div 8) * 32
 
 	// pointer to BG tile map
-	uint8_t* tp = vram + (BG_TILE_MAP - 0x8000);
+	uint8_t* tp = vram + (BG_TILE_MAP - VRAM_LOC);
 	uint8_t tn = tp[t];
 
 	uint8_t c = color_bg (tn, bgx & 0x7, bgy & 0x7);
-	const uint8_t* rgb = SHADES[(bgp >> (c << 1)) & 0x3];
+	LCD_COLOR (x, y, c, bgp);
+}
 
-	memcpy (&lcd_buffer[(y * GB_LCD_WIDTH + x) * 3], rgb, 3);
+static void draw_win (uint8_t x, uint8_t y)
+{
+	uint16_t t = (x >> 3) + ((y & ~0x7) << 2);
+	uint8_t* tp = vram + (WIN_TILE_MAP - VRAM_LOC);
+	uint8_t tn = tp[t];
+
+	uint8_t c = color_bg (tn, x & 0x7, y & 0x7);
+	LCD_COLOR (x, y, c, bgp);
 }
 
 #define SPRITES_PER_LINE 10
@@ -260,21 +279,14 @@ static void draw_obj (uint8_t x, uint8_t y)
 				dy = OBJ_SIZE - 1 - dy;
 
 			uint8_t c = color_sprite (tn, dx, dy);
-
 			if (c)
 			{
 				uint8_t pal = *(obp0_ + SPRITE_PALETTE (sprite));
-				const uint8_t* rgb = SHADES[(pal >> (c << 1)) & 0x3];
-				memcpy (&lcd_buffer[(y * GB_LCD_WIDTH + x) * 3], rgb, 3);
+				LCD_COLOR (x, y, c, pal);
+				return;
 			}
-			return;
 		}
 	}
-}
-
-static void draw_win (uint8_t x, uint8_t y)
-{
-
 }
 
 /* draw in the LCD at position x, y. */
@@ -286,7 +298,7 @@ static void draw (uint8_t x, uint8_t y)
 		// BG
 		draw_bg (x, y);
 		// WIN
-		if (WIN_DISP_ENABLED)
+		if (WIN_DISP_ENABLED && x == (wx - 7) && y == wy)
 			draw_win (x, y);
 	}
 	// Sprite
@@ -329,16 +341,17 @@ static void step ()
 	}
 
 	// which dot on the current line
-	uint16_t x = dot % GB_SCANLINE;
+	int16_t x = dot % GB_SCANLINE;
 
 	// LYC=LY
-	if (lyc == ly)
+	if (lyc == ly && x == 0)
 	{
 		status |= 0x04;
-		if (x == 0 && LYC_EQ_LY_INT)
+		if (LYC_EQ_LY_INT)
 			gb_cpu_flag_interrupt (INT_FLAG_LCD_STAT);
 	}
-	else status &= ~0x04;
+	else if (lyc != ly && LYC_EQ_LY)
+		status &= ~0x04;
 
 	// V-BLANK
 	if (ly == GB_LCD_HEIGHT && x == 0)
@@ -355,8 +368,10 @@ static void step ()
 	// Visible line
 	else if (ly < GB_LCD_HEIGHT)
 	{
+		x -= OAM_CC;
+
 		// OAM search
-		if (x == 0)
+		if (x == -OAM_CC)
 		{
 			// Load sprites on this line.
 			SET_MODE (MODE_SEARCH_OAM);
@@ -367,18 +382,18 @@ static void step ()
 			find_line_sprites ();
 		}
 		// H-BLANK
-		else if (x == GB_LCD_WIDTH + OAM_CC)
+		else if (x == GB_LCD_WIDTH)
 		{
 			SET_MODE (MODE_HBLANK);
 			if (MODE_0_HBLANK_INT)
 				gb_cpu_flag_interrupt (INT_FLAG_LCD_STAT);
 		}
 		// Draw
-		else if (x >= OAM_CC && x < GB_LCD_WIDTH + OAM_CC)
+		else if (x >= 0 && x < GB_LCD_WIDTH)
 		{
-			if (x == OAM_CC)
+			if (x == 0)
 				SET_MODE (MODE_TRANSFER_LCD);
-			draw (x - OAM_CC, ly);
+			draw (x, ly);
 		}
 	}
 
