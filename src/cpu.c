@@ -264,7 +264,7 @@ static void inc_tima (int cc)
 		if (++TIMA == 0) // overflow
 		{
 			TIMA = TMA;
-			gb_cpu_flag_interrupt (INT_FLAG_TIMER);
+			//gb_cpu_flag_interrupt (INT_FLAG_TIMER);
 		}
 	}
 
@@ -771,9 +771,6 @@ void gb_cpu_flag_interrupt (interrupt_flag f)
  */
 int interrupt ()
 {
-	// all interrupts disabled
-	if (!ime) return 1;
-
 	// loop over interrupt flags in priority order.
 	// call any interrupts that have been flagged and enabled.
 	for (uint8_t b = 0; b < 5; b ++)
@@ -790,7 +787,6 @@ int interrupt ()
 			return 0;
 		}
 	}
-
 	// no interrupt requested
 	return 1;
 }
@@ -803,10 +799,6 @@ void gb_cpu_reset ()
 	pc = 0x100;
 	sp = 0xFFFE;
 
-	//AF = 0;
-	//BC = 0;
-	//DE = 0;
-	//HL = 0;
 	AF = 0x01B0;
 	BC = 0x0013;
 	DE = 0x00D8;
@@ -840,7 +832,7 @@ int gb_cpu_step ()
 {
 	int cc = 0;
 	// first check any interrupts
-	if (interrupt () == 0) cc += 5;
+	if (ime && interrupt () == 0) cc += 5;
 
 	if (f_halt) return 1;
 
