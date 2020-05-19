@@ -564,7 +564,7 @@ JRCC         JP_CC_Z,n       28         8
 JRCC         JP_CC_NC,n      30         8
 JRCC         JP_CC_C,n       38         8
 # CALL nn
-CALL         nn              CD        24
+CALL         nn              CD        12
 # CALL cc,nn
 CALLCC       JP_CC_NZ,nn     C4        12
 CALLCC       JP_CC_Z,nn      CC        12
