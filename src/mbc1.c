@@ -5,9 +5,8 @@
 #include "gameboy/cpu.h"
 #include <string.h>
 
-uint8_t* ROM;
-uint8_t* RAM;
-uint8_t* cpu_ram;
+static uint8_t* ROM;
+static uint8_t* RAM;
 
 /* RAM enabled register. */
 static uint8_t ram_enabled;
@@ -72,8 +71,6 @@ void gb_mbc1_load (uint8_t* rom, uint8_t* ram)
 {
 	ROM = rom;
 	RAM = ram;
-
-	cpu_ram = gb_cpu_mem (0);
 
 	gb_cpu_register_store_handler (write_ram_enable_h);
 	gb_cpu_register_store_handler (write_bank_number_h);

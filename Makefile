@@ -1,16 +1,16 @@
-CC=gcc
-CFLAGS=-Wall
-LDFLAGS=-L./lib -lgameboy -lSDL2 -lpulse -lpulse-simple
-INCLUDES=-I./include
+CC = gcc
+CFLAGS += -Wall
+LDFLAGS += -L./lib -lgameboy -lSDL2 -lpulse -lpulse-simple
+INCLUDES = -I./include
 
-SRC=gb.c file.c cpu.c mbc1.c ppu.c io.c
+SRC=gb.c file.c cpu.c ppu.c io.c mbc1.c mbc3.c
 OBJ=$(addprefix build/, $(SRC:.c=.o))
 LIB=lib/libgameboy.a
 ARCMD = rcs
 BIN=bin/gameboy
 
 ifdef DEBUG
-CFLAGS += -g3 -DDEBUG_PPU
+CFLAGS += -g3 -DDEBUG_PPU # -DDEBUG_CPU
 else
 CFLAGS += -g3
 endif
