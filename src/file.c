@@ -25,10 +25,10 @@ static const uint8_t LOGO[LOGO_SIZE] =
  */
 static void print_nintendo_logo (uint8_t* logo)
 {
-	uint8_t bitmap[8 * LOGO_SIZE];
+	uint8_t bitmap[LOGO_SIZE << 3];
 	int w = 12;
 	int h = 8;
-	int bw = LOGO_SIZE * 8 / h;
+	int bw = LOGO_SIZE;
 
 	for (int i = 0; i < LOGO_SIZE; i ++)
 	{
