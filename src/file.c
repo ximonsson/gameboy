@@ -173,24 +173,25 @@ static int read_header (FILE* fp, uint8_t* mbc, size_t* rom, size_t* ram)
 
 	// Cartridge type
 	* mbc = header[0x47];
-	printf ("CARTRIDGE TYPE (MBC) > [x%.2X]: %s\n", *mbc, MBC[*mbc]);
+	printf ("CARTRIDGE TYPE (MBC) > [0x%.2X] %s\n", *mbc, MBC[*mbc]);
 
 	// ROM size
 	* rom = 32 << (10 + header[0x48]);
-	printf ("ROM SIZE             > %lu B (= %lu KB) [%d]\n", * rom, (* rom) >> 10, header[0x48]);
+	printf ("ROM SIZE             > [%u] %lu KB\n",  header[0x48], (* rom) >> 10);
 
 	// RAM size
 	* ram = header[0x49];
-	printf ("RAM SIZE             > 0x%lu", * ram);
+	printf ("RAM SIZE             > [%lu]", * ram);
 	switch (*ram)
 	{
+		case 0: * ram = 8 << 10; break;
 		case 1: * ram = 2 << 10; break;
 		case 2: * ram = 8 << 10; break;
 		case 3: * ram = 32 << 10; break;
 		case 4: * ram = 128 << 10; break;
 		case 5: * ram = 64 << 10; break;
 	}
-	printf (" [%ld kB]\n", (*ram) >> 10);
+	printf (" %ld kB\n", (*ram) >> 10);
 
 	return 0;
 }
