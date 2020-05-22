@@ -221,7 +221,6 @@ static void print_bg (uint8_t bg)
 	memcpy (&lcd_buffer[(y * GB_LCD_WIDTH + x) * 3], rgb, 3);\
 }
 
-
 static void draw_bg (uint8_t x, uint8_t y)
 {
 	// read BG tile map
@@ -239,11 +238,14 @@ static void draw_bg (uint8_t x, uint8_t y)
 
 static void draw_win (uint8_t x, uint8_t y)
 {
-	uint16_t t = (x >> 3) + ((y & ~0x7) << 2);
+	uint8_t winx = x - (wx - 7), winy = y - wy;
+
+
+	uint16_t t = (winx >> 3) + ((winy & ~0x7) << 2);
 	uint8_t* tp = vram + (WIN_TILE_MAP - VRAM_LOC);
 	uint8_t tn = tp[t];
 
-	uint8_t c = color_bg (tn, x & 0x7, y & 0x7);
+	uint8_t c = color_bg (tn, winx & 0x7, winy & 0x7);
 	LCD_COLOR (x, y, c, bgp);
 }
 
@@ -262,6 +264,8 @@ static void draw_obj (uint8_t x, uint8_t y)
 
 	for (int i = 0; i < SPRITES_PER_LINE && line_sprites[i] != 0xFF; i ++)
 	{
+		//if (SPRITE_BG_PRIO (sprite)) continue;
+
 		sprite = oam + (line_sprites[i] << 2);
 		sx = sprite[1] - 8;
 		dx = x - sx;
@@ -270,7 +274,7 @@ static void draw_obj (uint8_t x, uint8_t y)
 		{
 			uint8_t sy = sprite[0] - 16;
 			uint8_t dy = ly - sy;
-			uint8_t tn = sprite[2];
+			uint8_t tn = sprite[2]; // + (OBJ_SIZE >> 3) - 1;
 
 			if (SPRITE_XFLIP (sprite))
 				dx = 7 - dx;
@@ -298,7 +302,7 @@ static void draw (uint8_t x, uint8_t y)
 		// BG
 		draw_bg (x, y);
 		// WIN
-		if (WIN_DISP_ENABLED && x == (wx - 7) && y == wy)
+		if (WIN_DISP_ENABLED && x >= (wx - 7) && y >= wy)
 			draw_win (x, y);
 	}
 	// Sprite
@@ -325,21 +329,13 @@ static void inline find_line_sprites ()
 		// visible sprite on the current line
 		int16_t dy = ly - (y - 16);
 		if (dy < OBJ_SIZE && dy >= 0)
-			line_sprites[n++] = i;
+			line_sprites[n ++] = i;
 	}
 }
 
 /* step the PPU one dot. */
 static void step ()
 {
-	if (!LCD_ENABLED)
-	{
-		dot = 0;
-		ly = 0;
-		SET_MODE (MODE_VBLANK); // TODO research this
-		return;
-	}
-
 	// which dot on the current line
 	int16_t x = dot % GB_SCANLINE;
 
@@ -366,7 +362,7 @@ static void step ()
 		memcpy (lcd, lcd_buffer, GB_LCD_HEIGHT * GB_LCD_WIDTH * 3);
 	}
 	// Visible line
-	else if (ly < GB_LCD_HEIGHT)
+	else if (LCD_ENABLED && ly < GB_LCD_HEIGHT)
 	{
 		x -= OAM_CC;
 
