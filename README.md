@@ -46,6 +46,7 @@ Not really aiming for supporting that many but at least the comon ones:
 
 ### TODO
 
+* [ ] Audio support!
 * [ ] Sprite - BG priority needs to be solved.
 * [ ] RTC for MBC3.
 * [ ] Timer support - need to keep better track of CPU cycles.
