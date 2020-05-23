@@ -221,7 +221,7 @@ static void print_bg (uint8_t bg)
 	memcpy (&lcd_buffer[(y * GB_LCD_WIDTH + x) * 3], rgb, 3);\
 }
 
-static void draw_bg (uint8_t x, uint8_t y)
+static uint8_t draw_bg (uint8_t x, uint8_t y)
 {
 	// read BG tile map
 	uint8_t bgx = (x + scx), bgy = (y + scy);
@@ -234,12 +234,13 @@ static void draw_bg (uint8_t x, uint8_t y)
 
 	uint8_t c = color_bg (tn, bgx & 0x7, bgy & 0x7);
 	LCD_COLOR (x, y, c, bgp);
+
+	return c;
 }
 
 static void draw_win (uint8_t x, uint8_t y)
 {
 	uint8_t winx = x - (wx - 7), winy = y - wy;
-
 
 	uint16_t t = (winx >> 3) + ((winy & ~0x7) << 2);
 	uint8_t* tp = vram + (WIN_TILE_MAP - VRAM_LOC);
@@ -256,7 +257,7 @@ static uint8_t line_sprites[SPRITES_PER_LINE];
 
 #define RESET_LINE_SPRITES memset (line_sprites, 0xFF, SPRITES_PER_LINE)
 
-static void draw_obj (uint8_t x, uint8_t y)
+static void draw_obj (uint8_t x, uint8_t y, uint8_t bgc)
 {
 	uint8_t* sprite;
 	uint8_t sx;
@@ -264,14 +265,14 @@ static void draw_obj (uint8_t x, uint8_t y)
 
 	for (int i = 0; i < SPRITES_PER_LINE && line_sprites[i] != 0xFF; i ++)
 	{
-		//if (SPRITE_BG_PRIO (sprite)) continue;
-
 		sprite = oam + (line_sprites[i] << 2);
 		sx = sprite[1] - 8;
 		dx = x - sx;
 
 		if (dx >= 0 && dx < 8)
 		{
+			if (SPRITE_BG_PRIO (sprite) && bgc) break;
+
 			uint8_t sy = sprite[0] - 16;
 			uint8_t dy = ly - sy;
 			uint8_t tn = sprite[2]; // + (OBJ_SIZE >> 3) - 1;
@@ -287,7 +288,7 @@ static void draw_obj (uint8_t x, uint8_t y)
 			{
 				uint8_t pal = *(obp0_ + SPRITE_PALETTE (sprite));
 				LCD_COLOR (x, y, c, pal);
-				return;
+				break;
 			}
 		}
 	}
@@ -296,20 +297,21 @@ static void draw_obj (uint8_t x, uint8_t y)
 /* draw in the LCD at position x, y. */
 static void draw (uint8_t x, uint8_t y)
 {
+	uint8_t bgc = 0;
 	// Background
 	if (BG_WIN_PRIO)
 	{
 		// BG
-		draw_bg (x, y);
+		bgc = draw_bg (x, y);
 		// WIN
 		if (WIN_DISP_ENABLED && x >= (wx - 7) && y >= wy)
 			draw_win (x, y);
 	}
 	// Sprite
-	if (OBJ_ENABLED)
-		draw_obj (x, y);
+	if (OBJ_ENABLED) draw_obj (x, y, bgc);
 }
 
+/* Find (the first 10) sprites that are visible on the current line. */
 static void inline find_line_sprites ()
 {
 	uint8_t* sprite;
@@ -353,11 +355,9 @@ static void step ()
 	if (ly == GB_LCD_HEIGHT && x == 0)
 	{
 		gb_cpu_flag_interrupt (INT_FLAG_VBLANK);
-
 		SET_MODE (MODE_VBLANK);
 		if (MODE_1_VBLANK_INT)
 			gb_cpu_flag_interrupt (INT_FLAG_LCD_STAT);
-
 		// Transfer data to LCD
 		memcpy (lcd, lcd_buffer, GB_LCD_HEIGHT * GB_LCD_WIDTH * 3);
 	}
