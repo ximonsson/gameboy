@@ -19,19 +19,19 @@ There is a sample application with source code located in `./examples/app` that 
 
 #### CPU Instructions
 
-| Test # | Status        | Note                               |
-|--------|---------------|------------------------------------|
-| 01     | Pass          |  |
-| 02     | Loops forever | Timer interrupts are not correctly synchronized, should be this. |
-| 03     | Pass          |  |
-| 04     | Pass          |  |
-| 05     | Pass          |  |
-| 06     | Pass          |  |
-| 07     | Pass          |  |
-| 08     | Pass          |  |
-| 09     | Pass          |  |
-| 10     | Pass          |  |
-| 11     | Pass          |  |
+| Test # | Status        |
+|--------|---------------|
+| 01     | Pass          |
+| 02     | Pass          |
+| 03     | Pass          |
+| 04     | Pass          |
+| 05     | Pass          |
+| 06     | Pass          |
+| 07     | Pass          |
+| 08     | Pass          |
+| 09     | Pass          |
+| 10     | Pass          |
+| 11     | Pass          |
 
 
 ### MBC Support
@@ -47,6 +47,6 @@ Not really aiming for supporting that many but at least the comon ones:
 ### TODO
 
 * [ ] Audio support!
-* [ ] Sprite - BG priority needs to be solved.
+* [x] Sprite - BG priority needs to be solved.
 * [ ] RTC for MBC3.
-* [ ] Timer support - need to keep better track of CPU cycles.
+* [x] Timer support - need to keep better track of CPU cycles.
