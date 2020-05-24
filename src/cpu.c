@@ -780,31 +780,36 @@ void gb_cpu_flag_interrupt (interrupt_flag f)
  */
 int interrupt ()
 {
-	uint8_t ret = 1;
-	uint8_t f;
+	uint8_t ret = 0;
+	uint8_t f = 1;
+	uint8_t b = 0;
 
 	// loop over interrupt flags in priority order.
 	// call any interrupts that have been flagged and enabled.
-	for (uint8_t b = 0; b < 5; b ++)
+	for (; b < 5; b ++)
 	{
-		f = 1 << b;
 		if (f & IF & IE)
 		{
-			// if CPU is halted we just unset HALT flag - don't call the interrupt
-			if (f_halt) { f_halt = 0; break; }
-
-			ime = 0;
-			IF &= ~f;
-			PUSH (pc);
-			pc = 0x40 + 0x8 * b;
-			ret = 0;
-
-#ifdef DEBUG_CPU
-			printf ("%-25s\n", ">>> interrupt ==> calling handler @ $%.4X", pc);
-#endif
+			// unset halt
+			// return value depends if IME is enabled
+			f_halt = 0;
+			ret = ime;
 			break;
 		}
+		f <<= 1;
 	}
+
+	if (ret)
+	{
+		ime = 0;
+		IF &= ~f;
+		PUSH (pc);
+		pc = 0x40 + 0x8 * b;
+#ifdef DEBUG_CPU
+		printf ("%-25s\n", ">>> interrupt ==> calling handler @ $%.4X", pc);
+#endif
+	}
+
 	return ret;
 }
 

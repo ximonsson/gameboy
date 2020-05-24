@@ -266,15 +266,14 @@ static void draw_obj (uint8_t x, uint8_t y, uint8_t bgc)
 	for (int i = 0; i < SPRITES_PER_LINE && line_sprites[i] != 0xFF; i ++)
 	{
 		sprite = oam + (line_sprites[i] << 2);
-		dx = x - sprite[1] + 8;
 
 		if (SPRITE_BG_PRIO (sprite) && bgc) continue;
 
+		dx = x - sprite[1] + 8;
+
 		if (dx >= 0 && dx < 8)
 		{
-
 			uint8_t dy = ly - sprite[0] + 16;
-			uint8_t tn = sprite[2];
 
 			if (SPRITE_XFLIP (sprite))
 				dx = 7 - dx;
@@ -282,7 +281,7 @@ static void draw_obj (uint8_t x, uint8_t y, uint8_t bgc)
 			if (SPRITE_YFLIP (sprite))
 				dy = OBJ_SIZE - 1 - dy;
 
-			uint8_t c = color_sprite (tn, dx, dy);
+			uint8_t c = color_sprite (sprite[2], dx, dy);
 			if (c)
 			{
 				uint8_t pal = *(obp0_ + SPRITE_PALETTE (sprite));
