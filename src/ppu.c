@@ -268,9 +268,10 @@ static void draw_obj (uint8_t x, uint8_t y, uint8_t bgc)
 		sprite = oam + (line_sprites[i] << 2);
 		dx = x - sprite[1] + 8;
 
+		if (SPRITE_BG_PRIO (sprite) && bgc) continue;
+
 		if (dx >= 0 && dx < 8)
 		{
-			if (SPRITE_BG_PRIO (sprite) && bgc) continue;
 
 			uint8_t dy = ly - sprite[0] + 16;
 			uint8_t tn = sprite[2];
