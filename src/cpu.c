@@ -71,7 +71,7 @@ static void oam_dma_transfer (uint8_t v)
 	memcpy (ram + OAM_LOC, ram + src, 0xA0);
 }
 
-#define MAX_HANDLERS 16
+#define MAX_HANDLERS 32
 
 /* Currently registered read handlers. */
 static read_handler read_handlers[MAX_HANDLERS];
@@ -88,9 +88,7 @@ static uint8_t mem_read (uint16_t address)
 	uint8_t v = ram[address];
 	int stop = 0;
 	for (read_handler* h = read_handlers; (*h) != 0 && !stop; h ++)
-	{
 		stop = (*h)(address, &v);
-	}
 	return v;
 }
 
@@ -114,9 +112,7 @@ static void mem_store (uint16_t address, uint8_t v)
 {
 	int stop = 0;
 	for (store_handler* h = store_handlers; (*h) != 0 && !stop; h ++)
-	{
 		stop = (*h)(address, v);
-	}
 	if (!stop) // if we didn't break the loop we can store to RAM @ address.
 		ram[address] = v;
 }
@@ -203,10 +199,10 @@ static int read_echo_ram_h (uint16_t address, uint8_t* v)
 /* Special Registers ---------------------------------------------------------------- */
 
 /* HALT flag. */
-static uint8_t f_halt = 0;
+static uint8_t f_halt;
 
 /* Interrupt Master Enable flag (IME). */
-static uint8_t ime = 0;
+static uint8_t ime;
 
 /* Interrupt Enable (IE) register. Is located at RAM memory $FFFF. */
 static uint8_t* reg_ie = ram + 0xFFFF;
@@ -232,10 +228,17 @@ static int write_div_h (uint16_t addr, uint8_t n)
 	return 0;
 }
 
+// keep track of DIV cycles.
+static int divcc;
+
 static void inc_div (int cc)
 {
-	// TODO check timing
-	DIV ++;
+	divcc += cc;
+	if (divcc >= GB_DIV_CC)
+	{
+		DIV ++;
+		divcc %= GB_DIV_CC;
+	}
 }
 
 /* Time counter register. */
@@ -250,24 +253,30 @@ static uint8_t* reg_tma = ram + 0xFF06;
 static uint8_t* reg_tac = ram + 0xFF07;
 #define TAC (* reg_tac)
 
-static uint16_t timer_cc[4] = { 1024, 16, 64, 256 };
+#define TIMER_ENABLED (TAC & 0x04)
+
+static const uint16_t timer_cc[4] = { 1024, 16, 64, 256 };
+
+// Keep track of TIMA cycles.
+static int timacc;
 
 static void inc_tima (int cc)
 {
-	if (TAC & 0x04)
+	if (!TIMER_ENABLED) return;
+
+	timacc += cc;
+	int cc_ = timer_cc[TAC & 0x3];
+
+	if (timacc >= cc_)
 	{
-		uint16_t cc_ = timer_cc[TAC & 0x3];
-
-		// TODO
-		// check timing
-
-		if (++TIMA == 0) // overflow
+		TIMA ++;
+		if (TIMA == 0) // overflow
 		{
 			TIMA = TMA;
-			//gb_cpu_flag_interrupt (INT_FLAG_TIMER);
+			gb_cpu_flag_interrupt (INT_FLAG_TIMER);
 		}
+		timacc %= cc_;
 	}
-
 }
 
 /* CPU Instructions ----------------------------------------------------------------- */
@@ -771,24 +780,32 @@ void gb_cpu_flag_interrupt (interrupt_flag f)
  */
 int interrupt ()
 {
+	uint8_t ret = 1;
+	uint8_t f;
+
 	// loop over interrupt flags in priority order.
 	// call any interrupts that have been flagged and enabled.
 	for (uint8_t b = 0; b < 5; b ++)
 	{
-		if ((1 << b) & IF & IE)
+		f = 1 << b;
+		if (f & IF & IE)
 		{
-			ime = f_halt = 0;
-			IF &= ~(1 << b);
+			// if CPU is halted we just unset HALT flag - don't call the interrupt
+			if (f_halt) { f_halt = 0; break; }
+
+			ime = 0;
+			IF &= ~f;
 			PUSH (pc);
 			pc = 0x40 + 0x8 * b;
+			ret = 0;
+
 #ifdef DEBUG_CPU
-			printf ("                        >>> interrupt ==> calling handler @ $%.4X\n", pc);
+			printf ("%-25s\n", ">>> interrupt ==> calling handler @ $%.4X", pc);
 #endif
-			return 0;
+			break;
 		}
 	}
-	// no interrupt requested
-	return 1;
+	return ret;
 }
 
 /**
@@ -814,6 +831,7 @@ void gb_cpu_reset ()
 	gb_cpu_register_store_handler (write_div_h);
 	gb_cpu_register_store_handler (write_unused_ram_h);
 	gb_cpu_register_store_handler (write_echo_ram_h);
+	store_handlers[n_store_handlers] = 0;
 
 	n_read_handlers = 0;
 	gb_cpu_register_read_handler (read_unused_ram_h);
@@ -821,6 +839,9 @@ void gb_cpu_reset ()
 	read_handlers[n_read_handlers] = 0;
 
 	memset (ram, 0, 1 << 16);
+
+	// reset timers
+	divcc = timacc = 0;
 }
 
 /**
@@ -831,13 +852,20 @@ void gb_cpu_reset ()
 int gb_cpu_step ()
 {
 	int cc = 0;
-	// first check any interrupts
-	if (ime && interrupt () == 0) cc += 5;
 
-	if (f_halt) return 1;
+	// first check any interrupts
+	if ((ime || f_halt) && interrupt () == 0) cc += 5;
+
+	// if CPU is halted we clock on cycle and increment timers then return
+	if (f_halt)
+	{
+		cc = 1;
+		goto inc;
+	}
 
 	// load an opcode and perform the operation associated,
 	// step the PC and clock the number of cycles
+
 #ifdef DEBUG_CPU
 	printf ("$%.4X: ", pc);
 #endif
@@ -851,6 +879,8 @@ int gb_cpu_step ()
 	op->instruction ();
 	cc += op->cc;
 
+inc:
+	// increment timers
 	inc_div (cc);
 	inc_tima (cc);
 
