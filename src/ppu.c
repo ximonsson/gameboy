@@ -147,8 +147,9 @@ static uint8_t color (uint8_t* tile, uint8_t x, uint8_t y)
 /* get color within sprite. */
 static uint8_t color_sprite (uint8_t n, uint8_t x, uint8_t y)
 {
-	uint8_t* tile = vram + (n << 4);
-	return color (tile, x, y);
+	if (OBJ_SIZE == 16) n &= 0xFE;
+	uint16_t nn = n << 4;
+	return color (vram + nn, x, y);
 }
 
 /* get color within background. */
@@ -260,22 +261,19 @@ static uint8_t line_sprites[SPRITES_PER_LINE];
 static void draw_obj (uint8_t x, uint8_t y, uint8_t bgc)
 {
 	uint8_t* sprite;
-	uint8_t sx;
 	int16_t dx;
 
 	for (int i = 0; i < SPRITES_PER_LINE && line_sprites[i] != 0xFF; i ++)
 	{
 		sprite = oam + (line_sprites[i] << 2);
-		sx = sprite[1] - 8;
-		dx = x - sx;
+		dx = x - sprite[1] + 8;
 
 		if (dx >= 0 && dx < 8)
 		{
-			if (SPRITE_BG_PRIO (sprite) && bgc) break;
+			if (SPRITE_BG_PRIO (sprite) && bgc) continue;
 
-			uint8_t sy = sprite[0] - 16;
-			uint8_t dy = ly - sy;
-			uint8_t tn = sprite[2]; // + (OBJ_SIZE >> 3) - 1;
+			uint8_t dy = ly - sprite[0] + 16;
+			uint8_t tn = sprite[2];
 
 			if (SPRITE_XFLIP (sprite))
 				dx = 7 - dx;
