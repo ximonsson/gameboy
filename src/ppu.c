@@ -46,10 +46,10 @@ static uint8_t* lcdc_;
 #define lcdc (* lcdc_)
 
 #define LCD_ENABLED ((lcdc & 0x80) == 0x80)
-#define WIN_TILE_MAP (0x9800 | ((lcdc & 0x40) << 4))
+#define WIN_TILE_MAP (0x1800 | ((lcdc & 0x40) << 4))
 #define WIN_DISP_ENABLED ((lcdc & 0x20) == 0x20)
-#define BG_WIN_TILE (0x8800 & ~((lcdc & 0x10) << 7))
-#define BG_TILE_MAP (0x9800 | ((lcdc & 0x08) << 7))
+#define BG_WIN_TILE (0x0800 & ~((lcdc & 0x10) << 7))
+#define BG_TILE_MAP (0x1800 | ((lcdc & 0x08) << 7))
 #define OBJ_SIZE (8 + ((lcdc & 0x04) << 1))
 #define OBJ_ENABLED (lcdc & 0x02)
 #define BG_WIN_PRIO (lcdc & 0x01)
@@ -155,67 +155,17 @@ static uint8_t color_sprite (uint8_t n, uint8_t x, uint8_t y)
 /* get color within background. */
 static uint8_t color_bg (uint8_t n, uint8_t x, uint8_t y)
 {
-	uint8_t* tile = vram + (n << 4); // #tile x 16B
-	if (BG_WIN_TILE == 0x8800) // $8800 addressing mode
+	uint8_t* tile; // usually VRAM + #tile x 16B
+
+	if (BG_WIN_TILE == 0x0800) // $8800 addressing mode
 	{
 		int16_t n_ = ((int8_t) n) << 4;
 		tile = vram + 0x1000 + n_;
 	}
+	else tile = vram + (n << 4);
+
 	return color (tile, x, y);
 }
-
-#ifdef DEBUG_PPU
-static void print_tile (uint8_t* t)
-{
-	uint8_t c;
-	for (uint8_t y = 0; y < 8; y ++)
-	{
-		for (uint8_t x = 0; x < 8; x ++)
-		{
-			c = color (t, x, y);
-			switch (c)
-			{
-				case 0: printf (" "); break;
-				case 1: printf ("░"); break;
-				case 2: printf ("▒"); break;
-				case 3: printf ("█"); break;
-				default: printf ("%d", c); break;
-			}
-		}
-		printf ("\n");
-	}
-	printf ("\n");
-}
-
-static void print_sprite (uint8_t s)
-{
-	uint8_t* sprite = oam + (s << 2);
-
-	printf (" SPRITE @ (%d - 8 [%d], %d - 16 [%d])\n", sprite[1], sprite[1] - 8, sprite[0], sprite[0] - 16);
-	printf (" > Tile N: %d\n", sprite[2]);
-	printf (" > BG prio: %d\n", SPRITE_BG_PRIO (sprite));
-	printf (" > Y-flip: %d\n", SPRITE_YFLIP (sprite));
-	printf (" > X-flip: %d\n", SPRITE_XFLIP (sprite));
-	printf (" > Palette: %d\n", SPRITE_PALETTE (sprite));
-	printf (" > VRAM: %d\n", SPRITE_VRAM (sprite));
-	printf (" > Palette (CGB): %d\n", SPRITE_PALETTE_CGB (sprite));
-	printf ("\n");
-
-	uint8_t* tile = vram + (sprite[2] << 4);
-	print_tile (tile);
-}
-
-static void print_oam ()
-{
-	for (int i = 0; i < 40; i ++)
-		print_sprite (i);
-}
-
-static void print_bg (uint8_t bg)
-{
-
-}
-#endif
 
 #define LCD_COLOR(x, y, c, pal) { \
 	const uint8_t* rgb = SHADES[(pal >> (c << 1)) & 0x3];\
@@ -230,7 +180,7 @@ static uint8_t draw_bg (uint8_t x, uint8_t y)
 	uint16_t t = (bgx >> 3) + ((bgy & ~0x7) << 2); // (x div 8) + (y div 8) * 32
 
 	// pointer to BG tile map
-	uint8_t* tp = vram + (BG_TILE_MAP - VRAM_LOC);
+	uint8_t* tp = vram + BG_TILE_MAP;
 	uint8_t tn = tp[t];
 
 	uint8_t c = color_bg (tn, bgx & 0x7, bgy & 0x7);
@@ -244,7 +194,7 @@ static void draw_win (uint8_t x, uint8_t y)
 	uint8_t winx = x - (wx - 7), winy = y - wy;
 
 	uint16_t t = (winx >> 3) + ((winy & ~0x7) << 2);
-	uint8_t* tp = vram + (WIN_TILE_MAP - VRAM_LOC);
+	uint8_t* tp = vram + WIN_TILE_MAP;
 	uint8_t tn = tp[t];
 
 	uint8_t c = color_bg (tn, winx & 0x7, winy & 0x7);
@@ -424,3 +374,56 @@ void gb_ppu_step (int cc)
 {
 	for (int i = 0; i < cc; i ++) step ();
 }
+
+#ifdef DEBUG_PPU
+static void print_tile (uint8_t* t)
+{
+	uint8_t c;
+	for (uint8_t y = 0; y < 8; y ++)
+	{
+		for (uint8_t x = 0; x < 8; x ++)
+		{
+			c = color (t, x, y);
+			switch (c)
+			{
+				case 0: printf (" "); break;
+				case 1: printf ("░"); break;
+				case 2: printf ("▒"); break;
+				case 3: printf ("█"); break;
+				default: printf ("%d", c); break;
+			}
+		}
+		printf ("\n");
+	}
+	printf ("\n");
+}
+
+static void print_sprite (uint8_t s)
+{
+	uint8_t* sprite = oam + (s << 2);
+
+	printf (" SPRITE @ (%d - 8 [%d], %d - 16 [%d])\n", sprite[1], sprite[1] - 8, sprite[0], sprite[0] - 16);
+	printf (" > Tile N: %d\n", sprite[2]);
+	printf (" > BG prio: %d\n", SPRITE_BG_PRIO (sprite));
+	printf (" > Y-flip: %d\n", SPRITE_YFLIP (sprite));
+	printf (" > X-flip: %d\n", SPRITE_XFLIP (sprite));
+	printf (" > Palette: %d\n", SPRITE_PALETTE (sprite));
+	printf (" > VRAM: %d\n", SPRITE_VRAM (sprite));
+	printf (" > Palette (CGB): %d\n", SPRITE_PALETTE_CGB (sprite));
+	printf ("\n");
+
+	uint8_t* tile = vram + (sprite[2] << 4);
+	print_tile (tile);
+}
+
+static void print_oam ()
+{
+	for (int i = 0; i < 40; i ++)
+		print_sprite (i);
+}
+
+static void print_bg (uint8_t bg)
+{
+
+}
+#endif
