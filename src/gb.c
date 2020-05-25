@@ -3,6 +3,7 @@
 #include "gameboy/ppu.h"
 #include "gameboy/mbc.h"
 #include "gameboy/io.h"
+#include "gameboy/apu.h"
 #include "gb.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -77,7 +78,7 @@ int gb_load (const char* file)
 	gb_cpu_reset ();
 	gb_ppu_reset ();
 	gb_io_reset ();
-	// gb_apu_reset ();
+	gb_apu_reset ();
 
 	uint8_t mbc;
 	if ((ret = gb_load_file (file, &mbc, &ROM, &RAM)) != 0)

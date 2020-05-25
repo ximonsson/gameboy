@@ -3,7 +3,7 @@ CFLAGS += -Wall
 LDFLAGS += -L./lib -lgameboy -lSDL2 -lpulse -lpulse-simple
 INCLUDES = -I./include
 
-SRC=gb.c file.c cpu.c ppu.c io.c mbc1.c mbc3.c mbc5.c mbc0.c
+SRC=gb.c file.c cpu.c ppu.c io.c apu.c mbc1.c mbc3.c mbc5.c mbc0.c
 OBJ=$(addprefix build/, $(SRC:.c=.o))
 LIB=lib/libgameboy.a
 ARCMD = rcs
