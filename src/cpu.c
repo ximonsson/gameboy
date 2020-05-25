@@ -763,7 +763,7 @@ void reti ()
 void gb_cpu_flag_interrupt (interrupt_flag f)
 {
 #ifdef DEBUG_CPU
-	printf ("                           >>> IRQ x%.4X \n", f);
+	printf ("%-25s $%.2X\n", ">>> IRQ", f);
 #endif
 	IF |= f;
 }
@@ -806,7 +806,7 @@ int interrupt ()
 		PUSH (pc);
 		pc = 0x40 + 0x8 * b;
 #ifdef DEBUG_CPU
-		printf ("%-25s\n", ">>> interrupt ==> calling handler @ $%.4X", pc);
+		printf ("%-25s @ $%.4X\n", ">>> interrupt ==> calling handler", pc);
 #endif
 	}
 
