@@ -15,6 +15,10 @@ There is a sample application with source code located in `./examples/app` that 
 
 ## Status
 
+### Known Issues
+
+* Timing: Seems like timing of the emulator is super off. I have no idea why though... I do think this is the reason for the games that are not working properly.
+
 ### Blargg's Tests
 
 #### CPU Instructions
@@ -35,7 +39,7 @@ There is a sample application with source code located in `./examples/app` that 
 
 #### Instruction timing
 
-Just gives me *#255 Failure*. I don't even know what it means. Something might be very wrong with my timing but I don't understand what it could be.
+Just gives me *Failed #255*. I don't even know what it means. Something might be very wrong with my timing but I don't understand what it could be.
 
 
 ### MBC Support
@@ -53,7 +57,7 @@ Not really aiming for supporting that many but at least the comon ones:
 I think there is an error with the implementation of MBC1 at the moment because there are many games there that seem to have errors. Seeing how the timing tests are failing also there could be something there but I have no idea. There is of course the possibility that these games are trying to interract with the APU and not succeeding which is causing issues.
 
 * Pokemon Gold/Silver: goes back to title screen randomly when changing location (exiting/entering houses) - I think this is because of RTC support not available.
-* Earth Worm Jim: blank screen after credits - Might be because of bad MBC1 implementation and ROM bank switching or maybe some timer error.
+* Earthworm Jim: Losing a life as soon as the game starts.
 * The Simpsons, Bart vs the Juggernauts: does not start at all just randomness on screen.
 * Dragon Ball Z: Skips intro movie and jumps a lot in what happens - MBC1.
 * Street Fighter II: Flickers a lot during fighting with Chun Li for example.
@@ -61,7 +65,6 @@ I think there is an error with the implementation of MBC1 at the moment because 
 * Gargoyle's Quest: crashes because it jumps somewhere it shouldn't.
 * Yoshi & Mario: jibberish on title screen.
 * Super Mario Land 2 - 6 Golden Coins: jumps to invalid memory addresses.
-* Asterix: used to work but now stopped - must be a timing thing in that case I think.
 
 
 ### TODO
@@ -69,4 +72,4 @@ I think there is an error with the implementation of MBC1 at the moment because 
 * [ ] Audio support!
 * [x] Sprite - BG priority needs to be solved.
 * [ ] RTC for MBC3.
-* [x] Timer support - need to keep better track of CPU cycles.
+* [x] Timer support - need to keep better track of CPU cycles.o
