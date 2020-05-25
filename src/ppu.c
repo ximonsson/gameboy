@@ -92,7 +92,7 @@ static int write_status_h (uint16_t addr, uint8_t v)
 	if (addr != STATUS_LOC) return 0;
 
 	// do not overwrite mode bits and LY=LYC
-	status = v & 0xF8;
+	status = (v & 0xF8) | (status & 0x07);
 
 	return 1;
 }
@@ -310,7 +310,7 @@ static void step ()
 		memcpy (lcd, lcd_buffer, GB_LCD_HEIGHT * GB_LCD_WIDTH * 3);
 	}
 	// Visible line
-	else if (LCD_ENABLED && ly < GB_LCD_HEIGHT)
+	else if (ly < GB_LCD_HEIGHT)
 	{
 		x -= OAM_CC;
 
@@ -337,7 +337,8 @@ static void step ()
 		{
 			if (x == 0)
 				SET_MODE (MODE_TRANSFER_LCD);
-			draw (x, ly);
+			if (LCD_ENABLED)
+				draw (x, ly);
 		}
 	}
 
