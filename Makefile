@@ -12,7 +12,7 @@ BIN=bin/gameboy
 ifdef DEBUG
 CFLAGS += -g3 -DDEBUG_PPU # -DDEBUG_CPU
 else
-CFLAGS += -g3
+CFLAGS += -O3
 endif
 
 ifdef GLES
