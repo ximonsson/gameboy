@@ -205,7 +205,7 @@ operation;
 -- as we parse the file.
 -- The CBxx all make exactly 256 operations so no need there.
 
-io.write("void invalid_op() { fprintf (stderr, \"INVALID OPERATION\\n\"); }", "\n")
+io.write("void invalid_op () { fprintf (stderr, \"$%.4X: INVALID OPERATION\\n\", pc); }", "\n")
 
 local invalid_instruction = {
 	["inst"] = "INVALID",

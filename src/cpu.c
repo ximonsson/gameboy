@@ -835,6 +835,8 @@ void gb_cpu_reset ()
 	divcc = timacc = 0;
 }
 
+#define IRQ (IE & IF)
+
 /**
  * Step the CPU, executing one operation.
  *
@@ -849,7 +851,7 @@ int gb_cpu_step ()
 		// if the CPU is halted and an interrupt is requested we unset the halt flag
 		// else if just increment one cc the timers and return.
 
-		if (IF & IE)
+		if (IRQ)
 			f_halt = 0;
 		else
 		{
@@ -858,7 +860,7 @@ int gb_cpu_step ()
 	}
 
 	// check any interrupts
-	if (ime && IF & IE)
+	if (ime && IRQ)
 	{
 		interrupt ();
 		cc = 5;
