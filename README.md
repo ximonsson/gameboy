@@ -33,15 +33,35 @@ There is a sample application with source code located in `./examples/app` that 
 | 10     | Pass          |
 | 11     | Pass          |
 
+#### Instruction timing
+
+Just gives me *#255 Failure*. I don't even know what it means. Something might be very wrong with my timing but I don't understand what it could be.
+
 
 ### MBC Support
 
 Not really aiming for supporting that many but at least the comon ones:
 
 * [x] MBC0
-* [x] MBC1
+* [x] MBC1 **But there might be some error in bank switching**
 * [x] MBC3 **Not Timer though**
 * [x] MBC5
+
+
+### Problematic games
+
+I think there is an error with the implementation of MBC1 at the moment because there are many games there that seem to have errors. Seeing how the timing tests are failing also there could be something there but I have no idea. There is of course the possibility that these games are trying to interract with the APU and not succeeding which is causing issues.
+
+* Pokemon Gold/Silver: goes back to title screen randomly when changing location (exiting/entering houses) - I think this is because of RTC support not available.
+* Earth Worm Jim: blank screen after credits - Might be because of bad MBC1 implementation and ROM bank switching or maybe some timer error.
+* The Simpsons, Bart vs the Juggernauts: does not start at all just randomness on screen.
+* Dragon Ball Z: Skips intro movie and jumps a lot in what happens - MBC1.
+* Street Fighter II: Flickers a lot during fighting with Chun Li for example.
+* Bomberman: seems to freeze when choosing mode.
+* Gargoyle's Quest: crashes because it jumps somewhere it shouldn't.
+* Yoshi & Mario: jibberish on title screen.
+* Super Mario Land 2 - 6 Golden Coins: jumps to invalid memory addresses.
+* Asterix: used to work but now stopped - must be a timing thing in that case I think.
 
 
 ### TODO

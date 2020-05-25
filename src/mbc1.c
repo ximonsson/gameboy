@@ -5,8 +5,8 @@
 #include "gameboy/cpu.h"
 #include <string.h>
 
-static uint8_t* ROM;
-static uint8_t* RAM;
+static uint8_t* rom;
+static uint8_t* ram;
 
 /* RAM enabled register. */
 static uint8_t ram_enabled;
@@ -28,6 +28,9 @@ static uint8_t bank_lo;
 static uint8_t bank_hi;
 static uint8_t bank_ram;
 
+/* points correctly to address within current RAM bank. */
+#define RAM(adr) ram[adr - 0xA000 + (bank_ram << 13)]
+
 static void reload_banks ()
 {
 	uint32_t b;
@@ -43,7 +46,7 @@ static void reload_banks ()
 		bank_ram = bank_hi;
 	}
 
-	gb_cpu_load_rom (1, ROM + (b << 14));
+	gb_cpu_load_rom (1, rom + (b << 14));
 }
 
 static int write_select_mode_h (uint16_t adr, uint8_t v)
@@ -73,39 +76,29 @@ static int write_bank_number_h (uint16_t adr, uint8_t v)
 /* Handles reading from RAM $A000 - $BFFF. */
 static int read_ram_h (uint16_t adr, uint8_t* v)
 {
-	if (adr < 0xA000 || adr >= 0xC000)
-		return 0;
-	else if (! RAM_ENABLED)
-	{
-		*v = 0;
-		return 1;
-	}
-
-	adr = adr - 0xA000 + (bank_ram << 13);
-	*v = RAM[adr];
+	if (adr < 0xA000 || adr >= 0xC000) return 0;
+	*v = RAM_ENABLED ? RAM (adr) : 0;
 	return 1;
 }
 
 /* Handles writing to RAM $A000 - $BFFF. */
-static int write_ram_h (uint16_t address, uint8_t v)
+static int write_ram_h (uint16_t adr, uint8_t v)
 {
-	if (address < 0xA000 || address > 0xBFFF) return 0;
-	else if (! RAM_ENABLED) return 1;
-
-	address = address - 0xA000 + (bank_ram << 13);
-	RAM[address] = v;
+	if (adr < 0xA000 || adr > 0xBFFF) return 0;
+	else if (RAM_ENABLED) RAM (adr) = v;
 	return 1;
 }
 
-void gb_mbc1_load (uint8_t* rom, uint8_t* ram)
+void gb_mbc1_load (uint8_t* rom_, uint8_t* ram_)
 {
-	ROM = rom;
-	RAM = ram;
+	rom = rom_;
+	ram = ram_;
 
 	bank_hi = 0;
-	bank_lo = 0;
+	bank_lo = 1;
 	bank_ram = 0;
 	ram_enabled = 0;
+	select_mode = 0;
 
 	gb_cpu_register_store_handler (write_ram_enable_h);
 	gb_cpu_register_store_handler (write_bank_number_h);

@@ -176,8 +176,8 @@ static int read_header (FILE* fp, uint8_t* mbc, size_t* rom, size_t* ram)
 	printf ("CARTRIDGE TYPE (MBC) > [0x%.2X] %s\n", *mbc, MBC[*mbc]);
 
 	// ROM size
-	* rom = 32 << (10 + header[0x48]);
-	printf ("ROM SIZE             > [%u] %lu KB\n",  header[0x48], (* rom) >> 10);
+	* rom = 1 << (15 + header[0x48]);
+	printf ("ROM SIZE             > [%u] %lu KB (%lu banks)\n",  header[0x48], (* rom) >> 10, (* rom) >> 14);
 
 	// RAM size
 	* ram = header[0x49];

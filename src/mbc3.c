@@ -92,10 +92,7 @@ static int read_ram_h (uint16_t adr, uint8_t* v)
 	if (flag_read_rtc)
 		*v = RTC;
 	else
-	{
-		//adr = adr - 0xA000 + (ram_bank << 13);
 		*v = RAM (adr);
-	}
 
 	return 1;
 }
@@ -122,8 +119,10 @@ void gb_mbc3_load (uint8_t* rom_, uint8_t* ram_)
 	ram = ram_;
 
 	memset (rtc, 0, 5);
-
-	rom_bank = 1; ram_bank = 0;
+	rom_bank = 1;
+	ram_bank = 0;
+	ram_enabled = 0;
+	flag_read_rtc = 0;
 
 	gb_cpu_register_store_handler (write_ram_enable_h);
 	gb_cpu_register_store_handler (write_rom_bank_h);
@@ -131,6 +130,4 @@ void gb_mbc3_load (uint8_t* rom_, uint8_t* ram_)
 	gb_cpu_register_store_handler (write_ram_h);
 
 	gb_cpu_register_read_handler (read_ram_h);
-
-	flag_read_rtc = 0;
 }
