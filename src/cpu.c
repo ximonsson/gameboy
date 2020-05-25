@@ -236,7 +236,7 @@ static void inc_div (int cc)
 	divcc += cc;
 	if (divcc >= GB_DIV_CC)
 	{
-		DIV ++;
+		DIV += divcc / GB_DIV_CC;
 		divcc %= GB_DIV_CC;
 	}
 }
@@ -255,8 +255,6 @@ static uint8_t* reg_tac = ram + 0xFF07;
 
 #define TIMER_ENABLED (TAC & 0x04)
 
-static const uint16_t timer_cc[4] = { 1024, 16, 64, 256 };
-
 // Keep track of TIMA cycles.
 static int timacc;
 
@@ -265,17 +263,14 @@ static void inc_tima (int cc)
 	if (!TIMER_ENABLED) return;
 
 	timacc += cc;
-	int cc_ = timer_cc[TAC & 0x3];
-
-	if (timacc >= cc_)
+	static const uint16_t timer_cc[4] = { 1024, 16, 64, 256 };
+	for (int c = timer_cc[TAC & 0x03]; timacc >= c; timacc -= c)
 	{
-		TIMA ++;
-		if (TIMA == 0) // overflow
+		if (++TIMA == 0) // overflow
 		{
 			TIMA = TMA;
 			gb_cpu_flag_interrupt (INT_FLAG_TIMER);
 		}
-		timacc %= cc_;
 	}
 }
 
@@ -763,7 +758,7 @@ void reti ()
 void gb_cpu_flag_interrupt (interrupt_flag f)
 {
 #ifdef DEBUG_CPU
-	printf ("%-25s $%.2X\n", ">>> IRQ", f);
+	printf ("%s $%.2X\n", ">>> IRQ", f);
 #endif
 	IF |= f;
 }
@@ -795,7 +790,7 @@ void interrupt ()
 	pc = 0x40 + 0x8 * b;
 
 #ifdef DEBUG_CPU
-	printf ("%-25s @ $%.4X\n", ">>> interrupt ==> calling handler", pc);
+	printf (" <INT>; calling handler @ $%.4X\n", pc);
 #endif
 }
 
@@ -835,6 +830,7 @@ void gb_cpu_reset ()
 	divcc = timacc = 0;
 }
 
+/* macro to check if an interrupt is requested and enabled. */
 #define IRQ (IE & IF)
 
 /**
@@ -874,8 +870,8 @@ int gb_cpu_step ()
 #endif
 	uint8_t opcode = RAM (pc ++);
 	const operation* op = &operations[opcode];
-#ifdef DEBUG_CPU
 	if (opcode == 0xCB) op = &operations_cb[RAM (pc ++)]; // hijack in debug mode so we can print the operation
+#ifdef DEBUG_CPU
 	printf ("%-20s AF = x%.4X BC = x%.4X DE = x%.4X HL = x%.4X SP = x%.4X IF = x%.2X IE = 0x%.2X IME = %d\n",
 			op->name, AF, BC, DE, HL, SP, IF, IE, ime);
 #endif
