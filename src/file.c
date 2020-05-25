@@ -184,7 +184,7 @@ static int read_header (FILE* fp, uint8_t* mbc, size_t* rom, size_t* ram)
 	printf ("RAM SIZE             > [%lu]", * ram);
 	switch (*ram)
 	{
-		case 0: * ram = 8 << 10; break;
+		case 0: * ram = 0; break;
 		case 1: * ram = 2 << 10; break;
 		case 2: * ram = 8 << 10; break;
 		case 3: * ram = 32 << 10; break;
