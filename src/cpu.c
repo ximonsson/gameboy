@@ -875,8 +875,8 @@ int gb_cpu_step ()
 	printf ("%-20s AF = x%.4X BC = x%.4X DE = x%.4X HL = x%.4X SP = x%.4X IF = x%.2X IE = 0x%.2X IME = %d\n",
 			op->name, AF, BC, DE, HL, SP, IF, IE, ime);
 #endif
-	op->instruction ();
-	cc += op->cc;
+	cc += op->instruction ();
+	//cc += op->cc;
 
 inc:
 	// increment timers

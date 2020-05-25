@@ -154,7 +154,7 @@ function operation(line)
 	op_map[op] =  {
 		["inst"] = it,
 		["asm"] = string.format("%s %s", it, pm),
-		["str"] = string.format("void %s () { %s }", fn, call(it, pm)),
+		["str"] = string.format("int %s () { %s; return %s; }", fn, call(it, pm), cc),
 		["cc"] = tonumber(cc),
 		["fn"] = fn,
 	}
@@ -187,7 +187,7 @@ struct operation
 	const char* name;
 
 	// the instruction to be executed
-	const void (*instruction)();
+	const int (*instruction)();
 
 	// number of bytes the operation consumes
 	const uint8_t b;
@@ -205,7 +205,7 @@ operation;
 -- as we parse the file.
 -- The CBxx all make exactly 256 operations so no need there.
 
-io.write("void invalid_op () { fprintf (stderr, \"$%.4X: INVALID OPERATION\\n\", pc); }", "\n")
+io.write("int invalid_op () { fprintf (stderr, \"$%.4X: INVALID OPERATION\\n\", pc); return 0; }", "\n")
 
 local invalid_instruction = {
 	["inst"] = "INVALID",
@@ -239,7 +239,7 @@ end
 io.write("};\n")
 
 -- create the special CB instruction that runs instruction from the `operations_cb` map
-io.write("void __cbxx__() { uint8_t op = RAM (pc ++); operations_cb[op].instruction(); }\n")
+io.write("int __cbxx__() { uint8_t op = RAM (pc ++); return operations_cb[op].instruction(); }\n")
 operations[0xCB] = {
 	["inst"] = "CBXX",
 	["asm"] = "-- CBXX --",
