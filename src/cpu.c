@@ -770,6 +770,7 @@ void gb_cpu_flag_interrupt (interrupt_flag f)
 
 /**
  * Interrupt.
+ * This assumes that one has already checked that an interrupt has been requested and IME is enabled.
  *
  * From docs:
  *   1. When an interrupt is generated, the IF flag will be set.
@@ -778,39 +779,24 @@ void gb_cpu_flag_interrupt (interrupt_flag f)
  *   4. The PC (program counter) is pushed onto the stack.
  *   5. Jump to the starting address of the interrupt.
  */
-int interrupt ()
+void interrupt ()
 {
-	uint8_t ret = 0;
 	uint8_t f = 1;
 	uint8_t b = 0;
 
 	// loop over interrupt flags in priority order.
 	// call any interrupts that have been flagged and enabled.
-	for (; b < 5; b ++)
-	{
-		if (f & IF & IE)
-		{
-			// unset halt
-			// return value depends if IME is enabled
-			f_halt = 0;
-			ret = ime;
-			break;
-		}
+	for (; b < 5 && !(f & IF & IE); b ++)
 		f <<= 1;
-	}
 
-	if (ret)
-	{
-		ime = 0;
-		IF &= ~f;
-		PUSH (pc);
-		pc = 0x40 + 0x8 * b;
+	ime = 0;
+	IF &= ~f;
+	PUSH (pc);
+	pc = 0x40 + 0x8 * b;
+
 #ifdef DEBUG_CPU
-		printf ("%-25s @ $%.4X\n", ">>> interrupt ==> calling handler", pc);
+	printf ("%-25s @ $%.4X\n", ">>> interrupt ==> calling handler", pc);
 #endif
-	}
-
-	return ret;
 }
 
 /**
@@ -858,14 +844,24 @@ int gb_cpu_step ()
 {
 	int cc = 0;
 
-	// first check any interrupts
-	if ((ime || f_halt) && interrupt () == 0) cc += 5;
-
-	// if CPU is halted we clock on cycle and increment timers then return
 	if (f_halt)
 	{
-		cc = 1;
-		goto inc;
+		// if the CPU is halted and an interrupt is requested we unset the halt flag
+		// else if just increment one cc the timers and return.
+
+		if (IF & IE)
+			f_halt = 0;
+		else
+		{
+			cc = 1; goto inc;
+		}
+	}
+
+	// check any interrupts
+	if (ime && IF & IE)
+	{
+		interrupt ();
+		cc = 5;
 	}
 
 	// load an opcode and perform the operation associated,
