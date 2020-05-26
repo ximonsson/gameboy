@@ -313,7 +313,7 @@ static void step ()
 		if (LYC_EQ_LY_INT)
 			gb_cpu_flag_interrupt (INT_FLAG_LCD_STAT);
 	}
-	else if (lyc != ly && LYC_EQ_LY)
+	else if (LYC_EQ_LY && lyc != ly)
 		status &= ~0x04;
 
 	// V-BLANK

@@ -33,7 +33,7 @@ static uint8_t bank_ram;
 
 static void reload_banks ()
 {
-	uint32_t b;
+	static int b;
 
 	if (ROM_SELECT_MODE)
 	{

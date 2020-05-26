@@ -269,11 +269,14 @@ static int audio_play ()
 {
 	return 0;
 
-	int err = 0;
-	size_t size;
+	static int err;
+	static size_t size;
+
 	//gb_audio_samples (audio_samples_buffer, &size);
+
 	if (pa_simple_write (audioconn, audio_samples_buffer, size, &err) < 0)
 		fprintf (stderr, "pa_simple_write: %s\n", pa_strerror (err));
+
 	return err;
 }
 
@@ -364,7 +367,7 @@ int main (int argc, char** argv)
 
 	// init
 	printf ("initializing sdl with opengl.\n");
-	init_screen (GB_LCD_WIDTH * 3, GB_LCD_HEIGHT * 3);
+	init_screen (GB_LCD_WIDTH * 4, GB_LCD_HEIGHT * 4);
 	init_opengl ();
 
 	printf ("initializing pulse audio output.\n");
