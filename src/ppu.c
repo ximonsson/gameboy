@@ -28,6 +28,12 @@ static uint8_t* obp1_;
 #define obp0 (* obp0_)
 #define obp1 (* obp1_)
 
+/* LY register is read only. */
+static int write_ly_h (uint16_t adr, uint8_t v)
+{
+	return adr == 0xFF44;
+}
+
 /**
  * LCD Control register
  *
@@ -97,8 +103,6 @@ static int write_status_h (uint16_t addr, uint8_t v)
 	return 1;
 }
 
-#define OAM_CC 80
-
 /* OAM data pointer */
 static uint8_t* oam;
 
@@ -122,14 +126,13 @@ static uint8_t* vram;
 static uint32_t dot = 0;
 
 /* monochrome palett. */
-const uint8_t SHADES [4][3] =
+static const uint8_t SHADES [4][3] =
 {
 	{ 0xFF, 0xFF, 0xFF },
 	{ 0xAA, 0xAA, 0xAA },
 	{ 0x55, 0x55, 0x55 },
 	{ 0x00, 0x00, 0x00 },
 };
-
 
 /* get color within tile @ (x, y). */
 static uint8_t color (uint8_t* tile, uint8_t x, uint8_t y)
@@ -148,23 +151,18 @@ static uint8_t color (uint8_t* tile, uint8_t x, uint8_t y)
 static uint8_t color_sprite (uint8_t n, uint8_t x, uint8_t y)
 {
 	if (OBJ_SIZE == 16) n &= 0xFE;
-	uint16_t nn = n << 4;
-	return color (vram + nn, x, y);
+	return color (vram + (n << 4), x, y);
 }
 
 /* get color within background. */
 static uint8_t color_bg (uint8_t n, uint8_t x, uint8_t y)
 {
-	uint8_t* tile; // usually VRAM + #tile x 16B
-
+	static int16_t offset;
 	if (BG_WIN_TILE == 0x0800) // $8800 addressing mode
-	{
-		int16_t n_ = ((int8_t) n) << 4;
-		tile = vram + 0x1000 + n_;
-	}
-	else tile = vram + (n << 4);
+		offset = 0x1000 + ((int8_t) n << 4);
+	else offset = n << 4;
 
-	return color (tile, x, y);
+	return color (vram + offset, x, y);
 }
 
 #define LCD_COLOR(x, y, c, pal) { \
@@ -180,8 +178,7 @@ static uint8_t draw_bg (uint8_t x, uint8_t y)
 	uint16_t t = (bgx >> 3) + ((bgy & ~0x7) << 2); // (x div 8) + (y div 8) * 32
 
 	// pointer to BG tile map
-	uint8_t* tp = vram + BG_TILE_MAP;
-	uint8_t tn = tp[t];
+	uint8_t tn = *(vram + BG_TILE_MAP + t);
 
 	uint8_t c = color_bg (tn, bgx & 0x7, bgy & 0x7);
 	LCD_COLOR (x, y, c, bgp);
@@ -194,8 +191,7 @@ static void draw_win (uint8_t x, uint8_t y)
 	uint8_t winx = x - (wx - 7), winy = y - wy;
 
 	uint16_t t = (winx >> 3) + ((winy & ~0x7) << 2);
-	uint8_t* tp = vram + WIN_TILE_MAP;
-	uint8_t tn = tp[t];
+	uint8_t tn = *(vram + WIN_TILE_MAP + t);
 
 	uint8_t c = color_bg (tn, winx & 0x7, winy & 0x7);
 	LCD_COLOR (x, y, c, bgp);
@@ -210,8 +206,9 @@ static uint8_t line_sprites[SPRITES_PER_LINE];
 
 static void draw_obj (uint8_t x, uint8_t y, uint8_t bgc)
 {
-	uint8_t* sprite;
-	int16_t dx;
+	static uint8_t* sprite;
+	static int16_t dx;
+	static uint8_t dy, c;
 
 	for (int i = 0; i < SPRITES_PER_LINE && line_sprites[i] != 0xFF; i ++)
 	{
@@ -223,7 +220,7 @@ static void draw_obj (uint8_t x, uint8_t y, uint8_t bgc)
 
 		if (dx >= 0 && dx < 8)
 		{
-			uint8_t dy = ly - sprite[0] + 16;
+			dy = ly - sprite[0] + 16;
 
 			if (SPRITE_XFLIP (sprite))
 				dx = 7 - dx;
@@ -231,7 +228,7 @@ static void draw_obj (uint8_t x, uint8_t y, uint8_t bgc)
 			if (SPRITE_YFLIP (sprite))
 				dy = OBJ_SIZE - 1 - dy;
 
-			uint8_t c = color_sprite (sprite[2], dx, dy);
+			c = color_sprite (sprite[2], dx, dy);
 			if (c)
 			{
 				uint8_t pal = *(obp0_ + SPRITE_PALETTE (sprite));
@@ -283,6 +280,8 @@ static void inline find_line_sprites ()
 	}
 }
 
+#define OAM_CC 80
+
 /* step the PPU one dot. */
 static void step ()
 {
@@ -291,7 +290,7 @@ static void step ()
 	{
 		dot = ly = 0;
 		SET_MODE (MODE_VBLANK);
-		return ;
+		return;
 	}
 	//*/
 
@@ -377,11 +376,12 @@ void gb_ppu_reset ()
 	RESET_LINE_SPRITES;
 
 	gb_cpu_register_store_handler (write_status_h);
+	gb_cpu_register_store_handler (write_ly_h);
 }
 
 void gb_ppu_step (int cc)
 {
-	for (int i = 0; i < cc; i ++) step ();
+	for (; cc > 0; cc --) step ();
 }
 
 #ifdef DEBUG_PPU
