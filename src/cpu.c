@@ -668,7 +668,7 @@ void res (uint8_t* r, uint8_t b)
 #ifdef DEBUG_CPU
 void jp (uint16_t nn)
 {
-	printf ("    JUMP @ $%.4X\n", nn);
+	printf (">>> JUMP @ $%.4X\n", nn);
 	pc = nn;
 }
 #else
@@ -683,15 +683,25 @@ enum jump_cc
 	JP_CC_C,
 };
 
-void jpcc (enum jump_cc cc, uint16_t nn)
+/* Keep a flag with extra cycles when conditionals are met.
+ * TODO not sure what I think of this solution.
+ */
+static int cond_cc;
+
+/* Macro for conditional jumps/calls. */
+#define CONDITIONAL(inst, cond, c) {\
+	switch (cond)\
+	{\
+		case JP_CC_NZ: if ((F & F_Z) == 0) { cond_cc = c; inst; } break;\
+		case JP_CC_Z:  if ((F & F_Z) != 0) { cond_cc = c; inst; } break;\
+		case JP_CC_NC: if ((F & F_C) == 0) { cond_cc = c; inst; } break;\
+		case JP_CC_C:  if ((F & F_C) != 0) { cond_cc = c; inst; } break;\
+	}\
+}
+
+void jpcc (enum jump_cc cond, uint16_t nn)
 {
-	switch (cc)
-	{
-		case JP_CC_NZ: if ((F & F_Z) == 0) jp (nn); break;
-		case JP_CC_Z:  if ((F & F_Z) != 0) jp (nn); break;
-		case JP_CC_NC: if ((F & F_C) == 0) jp (nn); break;
-		case JP_CC_C:  if ((F & F_C) != 0) jp (nn); break;
-	}
+	CONDITIONAL (jp (nn), cond, 4);
 }
 
 #ifdef DEBUG_CPU
@@ -704,28 +714,16 @@ void jr (int8_t n)
 #define jr(n) pc += (int8_t) n
 #endif
 
-void jrcc (enum jump_cc cc, int8_t n)
+void jrcc (enum jump_cc cond, int8_t n)
 {
-	switch (cc)
-	{
-		case JP_CC_NZ: if ((F & F_Z) == 0) jr (n); break;
-		case JP_CC_Z:  if ((F & F_Z) != 0) jr (n); break;
-		case JP_CC_NC: if ((F & F_C) == 0) jr (n); break;
-		case JP_CC_C:  if ((F & F_C) != 0) jr (n); break;
-	}
+	CONDITIONAL (jr (n), cond, 4);
 }
 
 #define call(nn) { PUSH (pc); jp (nn); }
 
-void callcc (enum jump_cc cc, uint16_t nn)
+void callcc (enum jump_cc cond, uint16_t nn)
 {
-	switch (cc)
-	{
-		case JP_CC_NZ: if ((F & F_Z) == 0) call (nn); break;
-		case JP_CC_Z:  if ((F & F_Z) != 0) call (nn); break;
-		case JP_CC_NC: if ((F & F_C) == 0) call (nn); break;
-		case JP_CC_C:  if ((F & F_C) != 0) call (nn); break;
-	}
+	CONDITIONAL (call (nn), cond, 12);
 }
 
 void rst (uint8_t n)
@@ -735,15 +733,9 @@ void rst (uint8_t n)
 
 #define ret() jp (POP ())
 
-void retcc (enum jump_cc cc)
+void retcc (enum jump_cc cond)
 {
-	switch (cc)
-	{
-		case JP_CC_NZ: if ((F & F_Z) == 0) ret (); break;
-		case JP_CC_Z:  if ((F & F_Z) != 0) ret (); break;
-		case JP_CC_NC: if ((F & F_C) == 0) ret (); break;
-		case JP_CC_C:  if ((F & F_C) != 0) ret (); break;
-	}
+	CONDITIONAL (ret (), cond, 12);
 }
 
 void reti ()
@@ -809,6 +801,7 @@ void gb_cpu_reset ()
 
 	ime = 1;
 	f_halt = 0;
+	cond_cc = 0;
 
 	// reset memory read/write handlers and add the default ones.
 
@@ -828,6 +821,36 @@ void gb_cpu_reset ()
 
 	// reset timers
 	divcc = timacc = 0;
+
+	uint8_t op;
+	printf ("normal operations\n");
+	printf ("    "); for (int i = 0; i < 0x10; i++) printf ("%.2X ", i);
+	printf ("\n");
+	for (int i = 0; i < 0x10; i ++)
+	{
+		printf ("%Xx: ", i);
+		for (int j = 0; j < 0x10; j ++)
+		{
+			op = (i << 4) | j;
+			printf ("%.2d ", operations[op].cc);
+		}
+		printf ("\n");
+	}
+	printf ("\n");
+	printf ("CBxx operations\n");
+	printf ("    "); for (int i = 0; i < 0x10; i++) printf ("%.2X ", i);
+	printf ("\n");
+	for (int i = 0; i < 0x10; i ++)
+	{
+		printf ("%Xx: ", i);
+		for (int j = 0; j < 0x10; j ++)
+		{
+			op = (i << 4) | j;
+			printf ("%.2d ", operations_cb[op].cc);
+		}
+		printf ("\n");
+	}
+	printf ("\n");
 }
 
 /* macro to check if an interrupt is requested and enabled. */
@@ -851,7 +874,8 @@ int gb_cpu_step ()
 			f_halt = 0;
 		else
 		{
-			cc = 1; goto inc;
+			cc = 4;
+			goto inc;
 		}
 	}
 
@@ -875,8 +899,8 @@ int gb_cpu_step ()
 	printf ("%-20s AF = x%.4X BC = x%.4X DE = x%.4X HL = x%.4X SP = x%.4X IF = x%.2X IE = 0x%.2X IME = %d\n",
 			op->name, AF, BC, DE, HL, SP, IF, IE, ime);
 #endif
-	cc += op->instruction ();
-	//cc += op->cc;
+	cc += op->instruction () + cond_cc;
+	cond_cc = 0;
 
 inc:
 	// increment timers

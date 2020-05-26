@@ -154,7 +154,7 @@ function operation(line)
 	op_map[op] =  {
 		["inst"] = it,
 		["asm"] = string.format("%s %s", it, pm),
-		["str"] = string.format("int %s () { %s; return %s; }", fn, call(it, pm), cc),
+		["str"] = string.format("int %s () { %s return %s; }", fn, call(it, pm), cc),
 		["cc"] = tonumber(cc),
 		["fn"] = fn,
 	}
