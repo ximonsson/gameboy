@@ -126,7 +126,7 @@ static int oam_dma_transf_handler (uint16_t address, uint8_t v)
 {
 	if (address != 0xFF46) return 0;
 	oam_dma_transfer (v);
-	return 1;
+	return 0;
 }
 
 /**
@@ -865,13 +865,16 @@ int gb_cpu_step ()
 #ifdef DEBUG_CPU
 	printf ("$%.4X: ", pc);
 #endif
+
 	uint8_t opcode = RAM (pc ++);
 	const operation* op = &operations[opcode];
+
 #ifdef DEBUG_CPU
 	if (opcode == 0xCB) op = &operations_cb[RAM (pc ++)]; // hijack in debug mode so we can print the operation
 	printf ("%-20s AF = x%.4X BC = x%.4X DE = x%.4X HL = x%.4X SP = x%.4X IF = x%.2X IE = 0x%.2X IME = %d\n",
 			op->name, AF, BC, DE, HL, SP, IF, IE, ime);
 #endif
+
 	cc += op->instruction () + cond_cc;
 	cond_cc = 0;
 
