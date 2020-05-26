@@ -232,17 +232,36 @@ static uint8_t* nr52;
 #define NR51 (* nr51)
 #define NR52 (* nr52)
 
+static uint8_t duty[4] =
+{
+	0x7F, // _-------
+	0x3F, // __------
+	0x0F, // ____----
+	0x03, // ______--
+};
+
 /* Channels ------------------------------------------------- */
 
+/* Channel 1: Tone + Sweep */
 
-typedef
-struct channel_square
+static void step_ch1 () { }
+
+/* Channel 2: Tone */
+
+#define CH2DUTY duty[(NR21 >> 6)]
+#define CH2LEN (NR21 & 0x3F)
+static uint8_t ch2_duty_cc;
+
+static void step_ch2 ()
 {
-
+	ch2_duty_cc ++;
 }
-channel_square;
 
 
+static void step_wave () { }
+
+
+static void step_noise () { }
 
 void gb_apu_reset ()
 {
