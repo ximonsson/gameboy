@@ -395,14 +395,14 @@ BIT          L,5             CB6D       8
 BIT          L,6             CB75       8
 BIT          L,7             CB7D       8
 
-BIT          (HL),0          CB46      16
-BIT          (HL),1          CB4E      16
-BIT          (HL),2          CB56      16
-BIT          (HL),3          CB5E      16
-BIT          (HL),4          CB66      16
-BIT          (HL),5          CB6E      16
-BIT          (HL),6          CB76      16
-BIT          (HL),7          CB7E      16
+BIT          (HL),0          CB46      12
+BIT          (HL),1          CB4E      12
+BIT          (HL),2          CB56      12
+BIT          (HL),3          CB5E      12
+BIT          (HL),4          CB66      12
+BIT          (HL),5          CB6E      12
+BIT          (HL),6          CB76      12
+BIT          (HL),7          CB7E      12
 # SET b,r
 SET          A,0             CBC7       8
 SET          A,1             CBCF       8
@@ -548,7 +548,7 @@ RES          (HL),5          CBAE      16
 RES          (HL),6          CBB6      16
 RES          (HL),7          CBBE      16
 # JP nn
-JP           nn              C3        12
+JP           nn              C3        16
 # JP cc,nn
 JPCC         JP_CC_NZ,nn     C2        12
 JPCC         JP_CC_Z,nn      CA        12
@@ -557,34 +557,34 @@ JPCC         JP_CC_C,nn      DA        12
 # JP (HL)
 JP           HL              E9         4
 # JR n
-JR           n               18         8
+JR           n               18        12
 # JR cc,n
 JRCC         JP_CC_NZ,n      20         8
 JRCC         JP_CC_Z,n       28         8
 JRCC         JP_CC_NC,n      30         8
 JRCC         JP_CC_C,n       38         8
 # CALL nn
-CALL         nn              CD        12
+CALL         nn              CD        24
 # CALL cc,nn
 CALLCC       JP_CC_NZ,nn     C4        12
 CALLCC       JP_CC_Z,nn      CC        12
 CALLCC       JP_CC_NC,nn     D4        12
 CALLCC       JP_CC_C,nn      DC        12
 # RST n
-RST          0x00            C7        32
-RST          0x08            CF        32
-RST          0x10            D7        32
-RST          0x18            DF        32
-RST          0x20            E7        32
-RST          0x28            EF        32
-RST          0x30            F7        32
-RST          0x38            FF        32
+RST          0x00            C7        16
+RST          0x08            CF        16
+RST          0x10            D7        16
+RST          0x18            DF        16
+RST          0x20            E7        16
+RST          0x28            EF        16
+RST          0x30            F7        16
+RST          0x38            FF        16
 # RET
-RET          -/-             C9         8
+RET          -/-             C9        19
 # RET cc
 RETCC        JP_CC_NZ        C0         8
 RETCC        JP_CC_Z         C8         8
 RETCC        JP_CC_NC        D0         8
 RETCC        JP_CC_C         D8         8
 # RETI
-RETI         -/-             D9         8
+RETI         -/-             D9        16
