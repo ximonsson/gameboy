@@ -7,6 +7,9 @@
 #include <stdio.h>
 #endif
 
+/* Dot counter within frame. */
+static uint32_t dot;
+
 /* Registers --------------------------------------------------- */
 static uint8_t* scy_;
 static uint8_t* scx_;
@@ -103,6 +106,20 @@ static int write_status_h (uint16_t addr, uint8_t v)
 	return 1;
 }
 
+static int write_lcdc_h (uint16_t adr, uint8_t v)
+{
+	if (adr != LCDC_LOC) return 0;
+
+	lcdc = v;
+	if (!LCD_ENABLED)
+	{
+		dot = ly = 0;
+		SET_MODE (MODE_VBLANK);
+	}
+
+	return 1;
+}
+
 /* OAM data pointer */
 static uint8_t* oam;
 
@@ -121,9 +138,6 @@ const uint8_t* gb_ppu_lcd () { return lcd; }
 
 /* VRAM */
 static uint8_t* vram;
-
-/* Dot counter within frame. */
-static uint32_t dot = 0;
 
 /* monochrome palett. */
 static const uint8_t SHADES [4][3] =
@@ -259,8 +273,10 @@ static void draw (uint8_t x, uint8_t y)
 /* Find (the first 10) sprites that are visible on the current line. */
 static void inline find_line_sprites ()
 {
-	uint8_t* sprite;
-	uint8_t x, y;
+	static uint8_t* sprite;
+	static uint8_t x, y;
+
+	RESET_LINE_SPRITES;
 	for (uint8_t i = 0, n = 0; i < 40 && n < SPRITES_PER_LINE; i ++)
 	{
 		// every 4 B is a sprite
@@ -285,14 +301,7 @@ static void inline find_line_sprites ()
 /* step the PPU one dot. */
 static void step ()
 {
-	//*
-	if (!LCD_ENABLED)
-	{
-		dot = ly = 0;
-		SET_MODE (MODE_VBLANK);
-		return;
-	}
-	//*/
+	if (!LCD_ENABLED) return;
 
 	// which dot on the current line
 	int16_t x = dot % GB_SCANLINE;
@@ -329,8 +338,6 @@ static void step ()
 			SET_MODE (MODE_SEARCH_OAM);
 			if (MODE_2_OAM_INT)
 				gb_cpu_flag_interrupt (INT_FLAG_LCD_STAT);
-
-			RESET_LINE_SPRITES;
 			find_line_sprites ();
 		}
 		// H-BLANK
@@ -369,13 +376,19 @@ void gb_ppu_reset ()
 	obp0_   = gb_cpu_mem (0xFF48);
 	obp1_   = gb_cpu_mem (0xFF49);
 
+	lcdc = 0x91; // NOTE a lot of games do not set the LCD enabled when starting....
+	bgp = 0xFC;
+	obp0 = obp1 = 0xFF;
+
 	vram = gb_cpu_mem (VRAM_LOC);
 	oam = gb_cpu_mem (OAM_LOC);
+
 	dot = 0;
 
 	RESET_LINE_SPRITES;
 
 	gb_cpu_register_store_handler (write_status_h);
+	gb_cpu_register_store_handler (write_lcdc_h);
 	gb_cpu_register_store_handler (write_ly_h);
 }
 
