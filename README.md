@@ -17,7 +17,8 @@ There is a sample application with source code located in `./examples/app` that 
 
 ### Known Issues
 
-* Timing: Seems like timing of the emulator is super off. I have no idea why though... I do think this is the reason for the games that are not working properly.
+* [x] *Solved* Timing: Seems like timing of the emulator is super off. I have no idea why though... I do think this is the reason for the games that are not working properly.
+* [ ] Behavior when LCD disabled: from what I understand the PPU should do nothing and stay in VBLANK mode (maybe). However a lot games are not working if the PPU is not ticking even while off. No idea what the error can be here. If I let the PPU tick even when it is disabled other games will crash. I sticking to keeping it off and try to find other solutions.
 
 ### Blargg's Tests
 
@@ -39,7 +40,7 @@ There is a sample application with source code located in `./examples/app` that 
 
 #### Instruction timing
 
-Just gives me *Failed #255*. I don't even know what it means. Something might be very wrong with my timing but I don't understand what it could be.
+*Passed*.
 
 
 ### MBC Support
@@ -51,20 +52,19 @@ Not really aiming for supporting that many but at least the comon ones:
 * [x] MBC3 **Not Timer though**
 * [x] MBC5
 
-
 ### Problematic games
 
-I think there is an error with the implementation of MBC1 at the moment because there are many games there that seem to have errors. Seeing how the timing tests are failing also there could be something there but I have no idea. There is of course the possibility that these games are trying to interract with the APU and not succeeding which is causing issues.
+I think there is an error with the implementation of MBC1 at the moment because there are many games there that seem to have errors. There is of course the possibility that these games are trying to interract with the APU and not succeeding which is causing issues.
 
+* Pokemon Red/Blue: experience bar is not showing.
+* Asterix: black screen.
+* Earthworm Jim: Does not get past credits.
+* Dragon Ball Z: black screen.
+* Street Fighter II: black screen.
+* Bomberman: black screen.
+* Gargoyle's Quest: black screen.
+* Super Mario Land 2 - 6 Golden Coins: Mario is invisble.
 * Pokemon Gold/Silver: goes back to title screen randomly when changing location (exiting/entering houses) - I think this is because of RTC support not available.
-* Earthworm Jim: Losing a life as soon as the game starts.
-* The Simpsons, Bart vs the Juggernauts: does not start at all just randomness on screen.
-* Dragon Ball Z: Skips intro movie and jumps a lot in what happens - MBC1.
-* Street Fighter II: Flickers a lot during fighting with Chun Li for example.
-* Bomberman: seems to freeze when choosing mode.
-* Gargoyle's Quest: crashes because it jumps somewhere it shouldn't.
-* Yoshi & Mario: jibberish on title screen.
-* Super Mario Land 2 - 6 Golden Coins: jumps to invalid memory addresses.
 
 
 ### TODO
@@ -72,4 +72,4 @@ I think there is an error with the implementation of MBC1 at the moment because 
 * [ ] Audio support!
 * [x] Sprite - BG priority needs to be solved.
 * [ ] RTC for MBC3.
-* [x] Timer support - need to keep better track of CPU cycles.o
+* [x] Timer support - need to keep better track of CPU cycles.

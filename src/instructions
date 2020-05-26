@@ -580,7 +580,7 @@ RST          0x28            EF        16
 RST          0x30            F7        16
 RST          0x38            FF        16
 # RET
-RET          -/-             C9        19
+RET          -/-             C9        16
 # RET cc
 RETCC        JP_CC_NZ        C0         8
 RETCC        JP_CC_Z         C8         8

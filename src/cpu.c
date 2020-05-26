@@ -268,8 +268,8 @@ static void inc_tima (int cc)
 	{
 		if (++TIMA == 0) // overflow
 		{
-			TIMA = TMA;
 			gb_cpu_flag_interrupt (INT_FLAG_TIMER);
+			TIMA = TMA;
 		}
 	}
 }
@@ -369,6 +369,9 @@ void adc (uint8_t n)
 
 void sub (uint8_t n)
 {
+#ifdef DEBUG_CPU
+	printf ("    $%.2X - $%.2X\n", A, n);
+#endif
 	uint16_t a = A - n;
 
 	F = F_N;
@@ -821,36 +824,6 @@ void gb_cpu_reset ()
 
 	// reset timers
 	divcc = timacc = 0;
-
-	uint8_t op;
-	printf ("normal operations\n");
-	printf ("    "); for (int i = 0; i < 0x10; i++) printf ("%.2X ", i);
-	printf ("\n");
-	for (int i = 0; i < 0x10; i ++)
-	{
-		printf ("%Xx: ", i);
-		for (int j = 0; j < 0x10; j ++)
-		{
-			op = (i << 4) | j;
-			printf ("%.2d ", operations[op].cc);
-		}
-		printf ("\n");
-	}
-	printf ("\n");
-	printf ("CBxx operations\n");
-	printf ("    "); for (int i = 0; i < 0x10; i++) printf ("%.2X ", i);
-	printf ("\n");
-	for (int i = 0; i < 0x10; i ++)
-	{
-		printf ("%Xx: ", i);
-		for (int j = 0; j < 0x10; j ++)
-		{
-			op = (i << 4) | j;
-			printf ("%.2d ", operations_cb[op].cc);
-		}
-		printf ("\n");
-	}
-	printf ("\n");
 }
 
 /* macro to check if an interrupt is requested and enabled. */
@@ -868,7 +841,7 @@ int gb_cpu_step ()
 	if (f_halt)
 	{
 		// if the CPU is halted and an interrupt is requested we unset the halt flag
-		// else if just increment one cc the timers and return.
+		// else if just increment four cycles the timers and return.
 
 		if (IRQ)
 			f_halt = 0;
@@ -894,8 +867,8 @@ int gb_cpu_step ()
 #endif
 	uint8_t opcode = RAM (pc ++);
 	const operation* op = &operations[opcode];
-	if (opcode == 0xCB) op = &operations_cb[RAM (pc ++)]; // hijack in debug mode so we can print the operation
 #ifdef DEBUG_CPU
+	if (opcode == 0xCB) op = &operations_cb[RAM (pc ++)]; // hijack in debug mode so we can print the operation
 	printf ("%-20s AF = x%.4X BC = x%.4X DE = x%.4X HL = x%.4X SP = x%.4X IF = x%.2X IE = 0x%.2X IME = %d\n",
 			op->name, AF, BC, DE, HL, SP, IF, IE, ime);
 #endif
