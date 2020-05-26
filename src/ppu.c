@@ -286,6 +286,15 @@ static void inline find_line_sprites ()
 /* step the PPU one dot. */
 static void step ()
 {
+	//*
+	if (!LCD_ENABLED)
+	{
+		dot = ly = 0;
+		SET_MODE (MODE_VBLANK);
+		return ;
+	}
+	//*/
+
 	// which dot on the current line
 	int16_t x = dot % GB_SCANLINE;
 
@@ -337,8 +346,7 @@ static void step ()
 		{
 			if (x == 0)
 				SET_MODE (MODE_TRANSFER_LCD);
-			if (LCD_ENABLED)
-				draw (x, ly);
+			draw (x, ly);
 		}
 	}
 
