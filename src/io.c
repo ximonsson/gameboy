@@ -2,7 +2,7 @@
 #include "gameboy/cpu.h"
 
 static uint8_t* p1;
-#define P1 (*p1)
+#define P1 (* p1)
 
 #define BTN_KEYS (P1 & 0x20)
 #define DIR_KEYS (P1 & 0x10)
@@ -23,10 +23,12 @@ static int read_joypad_h (uint16_t address, uint8_t* v)
 {
 	if (address != GB_IO_P1_LOC) return 0;
 
+	*v = 0xC0;
+
 	if (BTN_KEYS)
-		*v = P1 | (key_states & 0xF);
+		*v |= P1 | (key_states & 0xF);
 	else // DIR_KEYS
-		*v = P1 | (key_states >> 4);
+		*v |= P1 | (key_states >> 4);
 
 	return 1;
 }
