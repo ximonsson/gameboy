@@ -8,8 +8,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-static uint8_t* ROM = 0;
-static uint8_t* RAM = 0;
+static uint8_t* ROM;
+static uint8_t* RAM;
 
 /**
  * Map MBC identifiers to loader functions.
@@ -59,15 +59,13 @@ static const void (*MBC[0x100]) (uint8_t*, uint8_t*) =
 
 static int load_mbc (uint8_t mbc)
 {
-	mbc_loader l = MBC[mbc];
-
-	if (!l)
+	mbc_loader ld = MBC[mbc];
+	if (!ld)
 	{
 		fprintf (stderr, "MBC [%.2X] not supported\n", mbc);
 		return 1;
 	}
-
-	l (ROM, RAM);
+	ld (ROM, RAM);
 	return 0;
 }
 
@@ -96,10 +94,14 @@ void gb_release_button (gb_button b) { gb_io_release_button (b); }
 
 void gb_step ()
 {
+	int cc;
 	for (int cpucc = 0; cpucc < GB_FRAME; )
 	{
-		int cc = gb_cpu_step ();
+		cc = gb_cpu_step ();
+
 		gb_ppu_step (cc);
+		gb_apu_step (cc);
+
 		cpucc += cc;
 	}
 }
@@ -112,7 +114,4 @@ void gb_stop ()
 	free (RAM);
 }
 
-void gb_quit ()
-{
-
-}
+void gb_quit () { }
