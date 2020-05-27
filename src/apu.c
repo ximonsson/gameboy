@@ -273,7 +273,7 @@ static uint8_t* nr52;
 #define NR52 (* nr52)
 
 /* Duty patterns. */
-static uint8_t duty[4] =
+static uint8_t sqr_wav[4] =
 {
 	0x7F, // _-------
 	0x3F, // __------
@@ -281,30 +281,166 @@ static uint8_t duty[4] =
 	0x03, // ______--
 };
 
+#define FREQ(x) (131072 / (2048 - x))
+#define SOUNDLEN(t1) ((64 - t1) << 8) // (64 - t1) * 256 Hz
+#define ENVLEN(n) (n << 6) // n * 64 Hz
+
 /* Channels ------------------------------------------------- */
+
+/* Flag enabled channels. */
+static uint8_t enabled_ch;
+
+#define ENABLE_CH(c) (enabled_ch |= (1 << c))
+#define DISABLE_CH(c) (enabled_ch &= ~(1 << c))
+#define ENABLED(c) (enabled_ch & (1 << c) != 0)
 
 /* Channel 1: Tone + Sweep */
 
-/* Step Channel 1. */
-static void step_ch1 () { }
+#define CH1FREQ FREQ ((((NR14 & 0x07) << 8) | NR13))
+#define CH1DUTY sqr_wav[(NR11 >> 6)]
+#define CH1LEN SOUNDLEN ((NR11 & 0x3F))
+
+/* Channel 1 timer. */
+static int ch1_cc;
+
+/* Channel 2 duty counter. */
+static uint8_t ch1_duty_cc;
+
+/* Step Channel 1 timer. */
+static inline void step_timer_ch1 ()
+{
+	if (-- ch1_cc == 0)
+	{
+		ch1_cc = CH1FREQ;
+		ch1_duty_cc ++; ch1_duty_cc &= 0x07;
+	}
+}
+
+/* Channel 1 length counter. */
+static int ch1_len;
+
+/* Step channel 1 length counter. */
+static inline void step_len_ch1 ()
+{
+	if ((NR14 & 0x40) == 0)
+		return; // length disabled
+	else if (-- ch1_len == 0)
+		DISABLE_CH (1); // Disable
+}
+
+/* Step channel 1 sweep. */
+static inline void step_sweep_ch1 () { }
+
+/* Step channel 1 envelop. */
+static inline void step_env_ch1 () {}
 
 /* Channel 2: Tone */
 
-#define CH2DUTY duty[(NR21 >> 6)]
-#define CH2LEN (NR21 & 0x3F)
+#define CH2DUTY sqr_wav[(NR21 >> 6)]
+#define CH2LEN SOUNDLEN ((NR21 & 0x3F))
+#define CH2FREQ FREQ ((((NR24 & 0x07) << 8) | NR23))
+
+/* Channel 2 timer. */
+static int ch2_cc;
+
+/* Channel 2 duty counter. */
 static uint8_t ch2_duty_cc;
 
 /* Step Channel 2. */
-static void step_ch2 ()
+static inline void step_timer_ch2 ()
 {
-	ch2_duty_cc ++;
+	if (-- ch2_cc == 0)
+	{
+		ch2_cc = CH2FREQ;
+		ch2_duty_cc ++; ch2_duty_cc &= 0x07;
+	}
+}
+
+/* Channel 2 length counter. */
+static int ch2_len;
+
+/* Step channel 2's length counter. */
+static inline void step_len_ch2 ()
+{
+	if ((NR24 & 0x40) == 0)
+		return; // length disabled
+	else if (-- ch2_len == 0)
+		DISABLE_CH (2); // Disable
+}
+
+/* Step channel 2's envelop. */
+static inline void step_env_ch2 () { }
+
+static inline float ch2sample ()
+{
+	return (CH2DUTY >> (ch2_duty_cc >> 3)) & 1;
 }
 
 /* Step Wave channel. */
-static void step_wav () { }
+static inline void step_timer_wav () {}
+static inline void step_len_wav () {}
+static inline void step_env_wav () {}
 
 /* Step Noise channel. */
-static void step_noi () { }
+static inline void step_timer_noi () { }
+static inline void step_len_noi () { }
+static inline void step_env_noi () { }
+
+/* Frame sequencer. */
+static uint8_t fs;
+
+/* Step Frame Sequencer. */
+static inline void step_fs ()
+{
+	fs ++; fs &= 0x07;
+
+	if ((fs & 1) == 0) // even step - clock length counters
+	{
+		step_len_ch1 ();
+		step_len_ch2 ();
+		step_len_wav ();
+		step_len_noi ();
+
+		if (fs & 0x02) // fs == 2 or 6
+			step_sweep_ch1 ();
+	}
+	else if (fs == 7)
+	{
+		step_env_ch1 ();
+		step_env_ch2 ();
+		step_env_wav ();
+		step_env_noi ();
+	}
+}
+
+/* Frame sequencer timer */
+static int fs_cc;
+
+#define FSFREQ 8192 // CPU FREQ / 512 Hz
+
+static inline void step_timer_fs ()
+{
+	if (-- fs_cc == 0)
+	{
+		step_fs ();
+		fs_cc = FSFREQ;
+	}
+}
+
+static inline void step ()
+{
+	step_timer_ch1 ();
+	step_timer_ch2 ();
+	step_timer_wav ();
+	step_timer_noi ();
+
+	step_timer_fs ();
+}
+
+void gb_apu_step (int cc)
+{
+	for (; cc > 0; cc --) step ();
+}
 
 void gb_apu_reset ()
 {
@@ -334,17 +470,8 @@ void gb_apu_reset ()
 	nr50 = gb_cpu_mem (0xFF24);
 	nr51 = gb_cpu_mem (0xFF25);
 	nr52 = gb_cpu_mem (0xFF26);
-}
 
-static void step ()
-{
-	step_ch1 ();
-	step_ch2 ();
-	step_wav ();
-	step_noi ();
-}
-
-void gb_apu_step (int cc)
-{
-	for (; cc > 0; cc --) step ();
+	// TODO
+	// reset all timers
+	fs = 0;
 }
