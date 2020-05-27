@@ -294,7 +294,7 @@ static uint8_t enabled_ch;
 
 #define ENABLE_CH(c) (enabled_ch |= (1 << c))
 #define DISABLE_CH(c) (enabled_ch &= ~(1 << c))
-#define ENABLED(c) (enabled_ch & (1 << c) != 0)
+#define ENABLED(c) ((enabled_ch & (1 << c)) != 0)
 
 /* Channel 1: Tone + Sweep */
 
@@ -371,17 +371,20 @@ static inline void step_len_ch2 ()
 }
 
 /* Step channel 2's envelop. */
-static inline void step_env_ch2 () { }
+static inline void step_env_ch2 ()
+{
+
+}
 
 static inline float ch2sample ()
 {
-	return (CH2DUTY >> (ch2_duty_cc >> 3)) & 1;
+	float s = !ENABLED (2) ? 0.0 : (CH2DUTY >> (ch2_duty_cc >> 3)) & 1;
+	return s;
 }
 
 /* Step Wave channel. */
 static inline void step_timer_wav () {}
 static inline void step_len_wav () {}
-static inline void step_env_wav () {}
 
 /* Step Noise channel. */
 static inline void step_timer_noi () { }
@@ -410,7 +413,6 @@ static inline void step_fs ()
 	{
 		step_env_ch1 ();
 		step_env_ch2 ();
-		step_env_wav ();
 		step_env_noi ();
 	}
 }
