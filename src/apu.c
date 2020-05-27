@@ -1,5 +1,7 @@
 #include "gameboy/cpu.h"
+#include "gameboy/apu.h"
 #include <stdint.h>
+#include <string.h>
 
 /* Registers ------------------------------------------------ */
 
@@ -281,9 +283,9 @@ static uint8_t sqr_wav[4] =
 	0x03, // ______--
 };
 
-#define FREQ(x) (131072 / (2048 - x))
-#define SOUNDLEN(t1) ((64 - t1) << 8) // (64 - t1) * 256 Hz
-#define ENVLEN(n) (n << 6) // n * 64 Hz
+#define FREQ(x) ((2048 - x) << 5) // (GB_CPU_CLOCK / (131072 / (2048 - x)))
+#define SOUNDLEN(t1) (64 - t1) // (64 - t1) * 256 Hz
+#define ENVLEN(n) n // n * 64 Hz
 
 /* Channels ------------------------------------------------- */
 
@@ -437,13 +439,130 @@ static inline void step ()
 	step_timer_fs ();
 }
 
-void gb_apu_step (int cc)
+static inline float sample ()
 {
-	for (; cc > 0; cc --) step ();
+	// TODO
+	// right now we are just getting a value from channel 2 to see if it works
+	return ch2sample ();
 }
 
-void gb_apu_reset ()
+static int sample_rate;
+static float samples[2048];
+static int samples_len;
+static int apucc;
+
+void gb_apu_samples (float* buf, size_t* n)
 {
+	*n = samples_len * sizeof (float);
+	memcpy (buf, samples, *n);
+	samples_len = 0;
+}
+
+void gb_apu_step (int cc)
+{
+	for (; cc > 0; cc --)
+	{
+		step ();
+		if (sample_rate && ++ apucc == sample_rate)
+		{
+			samples[samples_len ++] = sample ();
+			apucc = 0;
+		}
+	}
+}
+
+static void write_ch2 (uint16_t adr, uint8_t v)
+{
+	switch (adr - 0xFF15)
+	{
+		case 1:
+			NR21 = v;
+			break;
+		case 2:
+			NR22 = v;
+			break;
+		case 3:
+			NR23 = v;
+			break;
+		case 4:
+			break;
+	}
+}
+
+static int write_apu_h (uint16_t adr, uint8_t v)
+{
+	// TODO
+	// not sure if one needs to handle the unused the registers.
+
+	if (adr < 0xFF10 || adr > 0xFF26) return 0;
+
+	// TODO
+	// make this cleaner when you less in a hurry
+	// maybe a function array
+
+	adr &= 0x00FF;
+
+	if (adr < 0x15)
+	{
+		// write channel 1
+		return 0;
+	}
+	else if (adr < 0x1A)
+	{
+		// write channel 2
+		return 0;
+	}
+	else if (adr < 0x20)
+	{
+		// write wave
+		return 0;
+	}
+	else if (adr < 0x27)
+	{
+		// write noise
+		return 0;
+	}
+
+	return 1;
+}
+
+static int read_apu_h (uint16_t adr, uint8_t* v)
+{
+	if (adr < 0xFF10 || adr > 0xFF26) return 0;
+
+	// TODO
+	// make this cleaner when you less in a hurry
+	// maybe a function array
+
+	adr &= 0x00FF;
+
+	if (adr < 0x15)
+	{
+		// write channel 1
+		return 0;
+	}
+	else if (adr < 0x1A)
+	{
+		// write channel 2
+		return 0;
+	}
+	else if (adr < 0x20)
+	{
+		// write wave
+	}
+	else if (adr < 0x27)
+	{
+		// write noise
+	}
+
+	return 1;
+}
+
+void gb_apu_reset (int sample_rate_)
+{
+	sample_rate = GB_CPU_CLOCK / sample_rate_; // TODO try to be more precise
+	samples_len = 0;
+
 	nr10 = gb_cpu_mem (0xFF10);
 	nr11 = gb_cpu_mem (0xFF11);
 	nr12 = gb_cpu_mem (0xFF12);

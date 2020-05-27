@@ -11,6 +11,13 @@
 static uint8_t* ROM;
 static uint8_t* RAM;
 
+static int sample_rate;
+
+void gb_init (int sample_rate_)
+{
+	sample_rate = sample_rate_;
+}
+
 /**
  * Map MBC identifiers to loader functions.
  */
@@ -76,7 +83,7 @@ int gb_load (const char* file)
 	gb_cpu_reset ();
 	gb_ppu_reset ();
 	gb_io_reset ();
-	gb_apu_reset ();
+	gb_apu_reset (sample_rate);
 
 	uint8_t mbc;
 	if ((ret = gb_load_file (file, &mbc, &ROM, &RAM)) != 0)
@@ -107,6 +114,8 @@ void gb_step ()
 }
 
 const uint8_t* gb_lcd () { return gb_ppu_lcd (); }
+
+void gb_audio_samples (float* buf, size_t* n) { gb_apu_samples (buf, n); }
 
 void gb_stop ()
 {

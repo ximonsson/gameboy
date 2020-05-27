@@ -267,12 +267,10 @@ static void audio_init (int rate)
 // play audio samples
 static int audio_play ()
 {
-	return 0;
-
 	static int err;
 	static size_t size;
 
-	//gb_audio_samples (audio_samples_buffer, &size);
+	gb_audio_samples (audio_samples_buffer, &size);
 
 	if (pa_simple_write (audioconn, audio_samples_buffer, size, &err) < 0)
 		fprintf (stderr, "pa_simple_write: %s\n", pa_strerror (err));
@@ -357,6 +355,8 @@ static void handle_events ()
 
 int main (int argc, char** argv)
 {
+	gb_init (SAMPLE_RATE);
+
 	printf ("\n");
 	if (gb_load (argv[1]) != 0)
 	{
@@ -372,7 +372,6 @@ int main (int argc, char** argv)
 
 	printf ("initializing pulse audio output.\n");
 	audio_init (SAMPLE_RATE);
-	//gb_audio_set_sample_rate (SAMPLE_RATE);
 
 	// run game
 	printf ("starting game.\n");
