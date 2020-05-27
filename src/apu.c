@@ -305,7 +305,7 @@ static uint8_t enabled_ch;
 /* Channel 1 timer. */
 static int ch1_cc;
 
-/* Channel 2 duty counter. */
+/* Channel 1 duty counter. */
 static uint8_t ch1_duty_cc;
 
 /* Step Channel 1 timer. */
@@ -333,8 +333,32 @@ static inline void step_len_ch1 ()
 /* Step channel 1 sweep. */
 static inline void step_sweep_ch1 () { }
 
-/* Step channel 1 envelop. */
-static inline void step_env_ch1 () {}
+/* Channel 1 envelop counter. */
+static uint8_t ch1_envcc;
+
+/* Channel 1 volume. */
+static uint8_t ch1_vol;
+
+/* Step channel 2's envelop. */
+static inline void step_env_ch1 ()
+{
+	if (-- ch1_envcc == 0)
+	{
+		// reset counter
+		ch1_envcc = NR12 & 0x07;
+		if (!ch1_envcc) ch1_envcc = 8; // TODO w00t?
+
+		// change volume
+		if (ch1_vol > 0 && ch1_vol < 15)
+			ch1_vol += NR12 & 0x08 ? 1 : -1;
+	}
+}
+
+static inline float ch1sample ()
+{
+	float s = !ENABLED (1) ? 0.0 : (CH1DUTY >> (ch1_duty_cc >> 3)) & 1;
+	return s * ch1_vol / 100;
+}
 
 /* Channel 2: Tone */
 
@@ -394,7 +418,7 @@ static inline void step_env_ch2 ()
 static inline float ch2sample ()
 {
 	float s = !ENABLED (2) ? 0.0 : (CH2DUTY >> (ch2_duty_cc >> 3)) & 1;
-	return s * ch2_vol * 100;
+	return s * ch2_vol / 100;
 }
 
 /* Step Wave channel. */
@@ -460,7 +484,7 @@ static inline float sample ()
 {
 	// TODO
 	// right now we are just getting a value from channel 2 to see if it works
-	return ch2sample ();
+	return ch1sample ();
 }
 
 static int sample_rate;
@@ -509,6 +533,24 @@ static int write_ch2 (uint16_t adr, uint8_t v)
 	return 0;
 }
 
+static int write_ch1 (uint16_t adr, uint8_t v)
+{
+	//printf ("$%.4X - 0x0015 => %d\n", adr, adr - 0x0015);
+	switch (adr - 0x0010)
+	{
+		case 4:
+			if (v & 0x80)
+			{
+				ENABLE_CH (1);
+				if (ch1_len == 0) ch1_len = 64;
+				ch1_cc = CH1FREQ;
+				ch1_envcc = NR12 & 0x07;
+				ch1_vol = NR12 >> 4;
+			}
+			return 1;
+	}
+	return 0;
+}
 
 static int write_apu_h (uint16_t adr, uint8_t v)
 {
@@ -518,7 +560,7 @@ static int write_apu_h (uint16_t adr, uint8_t v)
 	if (adr < 0xFF10 || adr > 0xFF26) return 0;
 
 	// TODO
-	// make this cleaner when you less in a hurry
+	// make this cleaner when you are less in a hurry
 	// maybe a function array
 
 	adr &= 0x00FF;
@@ -526,7 +568,7 @@ static int write_apu_h (uint16_t adr, uint8_t v)
 	if (adr < 0x15)
 	{
 		// write channel 1
-		return 0;
+		return write_ch1 (adr, v);
 	}
 	else if (adr < 0x1A)
 	{
