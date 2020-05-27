@@ -370,16 +370,31 @@ static inline void step_len_ch2 ()
 		DISABLE_CH (2); // Disable
 }
 
+/* Channel 2 envelop counter. */
+static uint8_t ch2_envcc;
+
+/* Channel 2 volume. */
+static uint8_t ch2_vol;
+
 /* Step channel 2's envelop. */
 static inline void step_env_ch2 ()
 {
+	if (-- ch2_envcc == 0)
+	{
+		// reset counter
+		ch2_envcc = NR22 & 0x07;
+		if (!ch2_envcc) ch2_envcc = 8; // TODO w00t?
 
+		// change volume
+		if (ch2_vol > 0 && ch2_vol < 15)
+			ch2_vol += NR22 & 0x08 ? 1 : -1;
+	}
 }
 
 static inline float ch2sample ()
 {
 	float s = !ENABLED (2) ? 0.0 : (CH2DUTY >> (ch2_duty_cc >> 3)) & 1;
-	return s;
+	return s * ch2_vol * 100;
 }
 
 /* Step Wave channel. */
@@ -473,23 +488,27 @@ void gb_apu_step (int cc)
 	}
 }
 
-static void write_ch2 (uint16_t adr, uint8_t v)
+#include <stdio.h>
+
+static int write_ch2 (uint16_t adr, uint8_t v)
 {
-	switch (adr - 0xFF15)
+	//printf ("$%.4X - 0x0015 => %d\n", adr, adr - 0x0015);
+	switch (adr - 0x0015)
 	{
-		case 1:
-			NR21 = v;
-			break;
-		case 2:
-			NR22 = v;
-			break;
-		case 3:
-			NR23 = v;
-			break;
 		case 4:
-			break;
+			if (v & 0x80)
+			{
+				ENABLE_CH (2);
+				if (ch2_len == 0) ch2_len = 64;
+				ch2_cc = CH2FREQ;
+				ch2_envcc = NR22 & 0x07;
+				ch2_vol = NR22 >> 4;
+			}
+			return 1;
 	}
+	return 0;
 }
+
 
 static int write_apu_h (uint16_t adr, uint8_t v)
 {
@@ -512,7 +531,7 @@ static int write_apu_h (uint16_t adr, uint8_t v)
 	else if (adr < 0x1A)
 	{
 		// write channel 2
-		return 0;
+		return write_ch2 (adr, v);
 	}
 	else if (adr < 0x20)
 	{
@@ -591,6 +610,8 @@ void gb_apu_reset (int sample_rate_)
 	nr50 = gb_cpu_mem (0xFF24);
 	nr51 = gb_cpu_mem (0xFF25);
 	nr52 = gb_cpu_mem (0xFF26);
+
+	gb_cpu_register_store_handler (write_apu_h);
 
 	// TODO
 	// reset all timers
