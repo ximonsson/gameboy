@@ -330,8 +330,7 @@ static uint8_t ch1_len;
 /* Step channel 1 length counter. */
 static void step_len_ch1 ()
 {
-	//if ((NR14 & 0x40) == 0 || !ENABLED (1))
-	if (! ENABLED (1))
+	if ((~NR14 & 0x40) || !ch1_len)
 		return; // length disabled
 	else if (-- ch1_len == 0)
 	{
@@ -339,8 +338,36 @@ static void step_len_ch1 ()
 	}
 }
 
+#define CH1SWEEP ((NR10 >> 4) & 0x07)
+#define CH1SWEEP_ENABLED ((NR10 & 0x70) || (NR10 & 0x07))
+
+static uint8_t ch1_sweep_cc;
+static uint16_t ch1_shadow;
+
 /* Step channel 1 sweep. */
-static void step_sweep_ch1 () { }
+static void step_sweep_ch1 ()
+{
+	if (-- ch1_sweep_cc > 0) return;
+	else if (!CH1SWEEP_ENABLED) return;
+
+	printf ("CHANNEL 1: SWEEP!\n");
+	ch1_sweep_cc = CH1SWEEP;
+	if (!ch1_sweep_cc) ch1_sweep_cc = 8;
+
+	int freq = ch1_shadow >> (NR10 & 0x07);
+	if (NR10 & 0x08)
+		freq = ch1_shadow - freq;
+
+	if (freq > 2047) // overflow
+	{
+		DISABLE_CH (1);
+		return;
+	}
+
+	ch1_shadow = freq;
+	NR13 = freq & 0xFF;
+	NR14 = (NR14 & ~0x07) | (freq >> 8 & 0x07);
+}
 
 /* Channel 1 envelop counter. */
 static uint8_t ch1_envcc;
@@ -355,24 +382,19 @@ static void step_env_ch1 ()
 	{
 		// reset counter
 		ch1_envcc = NR12 & 0x07;
-		if (!ch1_envcc) ch1_envcc = 8;
+		if (!ch1_envcc)
+			ch1_envcc = 8;
 
 		// change volume
 		if (ch1_vol > 0 && ch1_vol < 15)
-		{
 			ch1_vol += NR12 & 0x08 ? 1 : -1;
-		}
 	}
 }
 
 static uint8_t ch1sample ()
 {
-	//uint8_t s = !ENABLED (1) ? 0 : (CH1DUTY >> (ch1_duty_cc >> 3)) & 1;
 	if (! ENABLED (1)) return 0;
-
-	uint8_t s = CH1DUTY;
-	s = (s >> ch1_duty_cc) & 1;
-
+	uint8_t s = (CH1DUTY >> ch1_duty_cc) & 1;
 	return s * ch1_vol;
 }
 
@@ -404,10 +426,8 @@ static uint8_t ch2_len;
 /* Step channel 2's length counter. */
 static void step_len_ch2 ()
 {
-	//if ((NR24 & 0x40) == 0)
-		//return; // length disabled
-	if (! ENABLED (2))
-		return;
+	if ((~NR24 & 0x40) || !ch2_len)
+		return; // length disabled
 	else if (-- ch2_len == 0)
 		DISABLE_CH (2); // Disable
 }
@@ -435,12 +455,9 @@ static void step_env_ch2 ()
 
 static uint8_t ch2sample ()
 {
-	//uint8_t s = !ENABLED (2) ? 0 : (CH2DUTY >> (ch2_duty_cc >> 3)) & 1;
 	if (! ENABLED (2)) return 0;
 
-	uint8_t s = CH2DUTY;
-	s = (s >> ch2_duty_cc) & 1;
-
+	uint8_t s = (CH2DUTY >> ch2_duty_cc) & 1;
 	return s * ch2_vol;
 }
 
@@ -464,9 +481,8 @@ static uint16_t wav_len;
 
 static void step_len_wav ()
 {
-	if (! ENABLED (3) || (~NR34 & 0x40))
+	if ((~NR34 & 0x40) || !wav_len)
 		return;
-
 	else if (-- wav_len == 0)
 		DISABLE_CH (3);
 }
@@ -474,7 +490,7 @@ static void step_len_wav ()
 static uint8_t wavsample ()
 {
 	// not enabled or volume is 0%
-	if (! ENABLED (3) || (NR32 & 0x60) == 0 || (~NR30 & 0x80))
+	if (! ENABLED (3) || (~NR32 & 0x60) || (~NR30 & 0x80))
 		return 0;
 
 	uint8_t s = wav_pat[wav_duty >> 1];
@@ -514,7 +530,7 @@ static uint16_t noi_len;
 /* Step Noise channel's length counter. */
 static void step_len_noi ()
 {
-	if (! ENABLED (4) || (NR42 & 0x60)) // TODO I don't believe this
+	if ((~NR44 & 0x40) || !noi_len) // TODO I don't believe this
 		return;
 	if (-- noi_len == 0)
 		DISABLE_CH (4);
@@ -534,7 +550,10 @@ static void step_env_noi ()
 
 		// change volume
 		if (noi_vol > 0 && noi_vol < 15)
+		{
 			noi_vol += NR42 & 0x08 ? 1 : -1;
+			printf ("NOISE: new volume = %d\n", noi_vol);
+		}
 	}
 }
 
@@ -654,10 +673,11 @@ static int write_ch1 (uint16_t adr, uint8_t v)
 				ENABLE_CH (1);
 
 				ch1_duty_cc = 0;
-				ch1_cc = CH1FREQ;
+				ch1_cc = ch1_shadow = CH1FREQ;
 				ch1_vol = NR12 >> 4;
+				ch1_sweep_cc = CH1SWEEP;
 
-				if (ch1_len == 0) ch1_len = 64;
+				if (!ch1_len) ch1_len = 64;
 				else ch1_len = CH1LEN;
 
 				ch1_envcc = NR12 & 0x07;
