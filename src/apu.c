@@ -350,7 +350,6 @@ static void step_sweep_ch1 ()
 	if (-- ch1_sweep_cc > 0) return;
 	else if (!CH1SWEEP_ENABLED) return;
 
-	printf ("CHANNEL 1: SWEEP!\n");
 	ch1_sweep_cc = CH1SWEEP;
 	if (!ch1_sweep_cc) ch1_sweep_cc = 8;
 
