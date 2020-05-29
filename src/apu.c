@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <stdio.h>
+
 /* Registers ------------------------------------------------ */
 
 /**
@@ -283,7 +285,7 @@ static uint8_t sqr_wav[4] =
 	0x03, // ______--
 };
 
-#define FREQ(x) ((2048 - x) << 5) // (GB_CPU_CLOCK / (131072 / (2048 - x)))
+#define FREQ(x) ((2048 - x) << 2) // (GB_CPU_CLOCK / (131072 / (2048 - x)))
 #define SOUNDLEN(t1) (64 - t1) // (64 - t1) * 256 Hz
 #define ENVLEN(n) n // n * 64 Hz
 
@@ -303,13 +305,13 @@ static uint8_t enabled_ch;
 #define CH1LEN SOUNDLEN ((NR11 & 0x3F))
 
 /* Channel 1 timer. */
-static int ch1_cc;
+static uint16_t ch1_cc;
 
 /* Channel 1 duty counter. */
 static uint8_t ch1_duty_cc;
 
 /* Step Channel 1 timer. */
-static inline void step_timer_ch1 ()
+static void step_timer_ch1 ()
 {
 	if (-- ch1_cc == 0)
 	{
@@ -319,19 +321,20 @@ static inline void step_timer_ch1 ()
 }
 
 /* Channel 1 length counter. */
-static int ch1_len;
+static uint8_t ch1_len;
 
 /* Step channel 1 length counter. */
-static inline void step_len_ch1 ()
+static void step_len_ch1 ()
 {
-	if ((NR14 & 0x40) == 0)
+	//if ((NR14 & 0x40) == 0 || !ENABLED (1))
+	if (! ENABLED (1))
 		return; // length disabled
 	else if (-- ch1_len == 0)
 		DISABLE_CH (1); // Disable
 }
 
 /* Step channel 1 sweep. */
-static inline void step_sweep_ch1 () { }
+static void step_sweep_ch1 () { }
 
 /* Channel 1 envelop counter. */
 static uint8_t ch1_envcc;
@@ -340,7 +343,7 @@ static uint8_t ch1_envcc;
 static uint8_t ch1_vol;
 
 /* Step channel 2's envelop. */
-static inline void step_env_ch1 ()
+static void step_env_ch1 ()
 {
 	if (-- ch1_envcc == 0)
 	{
@@ -354,10 +357,10 @@ static inline void step_env_ch1 ()
 	}
 }
 
-static inline float ch1sample ()
+static float ch1sample ()
 {
 	float s = !ENABLED (1) ? 0.0 : (CH1DUTY >> (ch1_duty_cc >> 3)) & 1;
-	return s * ch1_vol / 100;
+	return s * ch1_vol;
 }
 
 /* Channel 2: Tone */
@@ -373,7 +376,7 @@ static int ch2_cc;
 static uint8_t ch2_duty_cc;
 
 /* Step Channel 2. */
-static inline void step_timer_ch2 ()
+static void step_timer_ch2 ()
 {
 	if (-- ch2_cc == 0)
 	{
@@ -383,13 +386,15 @@ static inline void step_timer_ch2 ()
 }
 
 /* Channel 2 length counter. */
-static int ch2_len;
+static uint8_t ch2_len;
 
 /* Step channel 2's length counter. */
-static inline void step_len_ch2 ()
+static void step_len_ch2 ()
 {
-	if ((NR24 & 0x40) == 0)
-		return; // length disabled
+	//if ((NR24 & 0x40) == 0)
+		//return; // length disabled
+	if (! ENABLED (2))
+		return;
 	else if (-- ch2_len == 0)
 		DISABLE_CH (2); // Disable
 }
@@ -401,7 +406,7 @@ static uint8_t ch2_envcc;
 static uint8_t ch2_vol;
 
 /* Step channel 2's envelop. */
-static inline void step_env_ch2 ()
+static void step_env_ch2 ()
 {
 	if (-- ch2_envcc == 0)
 	{
@@ -415,26 +420,70 @@ static inline void step_env_ch2 ()
 	}
 }
 
-static inline float ch2sample ()
+static float ch2sample ()
 {
 	float s = !ENABLED (2) ? 0.0 : (CH2DUTY >> (ch2_duty_cc >> 3)) & 1;
-	return s * ch2_vol / 100;
+	return s * ch2_vol;
 }
 
+#define WAVFREQ_(x) ((2048 - x) << 1) // (GB_CPU_CLOCK / (65536 / (2048 - x)))
+#define WAVFREQ WAVFREQ_ ((((NR34 & 0x3) << 8) | NR33))
+
+static int wav_cc;
+static uint8_t wav_duty;
+
 /* Step Wave channel. */
-static inline void step_timer_wav () {}
-static inline void step_len_wav () {}
+static void step_timer_wav ()
+{
+	if (-- wav_cc == 0)
+	{
+		wav_duty ++; wav_duty &= 0x1F;
+		wav_cc = WAVFREQ;
+	}
+}
+
+static uint16_t wav_len;
+
+static void step_len_wav ()
+{
+	if (! ENABLED (3) || (~NR34 & 0x40))
+		return;
+
+	else if (-- wav_len == 0)
+		DISABLE_CH (3);
+}
+
+static float wavsample ()
+{
+	// not enabled or volume is 0%
+	if (! ENABLED (3) || (NR32 & 0x60) == 0)
+		return 0.0;
+
+	uint8_t s = wav_pat[wav_duty >> 1];
+
+	if ((wav_duty & 1) == 0) s >>= 4;
+	else s &= 0x0F;
+
+	s >>= ((NR32 & 60) >> 4) - 1; // apply volume
+
+	return s;
+}
 
 /* Step Noise channel. */
-static inline void step_timer_noi () { }
-static inline void step_len_noi () { }
-static inline void step_env_noi () { }
+static void step_timer_noi () { }
+static void step_len_noi () { }
+static void step_env_noi () { }
+
+static float noisample ()
+{
+	return 0.0;
+}
 
 /* Frame sequencer. */
 static uint8_t fs;
 
 /* Step Frame Sequencer. */
-static inline void step_fs ()
+static void step_fs ()
 {
 	fs ++; fs &= 0x07;
 
@@ -461,7 +510,7 @@ static int fs_cc;
 
 #define FSFREQ 8192 // CPU FREQ / 512 Hz
 
-static inline void step_timer_fs ()
+static void step_timer_fs ()
 {
 	if (-- fs_cc == 0)
 	{
@@ -470,21 +519,33 @@ static inline void step_timer_fs ()
 	}
 }
 
-static inline void step ()
+static void step ()
 {
+	// step channel timers
 	step_timer_ch1 ();
 	step_timer_ch2 ();
 	step_timer_wav ();
 	step_timer_noi ();
-
+	// step frame sequencer timer
 	step_timer_fs ();
 }
 
-static inline float sample ()
+static float sample ()
 {
-	// TODO
-	// right now we are just getting a value from channel 2 to see if it works
-	return ch1sample ();
+	if (~NR52 & 0x80) return -1.0;
+
+	float s = 0.0;
+
+	// add all the channels together then normalize
+
+	s += ch1sample ();
+	s += ch2sample ();
+	s += wavsample ();
+	s += noisample ();
+
+	s = s / 30.0 - 1.0;
+
+	return s;
 }
 
 static int sample_rate;
@@ -512,30 +573,8 @@ void gb_apu_step (int cc)
 	}
 }
 
-#include <stdio.h>
-
-static int write_ch2 (uint16_t adr, uint8_t v)
-{
-	//printf ("$%.4X - 0x0015 => %d\n", adr, adr - 0x0015);
-	switch (adr - 0x0015)
-	{
-		case 4:
-			if (v & 0x80)
-			{
-				ENABLE_CH (2);
-				if (ch2_len == 0) ch2_len = 64;
-				ch2_cc = CH2FREQ;
-				ch2_envcc = NR22 & 0x07;
-				ch2_vol = NR22 >> 4;
-			}
-			return 1;
-	}
-	return 0;
-}
-
 static int write_ch1 (uint16_t adr, uint8_t v)
 {
-	//printf ("$%.4X - 0x0015 => %d\n", adr, adr - 0x0015);
 	switch (adr - 0x0010)
 	{
 		case 4:
@@ -543,11 +582,48 @@ static int write_ch1 (uint16_t adr, uint8_t v)
 			{
 				ENABLE_CH (1);
 				if (ch1_len == 0) ch1_len = 64;
+				else ch1_len = CH1LEN;
 				ch1_cc = CH1FREQ;
 				ch1_envcc = NR12 & 0x07;
 				ch1_vol = NR12 >> 4;
+				ch1_duty_cc = 0;
 			}
 			return 1;
+	}
+	return 0;
+}
+
+static int write_ch2 (uint16_t adr, uint8_t v)
+{
+	switch (adr - 0x0015)
+	{
+		case 4:
+			if (v & 0x80)
+			{
+				ENABLE_CH (2);
+				if (ch2_len == 0) ch2_len = 64;
+				else ch2_len = CH2LEN;
+				ch2_cc = CH2FREQ;
+				ch2_envcc = NR22 & 0x07;
+				ch2_vol = NR22 >> 4;
+				ch2_duty_cc = 0;
+			}
+			return 1;
+	}
+	return 0;
+}
+
+static int write_wav (uint16_t adr, uint8_t v)
+{
+	adr -= 0x1A;
+	if (adr == 4 && (v & 0x80))
+	{
+		ENABLE_CH (3);
+		if (wav_len == 0) wav_len = 256;
+		else wav_len = 256 - NR30;
+		wav_cc = WAVFREQ;
+		wav_duty = 0;
+		return 1;
 	}
 	return 0;
 }
@@ -578,47 +654,25 @@ static int write_apu_h (uint16_t adr, uint8_t v)
 	else if (adr < 0x20)
 	{
 		// write wave
-		return 0;
+		return write_wav (adr, v);
 	}
-	else if (adr < 0x27)
+	else if (adr < 0x24)
 	{
 		// write noise
 		return 0;
 	}
 
-	return 1;
+	return 0;
 }
 
 static int read_apu_h (uint16_t adr, uint8_t* v)
 {
-	if (adr < 0xFF10 || adr > 0xFF26) return 0;
-
-	// TODO
-	// make this cleaner when you less in a hurry
-	// maybe a function array
-
-	adr &= 0x00FF;
-
-	if (adr < 0x15)
+	if (adr == 0xFF26) // NR52
 	{
-		// write channel 1
-		return 0;
+		*v = ((* v) & 0x80) | (enabled_ch & 0xF);
+		return 1;
 	}
-	else if (adr < 0x1A)
-	{
-		// write channel 2
-		return 0;
-	}
-	else if (adr < 0x20)
-	{
-		// write wave
-	}
-	else if (adr < 0x27)
-	{
-		// write noise
-	}
-
-	return 1;
+	return 0;
 }
 
 void gb_apu_reset (int sample_rate_)
@@ -654,8 +708,10 @@ void gb_apu_reset (int sample_rate_)
 	nr52 = gb_cpu_mem (0xFF26);
 
 	gb_cpu_register_store_handler (write_apu_h);
+	gb_cpu_register_read_handler (read_apu_h);
 
 	// TODO
 	// reset all timers
 	fs = 0;
+	enabled_ch = 0;
 }
