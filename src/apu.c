@@ -5,6 +5,10 @@
 
 #include <stdio.h>
 
+// TODO
+//
+// - DAC for each channel
+
 /* Registers ------------------------------------------------ */
 
 /**
@@ -330,7 +334,9 @@ static void step_len_ch1 ()
 	if (! ENABLED (1))
 		return; // length disabled
 	else if (-- ch1_len == 0)
+	{
 		DISABLE_CH (1); // Disable
+	}
 }
 
 /* Step channel 1 sweep. */
@@ -349,17 +355,24 @@ static void step_env_ch1 ()
 	{
 		// reset counter
 		ch1_envcc = NR12 & 0x07;
-		if (!ch1_envcc) ch1_envcc = 8; // TODO w00t?
+		if (!ch1_envcc) ch1_envcc = 8;
 
 		// change volume
 		if (ch1_vol > 0 && ch1_vol < 15)
+		{
 			ch1_vol += NR12 & 0x08 ? 1 : -1;
+		}
 	}
 }
 
-static float ch1sample ()
+static uint8_t ch1sample ()
 {
-	float s = !ENABLED (1) ? 0.0 : (CH1DUTY >> (ch1_duty_cc >> 3)) & 1;
+	//uint8_t s = !ENABLED (1) ? 0 : (CH1DUTY >> (ch1_duty_cc >> 3)) & 1;
+	if (! ENABLED (1)) return 0;
+
+	uint8_t s = CH1DUTY;
+	s = (s >> ch1_duty_cc) & 1;
+
 	return s * ch1_vol;
 }
 
@@ -420,9 +433,14 @@ static void step_env_ch2 ()
 	}
 }
 
-static float ch2sample ()
+static uint8_t ch2sample ()
 {
-	float s = !ENABLED (2) ? 0.0 : (CH2DUTY >> (ch2_duty_cc >> 3)) & 1;
+	//uint8_t s = !ENABLED (2) ? 0 : (CH2DUTY >> (ch2_duty_cc >> 3)) & 1;
+	if (! ENABLED (2)) return 0;
+
+	uint8_t s = CH2DUTY;
+	s = (s >> ch2_duty_cc) & 1;
+
 	return s * ch2_vol;
 }
 
@@ -453,11 +471,11 @@ static void step_len_wav ()
 		DISABLE_CH (3);
 }
 
-static float wavsample ()
+static uint8_t wavsample ()
 {
 	// not enabled or volume is 0%
 	if (! ENABLED (3) || (NR32 & 0x60) == 0 || (~NR30 & 0x80))
-		return 0.0;
+		return 0;
 
 	uint8_t s = wav_pat[wav_duty >> 1];
 
@@ -521,10 +539,10 @@ static void step_env_noi ()
 }
 
 /* Sample from the noise channel. */
-static float noisample ()
+static uint8_t noisample ()
 {
 	if (! ENABLE_CH (4))
-		return 0.0;
+		return 0;
 	return (~lfsr & 1) * noi_vol;
 }
 
@@ -635,14 +653,15 @@ static int write_ch1 (uint16_t adr, uint8_t v)
 			{
 				ENABLE_CH (1);
 
+				ch1_duty_cc = 0;
+				ch1_cc = CH1FREQ;
+				ch1_vol = NR12 >> 4;
+
 				if (ch1_len == 0) ch1_len = 64;
 				else ch1_len = CH1LEN;
 
-				ch1_cc = CH1FREQ;
 				ch1_envcc = NR12 & 0x07;
 				if (!ch1_envcc) ch1_envcc = 8;
-				ch1_vol = NR12 >> 4;
-				ch1_duty_cc = 0;
 			}
 			break;
 	}
@@ -662,14 +681,15 @@ static int write_ch2 (uint16_t adr, uint8_t v)
 			{
 				ENABLE_CH (2);
 
-				if (ch2_len == 0) ch2_len = 64;
-				else ch2_len = CH2LEN;
-
 				ch2_cc = CH2FREQ;
+				ch2_duty_cc = 0;
+				ch2_vol = NR22 >> 4;
+
 				ch2_envcc = NR22 & 0x07;
 				if (!ch2_envcc) ch2_envcc = 8;
-				ch2_vol = NR22 >> 4;
-				ch2_duty_cc = 0;
+
+				if (ch2_len == 0) ch2_len = 64;
+				else ch2_len = CH2LEN;
 			}
 			break;
 	}
@@ -683,11 +703,13 @@ static int write_wav (uint16_t adr, uint8_t v)
 	{
 		ENABLE_CH (3);
 
-		if (wav_len == 0) wav_len = 256;
-		else wav_len = 256 - NR31;
-
 		wav_cc = WAVFREQ;
 		wav_duty = 0;
+
+		if (wav_len == 0)
+			wav_len = 256;
+		else
+			wav_len = 256 - NR31;
 	}
 	else if (adr == 1)
 	{
@@ -703,12 +725,14 @@ static int write_noi (uint16_t adr, uint8_t v)
 	{
 		ENABLE_CH (4);
 
-		if (noi_len == 0) noi_len = 64;
-		else noi_len = 64 - (NR41 & 0x3F);
-
-		noi_vol = NR42 >> 4;
-		lfsr = 0xFFFF;
 		noi_cc = NOIFREQ;
+		lfsr = 0xFFFF;
+		noi_vol = NR42 >> 4;
+
+		if (noi_len == 0)
+			noi_len = 64;
+		else
+			noi_len = 64 - (NR41 & 0x3F);
 	}
 	else if (adr == 1)
 	{
