@@ -19,6 +19,8 @@ There is a sample application with source code located in `./examples/app` that 
 
 * [x] *Solved* Timing: Seems like timing of the emulator is super off. I have no idea why though... I do think this is the reason for the games that are not working properly.
 * [x] Behavior when LCD disabled: from what I understand the PPU should do nothing and stay in VBLANK mode (maybe). However a lot games are not working if the PPU is not ticking even while off. No idea what the error can be here. If I let the PPU tick even when it is disabled other games will crash. I sticking to keeping it off and try to find other solutions. <span style="color:FF0000">Not sure this is solved but setting default values of LCDC at least gets a lot of games started. Some games still have some isses.</span>
+* [ ] Sweep for channel 1.
+* [ ] Various audio bugs that I am not aware of.
 
 ### Blargg's Tests
 
@@ -49,6 +51,7 @@ Not really aiming for supporting that many but at least the comon ones:
 
 * [x] MBC0
 * [x] MBC1 **But there might be some error in bank switching**
+* [ ] MBC2
 * [x] MBC3 **Not Timer though**
 * [x] MBC5
 
@@ -68,7 +71,8 @@ I think there is an error with the implementation of MBC1 at the moment because 
 
 ### TODO
 
-* [ ] Audio support!
+* [-] Audio support!
+	* There is sound but there are some errors.
 * [x] Sprite - BG priority needs to be solved.
 * [ ] RTC for MBC3.
 * [x] Timer support - need to keep better track of CPU cycles.
