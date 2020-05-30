@@ -330,42 +330,53 @@ static uint8_t ch1_len;
 /* Step channel 1 length counter. */
 static void step_len_ch1 ()
 {
-	if ((~NR14 & 0x40) || !ch1_len)
+	if (!((NR14 & 0x40) && ch1_len))
 		return; // length disabled
-	else if (-- ch1_len == 0)
-	{
+
+	if (-- ch1_len == 0)
 		DISABLE_CH (1); // Disable
-	}
 }
 
 #define CH1SWEEP ((NR10 >> 4) & 0x07)
-#define CH1SWEEP_ENABLED ((NR10 & 0x70) || (NR10 & 0x07))
+#define CH1SWEEP_ENABLED (NR10 & 0x77)
+#define SWEEP_OVERFLOW 2047
 
 static uint8_t ch1_sweep_cc;
 static uint16_t ch1_shadow;
 
+static int16_t sweep ()
+{
+	int16_t freq = ch1_shadow >> (NR10 & 0x07);
+	if (NR10 & 0x08)
+		freq = - freq;
+	freq = ch1_shadow + freq;
+
+	if (freq > SWEEP_OVERFLOW) // overflow
+		DISABLE_CH (1);
+
+	return freq;
+}
+
 /* Step channel 1 sweep. */
 static void step_sweep_ch1 ()
 {
-	if (-- ch1_sweep_cc > 0) return;
-	else if (!CH1SWEEP_ENABLED) return;
+	if (!CH1SWEEP_ENABLED || -- ch1_sweep_cc > 0)
+		return;
 
 	ch1_sweep_cc = CH1SWEEP;
-	if (!ch1_sweep_cc) ch1_sweep_cc = 8;
+	if (!ch1_sweep_cc)
+		ch1_sweep_cc = 8;
 
-	int freq = ch1_shadow >> (NR10 & 0x07);
-	if (NR10 & 0x08)
-		freq = ch1_shadow - freq;
+	int16_t freq = sweep ();
 
-	if (freq > 2047) // overflow
+	if (freq < SWEEP_OVERFLOW)
 	{
-		DISABLE_CH (1);
-		return;
+		ch1_shadow = freq;
+		NR13 = freq & 0xFF;
+		NR14 = (NR14 & ~0x07) | ((freq >> 8) & 0x07);
 	}
 
-	ch1_shadow = freq;
-	NR13 = freq & 0xFF;
-	NR14 = (NR14 & ~0x07) | (freq >> 8 & 0x07);
+	sweep ();
 }
 
 /* Channel 1 envelop counter. */
@@ -412,7 +423,7 @@ static uint8_t ch2_duty_cc;
 /* Step Channel 2. */
 static void step_timer_ch2 ()
 {
-	if (-- ch2_cc <= 0)
+	if (-- ch2_cc == 0)
 	{
 		ch2_cc = CH2FREQ;
 		ch2_duty_cc ++; ch2_duty_cc &= 0x07;
@@ -462,6 +473,7 @@ static uint8_t ch2sample ()
 
 #define WAVFREQ_(x) ((2048 - x) << 1) // (GB_CPU_CLOCK / (65536 / (2048 - x)))
 #define WAVFREQ WAVFREQ_ ((((NR34 & 0x3) << 8) | NR33))
+#define WAVLEN (256 - NR31)
 
 static int wav_cc;
 static uint8_t wav_duty;
@@ -482,20 +494,22 @@ static void step_len_wav ()
 {
 	if ((~NR34 & 0x40) || !wav_len)
 		return;
-	else if (-- wav_len == 0)
+	if (-- wav_len == 0)
 		DISABLE_CH (3);
 }
 
 static uint8_t wavsample ()
 {
 	// not enabled or volume is 0%
-	if (! ENABLED (3) || (~NR32 & 0x60) || (~NR30 & 0x80))
+	if (!ENABLED (3) || (~NR32 & 0x60) || (~NR30 & 0x80))
 		return 0;
 
 	uint8_t s = wav_pat[wav_duty >> 1];
 
-	if ((wav_duty & 1) == 0) s >>= 4;
-	else s &= 0x0F;
+	if ((wav_duty & 1) == 0)
+		s >>= 4;
+	else
+		s &= 0x0F;
 
 	s >>= ((NR32 & 60) >> 4) - 1; // apply volume
 
@@ -529,7 +543,7 @@ static uint16_t noi_len;
 /* Step Noise channel's length counter. */
 static void step_len_noi ()
 {
-	if ((~NR44 & 0x40) || !noi_len) // TODO I don't believe this
+	if ((~NR44 & 0x40) || !noi_len)
 		return;
 	if (-- noi_len == 0)
 		DISABLE_CH (4);
@@ -663,7 +677,8 @@ static int write_ch1 (uint16_t adr, uint8_t v)
 	switch (adr - 0x0010)
 	{
 		case 1:
-			ch1_len = 64 - (v & 0x3F);
+			NR11 = v;
+			ch1_len = CH1LEN;
 			break;
 
 		case 4:
@@ -672,12 +687,17 @@ static int write_ch1 (uint16_t adr, uint8_t v)
 				ENABLE_CH (1);
 
 				ch1_duty_cc = 0;
-				ch1_cc = ch1_shadow = CH1FREQ;
+				ch1_cc = CH1FREQ;
 				ch1_vol = NR12 >> 4;
+
+				ch1_shadow = ((NR14 & 0x07) << 8) | NR13;
 				ch1_sweep_cc = CH1SWEEP;
+				if (!ch1_sweep_cc)
+					ch1_sweep_cc = 8;
+				if (NR10 & 0x07) // sweep calculation for overflow
+					sweep ();
 
 				if (!ch1_len) ch1_len = 64;
-				else ch1_len = CH1LEN;
 
 				ch1_envcc = NR12 & 0x07;
 				if (!ch1_envcc) ch1_envcc = 8;
@@ -692,7 +712,8 @@ static int write_ch2 (uint16_t adr, uint8_t v)
 	switch (adr - 0x0015)
 	{
 		case 1:
-			ch2_len = 64 - (v & 0x3F);
+			NR12 = v;
+			ch2_len = CH2LEN;
 			break;
 
 		case 4:
@@ -708,7 +729,7 @@ static int write_ch2 (uint16_t adr, uint8_t v)
 				if (!ch2_envcc) ch2_envcc = 8;
 
 				if (ch2_len == 0) ch2_len = 64;
-				else ch2_len = CH2LEN;
+				//else ch2_len = CH2LEN;
 			}
 			break;
 	}
@@ -727,12 +748,13 @@ static int write_wav (uint16_t adr, uint8_t v)
 
 		if (wav_len == 0)
 			wav_len = 256;
-		else
-			wav_len = 256 - NR31;
+		//else
+			//wav_len = WAVLEN;
 	}
 	else if (adr == 1)
 	{
-		wav_len = 256 - v;
+		NR32 = v;
+		wav_len = WAVLEN;
 	}
 	return 0;
 }
@@ -750,8 +772,8 @@ static int write_noi (uint16_t adr, uint8_t v)
 
 		if (noi_len == 0)
 			noi_len = 64;
-		else
-			noi_len = 64 - (NR41 & 0x3F);
+		//else
+			//noi_len = 64 - (NR41 & 0x3F);
 	}
 	else if (adr == 1)
 	{
