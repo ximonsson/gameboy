@@ -526,7 +526,7 @@ static const uint8_t divisors[8] = { 8, 16, 32, 48, 64, 80, 96, 112 };
 /* Step Noise channel. */
 static void step_timer_noi ()
 {
-	if (-- noi_cc <= 0 )
+	if (-- noi_cc <= 0)
 	{
 		uint8_t v = (lfsr ^ (lfsr >> 1)) & 1;
 		lfsr = (lfsr >> 1) | (v << 14);
@@ -563,10 +563,7 @@ static void step_env_noi ()
 
 		// change volume
 		if (noi_vol > 0 && noi_vol < 15)
-		{
 			noi_vol += NR42 & 0x08 ? 1 : -1;
-			printf ("NOISE: new volume = %d\n", noi_vol);
-		}
 	}
 }
 
@@ -761,7 +758,7 @@ static int write_wav (uint16_t adr, uint8_t v)
 
 static int write_noi (uint16_t adr, uint8_t v)
 {
-	adr -= 0x20;
+	adr -= 0x1F;
 	if (adr == 4 && (v & 0x80))
 	{
 		ENABLE_CH (4);
