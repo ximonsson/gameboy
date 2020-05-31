@@ -280,6 +280,8 @@ static uint8_t* nr52;
 #define NR51 (* nr51)
 #define NR52 (* nr52)
 
+#define APU_OFF (~NR52 & 0x80)
+
 /* Duty patterns. */
 static uint8_t sqr_wav[4] =
 {
@@ -330,11 +332,14 @@ static uint8_t ch1_len;
 /* Step channel 1 length counter. */
 static void step_len_ch1 ()
 {
-	if (!((NR14 & 0x40) && ch1_len))
+	if ((~NR14 & 0x40) || !ch1_len)
 		return; // length disabled
 
 	if (-- ch1_len == 0)
+	{
+		printf ("CHANNEL 1: disable\n");
 		DISABLE_CH (1); // Disable
+	}
 }
 
 #define CH1SWEEP ((NR10 >> 4) & 0x07)
@@ -472,7 +477,7 @@ static uint8_t ch2sample ()
 }
 
 #define WAVFREQ_(x) ((2048 - x) << 1) // (GB_CPU_CLOCK / (65536 / (2048 - x)))
-#define WAVFREQ WAVFREQ_ ((((NR34 & 0x3) << 8) | NR33))
+#define WAVFREQ WAVFREQ_ ((((NR34 & 0x07) << 8) | NR33))
 #define WAVLEN (256 - NR31)
 
 static int wav_cc;
@@ -495,13 +500,16 @@ static void step_len_wav ()
 	if ((~NR34 & 0x40) || !wav_len)
 		return;
 	if (-- wav_len == 0)
+	{
+		printf ("WAVE: disable\n");
 		DISABLE_CH (3);
+	}
 }
 
 static uint8_t wavsample ()
 {
 	// not enabled or volume is 0%
-	if (!ENABLED (3) || (~NR32 & 0x60) || (~NR30 & 0x80))
+	if (!ENABLED (3) || (NR32 & 0x60) == 0 || (NR30 & 0x80) == 0)
 		return 0;
 
 	uint8_t s = wav_pat[wav_duty >> 1];
@@ -511,7 +519,7 @@ static uint8_t wavsample ()
 	else
 		s &= 0x0F;
 
-	s >>= ((NR32 & 60) >> 4) - 1; // apply volume
+	s >>= ((NR32 & 0x60) >> 5) - 1; // apply volume
 
 	return s;
 }
@@ -529,6 +537,7 @@ static void step_timer_noi ()
 	if (-- noi_cc <= 0)
 	{
 		uint8_t v = (lfsr ^ (lfsr >> 1)) & 1;
+
 		lfsr = (lfsr >> 1) | (v << 14);
 
 		if (NR43 & 0x08)
@@ -546,7 +555,10 @@ static void step_len_noi ()
 	if ((~NR44 & 0x40) || !noi_len)
 		return;
 	if (-- noi_len == 0)
+	{
+		printf ("NOISE: disable\n");
 		DISABLE_CH (4);
+	}
 }
 
 static uint8_t noi_vol;
@@ -559,7 +571,7 @@ static void step_env_noi ()
 	{
 		// reset counter
 		noi_env_cc = NR42 & 0x07;
-		if (!noi_env_cc) noi_env_cc = 8;
+		//if (!noi_env_cc) noi_env_cc = 8;
 
 		// change volume
 		if (noi_vol > 0 && noi_vol < 15)
@@ -570,7 +582,7 @@ static void step_env_noi ()
 /* Sample from the noise channel. */
 static uint8_t noisample ()
 {
-	if (! ENABLE_CH (4))
+	if (! ENABLE_CH (4) || !(NR42 & 0xF8))
 		return 0;
 	return (~lfsr & 1) * noi_vol;
 }
@@ -628,7 +640,7 @@ static void step ()
 
 static float sample ()
 {
-	if (~NR52 & 0x80) return -1.0;
+	if (APU_OFF) return -1.0;
 
 	float s = 0.0;
 
@@ -681,6 +693,7 @@ static int write_ch1 (uint16_t adr, uint8_t v)
 		case 4:
 			if (v & 0x80)
 			{
+				printf ("CHANNEL 1: trigger\n");
 				ENABLE_CH (1);
 
 				ch1_duty_cc = 0;
@@ -738,6 +751,7 @@ static int write_wav (uint16_t adr, uint8_t v)
 	adr -= 0x1A;
 	if (adr == 4 && (v & 0x80))
 	{
+		printf ("WAVE: trigger\n");
 		ENABLE_CH (3);
 
 		wav_cc = WAVFREQ;
@@ -761,6 +775,7 @@ static int write_noi (uint16_t adr, uint8_t v)
 	adr -= 0x1F;
 	if (adr == 4 && (v & 0x80))
 	{
+		printf ("NOISE: trigger\n");
 		ENABLE_CH (4);
 
 		noi_cc = NOIFREQ;
@@ -791,6 +806,10 @@ static int write_apu_h (uint16_t adr, uint8_t v)
 
 	adr &= 0x00FF;
 
+	// ignore writes when powered off.
+	if (APU_OFF && adr < 0x26)
+		return 1;
+
 	if (adr < 0x15)
 	{
 		// write channel 1
@@ -812,23 +831,52 @@ static int write_apu_h (uint16_t adr, uint8_t v)
 		return write_noi (adr, v);
 	}
 
+	if (adr == 0x26) // NR52
+	{
+		if (~v & 0x80)
+		{
+			printf ("APU: Power OFF\n");
+			// power off the entire APU
+			memset (nr10, 0, 0x15); // write 0 to $FF10 - $FF25
+			enabled_ch = 0; // disable everything
+		}
+		else
+		{
+			printf ("APU: Power ON\n");
+			// power on the APU
+			fs = 0xff;
+			ch1_duty_cc = ch2_duty_cc = wav_duty = 0;
+		}
+	}
+
 	return 0;
 }
 
 static int read_apu_h (uint16_t adr, uint8_t* v)
 {
+	// TODO clean this later
+	//
+
+	if (adr >= 0xFF10 && adr <= 0xFF25)
+	{
+		if (APU_OFF)
+		{
+			* v = 0;
+			return 1;
+		}
+	}
+
 	if (adr == 0xFF26) // NR52
 	{
 		*v = ((* v) & 0x80) | 0x70 | (enabled_ch & 0xF);
 		return 1;
 	}
-	else if (adr >= 0xFF27 && adr <= 0xFF2F)
+	else if (adr >= 0xFF27 && adr <= 0xFF2F) // Wave pattern
 	{
 		* v = 0xFF;
 		return 1;
 	}
 
-	// TODO clean this later
 
 	switch (adr)
 	{
@@ -941,7 +989,7 @@ void gb_apu_reset (int sample_rate_)
 
 	// TODO
 	// reset all timers
-	fs = 0;
+	fs = 0xff;
 	fs_cc = FSFREQ;
 	enabled_ch = 0;
 
