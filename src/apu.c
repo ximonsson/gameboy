@@ -401,7 +401,7 @@ static void step_env_ch1 ()
 			ch1_envcc = 8;
 
 		// change volume
-		if (ch1_vol > 0 && ch1_vol < 15)
+		if (ch1_vol > 0 && ch1_vol < 16)
 			ch1_vol += NR12 & 0x08 ? 1 : -1;
 	}
 }
@@ -463,7 +463,7 @@ static void step_env_ch2 ()
 		if (!ch2_envcc) ch2_envcc = 8; // TODO w00t?
 
 		// change volume
-		if (ch2_vol > 0 && ch2_vol < 15)
+		if (ch2_vol > 0 && ch2_vol < 16)
 			ch2_vol += NR22 & 0x08 ? 1 : -1;
 	}
 }
@@ -575,7 +575,7 @@ static void step_env_noi ()
 			noi_env_cc = 8;
 
 		// change volume
-		if (noi_vol > 0 && noi_vol < 15)
+		if (noi_vol > 0 && noi_vol < 16)
 		{
 			noi_vol += NR42 & 0x08 ? 1 : -1;
 			printf ("NOISE: new volume %d\n", noi_vol);
@@ -586,7 +586,7 @@ static void step_env_noi ()
 /* Sample from the noise channel. */
 static uint8_t noisample ()
 {
-	if (! ENABLE_CH (4) || !(NR42 & 0xF8))
+	if ((! ENABLE_CH (4)) || !(NR42 & 0xF8))
 		return 0;
 	return (~lfsr & 1) * noi_vol;
 }
