@@ -337,7 +337,7 @@ static void step_len_ch1 ()
 
 	if (-- ch1_len == 0)
 	{
-		printf ("CHANNEL 1: disable\n");
+		//printf ("CHANNEL 1: disable\n");
 		DISABLE_CH (1); // Disable
 	}
 }
@@ -501,7 +501,7 @@ static void step_len_wav ()
 		return;
 	if (-- wav_len == 0)
 	{
-		printf ("WAVE: disable\n");
+		//printf ("WAVE: disable\n");
 		DISABLE_CH (3);
 	}
 }
@@ -567,15 +567,19 @@ static uint8_t noi_env_cc;
 /* Step Noise channel's envelop. */
 static void step_env_noi ()
 {
-	if (-- noi_env_cc == 0)
+	if (-- noi_env_cc <= 0)
 	{
 		// reset counter
 		noi_env_cc = NR42 & 0x07;
-		//if (!noi_env_cc) noi_env_cc = 8;
+		if (!noi_env_cc)
+			noi_env_cc = 8;
 
 		// change volume
 		if (noi_vol > 0 && noi_vol < 15)
+		{
 			noi_vol += NR42 & 0x08 ? 1 : -1;
+			printf ("NOISE: new volume %d\n", noi_vol);
+		}
 	}
 }
 
@@ -693,7 +697,7 @@ static int write_ch1 (uint16_t adr, uint8_t v)
 		case 4:
 			if (v & 0x80)
 			{
-				printf ("CHANNEL 1: trigger\n");
+				//printf ("CHANNEL 1: trigger\n");
 				ENABLE_CH (1);
 
 				ch1_duty_cc = 0;
@@ -751,7 +755,7 @@ static int write_wav (uint16_t adr, uint8_t v)
 	adr -= 0x1A;
 	if (adr == 4 && (v & 0x80))
 	{
-		printf ("WAVE: trigger\n");
+		//printf ("WAVE: trigger\n");
 		ENABLE_CH (3);
 
 		wav_cc = WAVFREQ;
@@ -775,17 +779,21 @@ static int write_noi (uint16_t adr, uint8_t v)
 	adr -= 0x1F;
 	if (adr == 4 && (v & 0x80))
 	{
-		printf ("NOISE: trigger\n");
+		NR44 = v;
+
 		ENABLE_CH (4);
 
 		noi_cc = NOIFREQ;
-		lfsr = 0xFFFF;
+		lfsr = 0x7FFF;
 		noi_vol = NR42 >> 4;
 
 		if (noi_len == 0)
 			noi_len = 64;
-		//else
-			//noi_len = 64 - (NR41 & 0x3F);
+
+		noi_env_cc = NR42 & 0x07;
+		if (!noi_env_cc) noi_env_cc = 8;
+
+		printf ("NOISE: trigger [ %d hz - %d - %d LEN (%d) ]\n", noi_cc, noi_vol, noi_len, NR44 & 0x40);
 	}
 	else if (adr == 1)
 	{
