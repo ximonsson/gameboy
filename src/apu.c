@@ -5,6 +5,54 @@
 
 #include <stdio.h>
 
+typedef
+struct envelope
+{
+	// counter
+	uint8_t cc;
+
+	// register
+	uint8_t* R;
+
+	// enabled flag
+	uint8_t enabled;
+
+	// volume
+	uint8_t vol;
+}
+envelope;
+
+void envelope_step (envelope* e)
+{
+	if (!e->enabled)
+		return;
+
+	if (-- e->cc == 0)
+	{
+		e->cc = (*e->R) & 0x07;
+		if (!e->cc)
+			e->cc = 8;
+
+		e->vol += (*e->R) & 0x08 ? 1 : -1;
+
+		if (e->vol == 0 || e->vol == 15)
+			e->enabled = 0;
+	}
+}
+
+void envelope_reset (envelope* e)
+{
+	e->enabled = 1;
+	e->vol = (*e->R) >> 4;
+	e->cc = (*e->R) & 0x07;
+}
+
+void envelope_init (envelope* e, uint8_t* r)
+{
+	e->R = r;
+	envelope_reset (e);
+}
+
 // TODO
 //
 // - DAC for each channel
@@ -384,33 +432,13 @@ static void step_sweep_ch1 ()
 	sweep ();
 }
 
-/* Channel 1 envelop counter. */
-static uint8_t ch1_envcc;
-
-/* Channel 1 volume. */
-static uint8_t ch1_vol;
-
-/* Step channel 2's envelop. */
-static void step_env_ch1 ()
-{
-	if (-- ch1_envcc == 0)
-	{
-		// reset counter
-		ch1_envcc = NR12 & 0x07;
-		if (!ch1_envcc)
-			ch1_envcc = 8;
-
-		// change volume
-		if (ch1_vol > 0 && ch1_vol < 16)
-			ch1_vol += NR12 & 0x08 ? 1 : -1;
-	}
-}
+static envelope ch1_env;
 
 static uint8_t ch1sample ()
 {
 	if (! ENABLED (1)) return 0;
 	uint8_t s = (CH1DUTY >> ch1_duty_cc) & 1;
-	return s * ch1_vol;
+	return s * ch1_env.vol;
 }
 
 /* Channel 2: Tone */
@@ -447,33 +475,14 @@ static void step_len_ch2 ()
 		DISABLE_CH (2); // Disable
 }
 
-/* Channel 2 envelop counter. */
-static uint8_t ch2_envcc;
-
-/* Channel 2 volume. */
-static uint8_t ch2_vol;
-
-/* Step channel 2's envelop. */
-static void step_env_ch2 ()
-{
-	if (-- ch2_envcc == 0)
-	{
-		// reset counter
-		ch2_envcc = NR22 & 0x07;
-		if (!ch2_envcc) ch2_envcc = 8; // TODO w00t?
-
-		// change volume
-		if (ch2_vol > 0 && ch2_vol < 16)
-			ch2_vol += NR22 & 0x08 ? 1 : -1;
-	}
-}
+static envelope ch2_env;
 
 static uint8_t ch2sample ()
 {
 	if (! ENABLED (2)) return 0;
 
 	uint8_t s = (CH2DUTY >> ch2_duty_cc) & 1;
-	return s * ch2_vol;
+	return s * ch2_env.vol;
 }
 
 #define WAVFREQ_(x) ((2048 - x) << 1) // (GB_CPU_CLOCK / (65536 / (2048 - x)))
@@ -555,40 +564,17 @@ static void step_len_noi ()
 	if ((~NR44 & 0x40) || !noi_len)
 		return;
 	if (-- noi_len == 0)
-	{
-		printf ("NOISE: disable\n");
 		DISABLE_CH (4);
-	}
 }
 
-static uint8_t noi_vol;
-static uint8_t noi_env_cc;
-
-/* Step Noise channel's envelop. */
-static void step_env_noi ()
-{
-	if (-- noi_env_cc <= 0)
-	{
-		// reset counter
-		noi_env_cc = NR42 & 0x07;
-		if (!noi_env_cc)
-			noi_env_cc = 8;
-
-		// change volume
-		if (noi_vol > 0 && noi_vol < 16)
-		{
-			noi_vol += NR42 & 0x08 ? 1 : -1;
-			printf ("NOISE: new volume %d\n", noi_vol);
-		}
-	}
-}
+static envelope noi_env;
 
 /* Sample from the noise channel. */
 static uint8_t noisample ()
 {
 	if ((! ENABLE_CH (4)) || !(NR42 & 0xF8))
 		return 0;
-	return (~lfsr & 1) * noi_vol;
+	return (~lfsr & 1) * noi_env.vol;
 }
 
 /* Frame sequencer. */
@@ -611,9 +597,9 @@ static void step_fs ()
 	}
 	else if (fs == 7)
 	{
-		step_env_ch1 ();
-		step_env_ch2 ();
-		step_env_noi ();
+		envelope_step (&ch1_env);
+		envelope_step (&ch2_env);
+		envelope_step (&noi_env);
 	}
 }
 
@@ -656,6 +642,7 @@ static float sample ()
 	s += noisample ();
 
 	s = s / 30.0 - 1.0;
+	s /= 2.0; // lower volume a little - hurts my ears like crazy
 
 	return s;
 }
@@ -702,7 +689,7 @@ static int write_ch1 (uint16_t adr, uint8_t v)
 
 				ch1_duty_cc = 0;
 				ch1_cc = CH1FREQ;
-				ch1_vol = NR12 >> 4;
+				//ch1_vol = NR12 >> 4;
 
 				ch1_shadow = ((NR14 & 0x07) << 8) | NR13;
 				ch1_sweep_cc = CH1SWEEP;
@@ -711,10 +698,10 @@ static int write_ch1 (uint16_t adr, uint8_t v)
 				if (NR10 & 0x07) // sweep calculation for overflow
 					sweep ();
 
-				if (!ch1_len) ch1_len = 64;
+				if (!ch1_len)
+					ch1_len = 64;
 
-				ch1_envcc = NR12 & 0x07;
-				if (!ch1_envcc) ch1_envcc = 8;
+				envelope_reset (&ch1_env);
 			}
 			break;
 	}
@@ -737,13 +724,11 @@ static int write_ch2 (uint16_t adr, uint8_t v)
 
 				ch2_cc = CH2FREQ;
 				ch2_duty_cc = 0;
-				ch2_vol = NR22 >> 4;
 
-				ch2_envcc = NR22 & 0x07;
-				if (!ch2_envcc) ch2_envcc = 8;
+				if (ch2_len == 0)
+					ch2_len = 64;
 
-				if (ch2_len == 0) ch2_len = 64;
-				//else ch2_len = CH2LEN;
+				envelope_reset (&ch2_env);
 			}
 			break;
 	}
@@ -755,7 +740,6 @@ static int write_wav (uint16_t adr, uint8_t v)
 	adr -= 0x1A;
 	if (adr == 4 && (v & 0x80))
 	{
-		//printf ("WAVE: trigger\n");
 		ENABLE_CH (3);
 
 		wav_cc = WAVFREQ;
@@ -763,8 +747,6 @@ static int write_wav (uint16_t adr, uint8_t v)
 
 		if (wav_len == 0)
 			wav_len = 256;
-		//else
-			//wav_len = WAVLEN;
 	}
 	else if (adr == 1)
 	{
@@ -785,15 +767,11 @@ static int write_noi (uint16_t adr, uint8_t v)
 
 		noi_cc = NOIFREQ;
 		lfsr = 0x7FFF;
-		noi_vol = NR42 >> 4;
 
 		if (noi_len == 0)
 			noi_len = 64;
 
-		noi_env_cc = NR42 & 0x07;
-		if (!noi_env_cc) noi_env_cc = 8;
-
-		printf ("NOISE: trigger [ %d hz - %d - %d LEN (%d) ]\n", noi_cc, noi_vol, noi_len, NR44 & 0x40);
+		envelope_reset (&noi_env);
 	}
 	else if (adr == 1)
 	{
@@ -1002,5 +980,8 @@ void gb_apu_reset (int sample_rate_)
 	enabled_ch = 0;
 
 	ch1_cc = ch2_cc = wav_cc = noi_cc = 1;
-	ch1_envcc = ch2_envcc = noi_env_cc = 0;
+
+	envelope_init (&ch1_env, nr12);
+	envelope_init (&ch2_env, nr22);
+	envelope_init (&noi_env, nr42);
 }
