@@ -756,7 +756,7 @@ static int write_wav (uint16_t adr, uint8_t v)
 	}
 	else if (adr == 1)
 	{
-		NR32 = v;
+		NR31 = v;
 		wav_len = WAVLEN;
 	}
 	return 0;
