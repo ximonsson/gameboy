@@ -744,6 +744,8 @@ static int write_wav (uint16_t adr, uint8_t v)
 	adr -= 0x1A;
 	if (adr == 4 && (v & 0x80))
 	{
+		NR34 = v;
+
 		ENABLE_CH (3);
 
 		wav_cc = WAVFREQ;
