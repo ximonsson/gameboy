@@ -702,6 +702,7 @@ static int write_ch1 (uint16_t adr, uint8_t v)
 			NR12 = v;
 			if ((NR12 & 0xF8) == 0) // DAC off
 				DISABLE_CH (1);
+			break;
 
 		case 4:
 			NR14 = v;
@@ -742,6 +743,7 @@ static int write_ch2 (uint16_t adr, uint8_t v)
 			NR22 = v;
 			if ((NR22 & 0xF8) == 0) // DAC off
 				DISABLE_CH (2);
+			break;
 
 		case 4:
 			NR24 = v;
@@ -768,7 +770,6 @@ static int write_wav (uint16_t adr, uint8_t v)
 	if (adr == 4)
 	{
 		NR34 = v;
-
 		if ((v & 0x80) && (NR32 & 0xF8))
 		{
 			ENABLE_CH (3);
