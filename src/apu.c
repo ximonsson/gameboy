@@ -384,22 +384,20 @@ static void step_len_ch1 ()
 		return; // length disabled
 
 	if (-- ch1_len == 0)
-	{
-		//printf ("CHANNEL 1: disable\n");
 		DISABLE_CH (1); // Disable
-	}
 }
 
 #define CH1SWEEP ((NR10 >> 4) & 0x07)
 #define CH1SWEEP_ENABLED (NR10 & 0x77)
+#define CH1SWEEP_SHIFT (NR10 & 0x07)
+
 #define SWEEP_OVERFLOW 2047
 
-static uint8_t ch1_sweep_cc;
 static uint16_t ch1_shadow;
 
 static int16_t sweep ()
 {
-	int16_t freq = ch1_shadow >> (NR10 & 0x07);
+	int16_t freq = ch1_shadow >> CH1SWEEP_SHIFT;
 	if (NR10 & 0x08)
 		freq = - freq;
 	freq = ch1_shadow + freq;
@@ -410,19 +408,23 @@ static int16_t sweep ()
 	return freq;
 }
 
+static uint8_t ch1_sweep_cc;
+
 /* Step channel 1 sweep. */
 static void step_sweep_ch1 ()
 {
-	if (!CH1SWEEP_ENABLED || -- ch1_sweep_cc > 0)
+	if (-- ch1_sweep_cc > 0)
 		return;
 
 	ch1_sweep_cc = CH1SWEEP;
 	if (!ch1_sweep_cc)
 		ch1_sweep_cc = 8;
 
+	if (!CH1SWEEP_ENABLED) return;
+
 	int16_t freq = sweep ();
 
-	if (freq < SWEEP_OVERFLOW)
+	if (freq <= SWEEP_OVERFLOW)
 	{
 		ch1_shadow = freq;
 		NR13 = freq & 0xFF;
@@ -684,18 +686,18 @@ static int write_ch1 (uint16_t adr, uint8_t v)
 		case 4:
 			if (v & 0x80)
 			{
-				//printf ("CHANNEL 1: trigger\n");
+				NR14 = v;
+
 				ENABLE_CH (1);
 
 				ch1_duty_cc = 0;
 				ch1_cc = CH1FREQ;
-				//ch1_vol = NR12 >> 4;
 
 				ch1_shadow = ((NR14 & 0x07) << 8) | NR13;
 				ch1_sweep_cc = CH1SWEEP;
 				if (!ch1_sweep_cc)
 					ch1_sweep_cc = 8;
-				if (NR10 & 0x07) // sweep calculation for overflow
+				if (CH1SWEEP_SHIFT) // sweep calculation for overflow
 					sweep ();
 
 				if (!ch1_len)
@@ -720,12 +722,14 @@ static int write_ch2 (uint16_t adr, uint8_t v)
 		case 4:
 			if (v & 0x80)
 			{
+				NR24 = v;
+
 				ENABLE_CH (2);
 
 				ch2_cc = CH2FREQ;
 				ch2_duty_cc = 0;
 
-				if (ch2_len == 0)
+				if (!ch2_len)
 					ch2_len = 64;
 
 				envelope_reset (&ch2_env);
