@@ -250,7 +250,7 @@ static void audio_init (int rate)
 {
 	pa_sample_spec ss;
 	ss.format = PA_SAMPLE_FLOAT32NE;
-	ss.channels = 1;
+	ss.channels = 2;
 	ss.rate = rate;
 
 	audio_samples_buffer = malloc (rate * sizeof (float));

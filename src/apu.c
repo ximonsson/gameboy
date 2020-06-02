@@ -24,18 +24,20 @@ envelope;
 
 void envelope_step (envelope* e)
 {
-	if (!e->enabled)
+	// not enabled or period is zero
+	if (!e->enabled || !((*e->R) & 0x07))
 		return;
 
 	if (-- e->cc == 0)
 	{
 		e->cc = (*e->R) & 0x07;
-		if (!e->cc)
-			e->cc = 8;
+		//if (!e->cc) e->cc = 8;
 
-		e->vol += (*e->R) & 0x08 ? 1 : -1;
+		uint8_t vol = e->vol + ((*e->R) & 0x08 ? 1 : -1);
 
-		if (e->vol == 0 || e->vol == 15)
+		if (vol >= 0 && vol <= 15)
+			e->vol = vol;
+		else
 			e->enabled = 0;
 	}
 }
@@ -511,10 +513,7 @@ static void step_len_wav ()
 	if ((~NR34 & 0x40) || !wav_len)
 		return;
 	if (-- wav_len == 0)
-	{
-		//printf ("WAVE: disable\n");
 		DISABLE_CH (3);
-	}
 }
 
 static uint8_t wavsample ()
@@ -630,27 +629,40 @@ static void step ()
 	step_timer_fs ();
 }
 
-static float sample ()
+static void sample (uint8_t* l, uint8_t* r)
 {
-	if (APU_OFF) return -1.0;
+	*l = 0;
+	*r = 0;
 
-	float s = 0.0;
+	if (APU_OFF) return;
 
-	// add all the channels together then normalize
+	// add all the channels together
 
-	s += ch1sample ();
-	s += ch2sample ();
-	s += wavsample ();
-	s += noisample ();
+	const uint8_t samples[4] =
+	{
+		ch1sample (),
+		ch2sample (),
+		wavsample (),
+		noisample (),
+	};
 
-	s = s / 30.0 - 1.0;
-	s /= 2.0; // lower volume a little - hurts my ears like crazy
+	uint8_t f = NR51;
 
-	return s;
+	for (int i = 0; i < 4; i ++)
+	{
+		if (f & 1) *r += samples[i];
+		f >>= 1;
+	}
+
+	for (int i = 0; i < 4; i ++)
+	{
+		if (f & 1) *l += samples[i];
+		f >>= 1;
+	}
 }
 
 static int sample_rate;
-static float samples[2048];
+static float samples[4096];
 static int samples_len;
 static int apucc;
 
@@ -668,7 +680,10 @@ void gb_apu_step (int cc)
 		step ();
 		if (sample_rate && ++ apucc == sample_rate)
 		{
-			samples[samples_len ++] = sample ();
+			static uint8_t l, r;
+			sample (&l, &r);
+			samples[samples_len ++] = l / 30.0 - 1.0;
+			samples[samples_len ++] = r / 30.0 - 1.0;
 			apucc = 0;
 		}
 	}
@@ -683,11 +698,15 @@ static int write_ch1 (uint16_t adr, uint8_t v)
 			ch1_len = CH1LEN;
 			break;
 
-		case 4:
-			if (v & 0x80)
-			{
-				NR14 = v;
+		case 2:
+			NR12 = v;
+			if ((NR12 & 0xF8) == 0) // DAC off
+				DISABLE_CH (1);
 
+		case 4:
+			NR14 = v;
+			if ((NR12 & 0xF8) && (v & 0x80))
+			{
 				ENABLE_CH (1);
 
 				ch1_duty_cc = 0;
@@ -715,15 +734,19 @@ static int write_ch2 (uint16_t adr, uint8_t v)
 	switch (adr - 0x0015)
 	{
 		case 1:
-			NR12 = v;
+			NR21 = v;
 			ch2_len = CH2LEN;
 			break;
 
-		case 4:
-			if (v & 0x80)
-			{
-				NR24 = v;
+		case 2:
+			NR22 = v;
+			if ((NR22 & 0xF8) == 0) // DAC off
+				DISABLE_CH (2);
 
+		case 4:
+			NR24 = v;
+			if ((NR22 & 0xF8) && (v & 0x80))
+			{
 				ENABLE_CH (2);
 
 				ch2_cc = CH2FREQ;
@@ -742,17 +765,26 @@ static int write_ch2 (uint16_t adr, uint8_t v)
 static int write_wav (uint16_t adr, uint8_t v)
 {
 	adr -= 0x1A;
-	if (adr == 4 && (v & 0x80))
+	if (adr == 4)
 	{
 		NR34 = v;
 
-		ENABLE_CH (3);
+		if ((v & 0x80) && (NR32 & 0xF8))
+		{
+			ENABLE_CH (3);
 
-		wav_cc = WAVFREQ;
-		wav_duty = 0;
+			wav_cc = WAVFREQ;
+			wav_duty = 0;
 
-		if (wav_len == 0)
-			wav_len = 256;
+			if (wav_len == 0)
+				wav_len = 256;
+		}
+	}
+	else if (adr == 2)
+	{
+		NR32 = v;
+		if ((NR32 & 0xF8) == 0)
+			DISABLE_CH (3);
 	}
 	else if (adr == 1)
 	{
@@ -765,23 +797,32 @@ static int write_wav (uint16_t adr, uint8_t v)
 static int write_noi (uint16_t adr, uint8_t v)
 {
 	adr -= 0x1F;
-	if (adr == 4 && (v & 0x80))
+	if (adr == 4)
 	{
 		NR44 = v;
+		if ((v & 0x80) && (NR42 & 0xF8))
+		{
+			ENABLE_CH (4);
 
-		ENABLE_CH (4);
+			noi_cc = NOIFREQ;
+			lfsr = 0x7FFF;
 
-		noi_cc = NOIFREQ;
-		lfsr = 0x7FFF;
+			if (noi_len == 0)
+				noi_len = 64;
 
-		if (noi_len == 0)
-			noi_len = 64;
-
-		envelope_reset (&noi_env);
+			envelope_reset (&noi_env);
+		}
 	}
 	else if (adr == 1)
 	{
+		NR41 = v;
 		noi_len = 64 - (NR41 & 0x3F);
+	}
+	else if (adr == 2)
+	{
+		NR42 = v;
+		if ((NR42 & 0xF8) == 0) // DAC off
+			DISABLE_CH (4);
 	}
 	return 0;
 }
@@ -832,12 +873,15 @@ static int write_apu_h (uint16_t adr, uint8_t v)
 			memset (nr10, 0, 0x15); // write 0 to $FF10 - $FF25
 			enabled_ch = 0; // disable everything
 		}
-		else
+		else if (APU_OFF)
 		{
 			printf ("APU: Power ON\n");
 			// power on the APU
 			fs = 0xff;
 			ch1_duty_cc = ch2_duty_cc = wav_duty = 0;
+			envelope_reset (&ch1_env);
+			envelope_reset (&ch2_env);
+			envelope_reset (&noi_env);
 		}
 	}
 
@@ -853,6 +897,7 @@ static int read_apu_h (uint16_t adr, uint8_t* v)
 	{
 		if (APU_OFF)
 		{
+			printf ("APU: off [$%.4X] => $00\n", adr);
 			* v = 0;
 			return 1;
 		}
@@ -868,7 +913,6 @@ static int read_apu_h (uint16_t adr, uint8_t* v)
 		* v = 0xFF;
 		return 1;
 	}
-
 
 	switch (adr)
 	{

@@ -59,6 +59,7 @@ Not really aiming for supporting that many but at least the comon ones:
 I think there is an error with the implementation of MBC1 at the moment because there are many games there that seem to have errors. There is of course the possibility that these games are trying to interract with the APU and not succeeding which is causing issues.
 
 * Pokemon Red/Blue: experience bar is not showing.
+	* Also some time the noise channel is not correctly turned off when you first appear in your house.
 * Asterix: stops working after title screen.
 * Earthworm Jim: Does not get past credits.
 * Dragon Ball Z: skips intro clip.
