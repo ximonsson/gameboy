@@ -113,6 +113,9 @@ static int write_lcdc_h (uint16_t adr, uint8_t v)
 	lcdc = v;
 	if (!LCD_ENABLED)
 	{
+#ifdef DEBUG_PPU
+		printf (" >>> LCD disabled\n");
+#endif
 		dot = ly = 0;
 		SET_MODE (MODE_VBLANK);
 	}
@@ -267,7 +270,8 @@ static void draw (uint8_t x, uint8_t y)
 			draw_win (x, y);
 	}
 	// Sprite
-	if (OBJ_ENABLED) draw_obj (x, y, bgc);
+	if (OBJ_ENABLED)
+		draw_obj (x, y, bgc);
 }
 
 /* Find (the first 10) sprites that are visible on the current line. */

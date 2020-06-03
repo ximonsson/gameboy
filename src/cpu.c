@@ -83,12 +83,12 @@ void gb_cpu_register_read_handler (read_handler h)
 	read_handlers[n_read_handlers] = 0;
 }
 
-static uint8_t mem_read (uint16_t address)
+static uint8_t mem_read (uint16_t adr)
 {
-	uint8_t v = ram[address];
+	uint8_t v = ram[adr];
 	int stop = 0;
 	for (read_handler* h = read_handlers; (*h) != 0 && !stop; h ++)
-		stop = (*h)(address, &v);
+		stop = (*h)(adr, &v);
 	return v;
 }
 
@@ -108,13 +108,13 @@ void gb_cpu_register_store_handler (store_handler h)
  * Store to memory.
  * Makes sure the callbacks are run for specific memory addresses.
  */
-static void mem_store (uint16_t address, uint8_t v)
+static void mem_store (uint16_t adr, uint8_t v)
 {
 	int stop = 0;
 	for (store_handler* h = store_handlers; (*h) != 0 && !stop; h ++)
-		stop = (*h)(address, v);
+		stop = (*h)(adr, v);
 	if (!stop) // if we didn't break the loop we can store to RAM @ address.
-		ram[address] = v;
+		ram[adr] = v;
 }
 
 #define STORE(a, v) mem_store (a, v)
@@ -124,8 +124,8 @@ static void mem_store (uint16_t address, uint8_t v)
 /* check writes to initiate OAM DMA transfer. */
 static int oam_dma_transf_handler (uint16_t address, uint8_t v)
 {
-	if (address != 0xFF46) return 0;
-	oam_dma_transfer (v);
+	if (address == 0xFF46)
+		oam_dma_transfer (v);
 	return 0;
 }
 
@@ -158,16 +158,14 @@ uint16_t stack_pop ()
 
 #define POP() stack_pop ()
 
-static int write_unused_ram_h (uint16_t address, uint8_t v)
+static int write_unused_ram_h (uint16_t adr, uint8_t v)
 {
-	if (address >= 0xFEA0 && address <= 0xFEFF)
-		return 1;
-	return 0;
+	return adr >= 0xFEA0 && adr <= 0xFEFF;
 }
 
-static int read_unused_ram_h (uint16_t address, uint8_t* v)
+static int read_unused_ram_h (uint16_t adr, uint8_t* v)
 {
-	if (address >= 0xFEA0 && address <= 0xFEFF)
+	if (adr >= 0xFEA0 && adr <= 0xFEFF)
 	{
 		*v = 0xFF;
 		return 1;
@@ -175,21 +173,21 @@ static int read_unused_ram_h (uint16_t address, uint8_t* v)
 	return 0;
 }
 
-static int write_echo_ram_h (uint16_t address, uint8_t v)
+static int write_echo_ram_h (uint16_t adr, uint8_t v)
 {
-	if (address >= 0xE000 && address <= 0xFDFF)
+	if (adr >= 0xE000 && adr <= 0xFDFF)
 	{
-		ram[address - 0x2000] = v;
+		ram[adr - 0x2000] = v;
 		return 1;
 	}
 	return 0;
 }
 
-static int read_echo_ram_h (uint16_t address, uint8_t* v)
+static int read_echo_ram_h (uint16_t adr, uint8_t* v)
 {
-	if (address >= 0xE000 && address <= 0xFDFF)
+	if (adr >= 0xE000 && adr <= 0xFDFF)
 	{
-		*v = ram[address - 0x2000];
+		*v = ram[adr - 0x2000];
 		return 1;
 	}
 	return 0;

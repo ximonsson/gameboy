@@ -76,7 +76,8 @@ static int write_bank_number_h (uint16_t adr, uint8_t v)
 /* Handles reading from RAM $A000 - $BFFF. */
 static int read_ram_h (uint16_t adr, uint8_t* v)
 {
-	if (adr < 0xA000 || adr >= 0xC000) return 0;
+	if (adr < 0xA000 || adr >= 0xC000)
+		return 0;
 	*v = RAM_ENABLED ? RAM (adr) : 0;
 	return 1;
 }
@@ -84,8 +85,10 @@ static int read_ram_h (uint16_t adr, uint8_t* v)
 /* Handles writing to RAM $A000 - $BFFF. */
 static int write_ram_h (uint16_t adr, uint8_t v)
 {
-	if (adr < 0xA000 || adr > 0xBFFF) return 0;
-	else if (RAM_ENABLED) RAM (adr) = v;
+	if (adr < 0xA000 || adr > 0xBFFF)
+		return 0;
+	else if (RAM_ENABLED)
+		RAM (adr) = v;
 	return 1;
 }
 
