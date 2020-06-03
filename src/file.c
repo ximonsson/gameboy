@@ -225,7 +225,8 @@ int gb_load_file (const char* file, uint8_t* mbc, uint8_t** rom, uint8_t** ram)
 	else ret = 0;
 
 	// allocate RAM
-	*ram = (uint8_t *) calloc (ram_size, sizeof (uint8_t));
+	*ram = (uint8_t *) malloc (ram_size);
+	memset (*ram, 0xFF, ram_size);
 
 	fclose (fp);
 	return ret;

@@ -61,8 +61,11 @@ I think there is an error with the implementation of MBC1 at the moment because 
 * ~Pokemon Red/Blue: experience bar is not showing.~ <span style="color:FF0000">seems to be my imagination that there was one, must be the other games...</span>
 	* ~Also some time the noise channel is not correctly turned off when you first appear in your house.~
 * Asterix: stops working after title screen.
+	* Gets stuck in a loop waiting for PPU mode 3 while the LCD is turned off.
 * Earthworm Jim: Does not get past credits.
-* Dragon Ball Z: skips intro clip.
+	* Gets stuck in a loop waiting for PPU mode 3 while the LCD is turned off.
+* ~Dragon Ball Z: skips intro clip.~
+	* The fix was to initiate RAM to $FF - I can't find any documentation on this anywhere.
 * Street Fighter II: a lot of flickering.
 * Bomberman: freezes when selecting mode.
 * Super Mario Land 2 - 6 Golden Coins: Mario is invisble.
