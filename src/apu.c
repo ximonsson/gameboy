@@ -5,6 +5,10 @@
 
 #include <stdio.h>
 
+/**
+ * Channel envelope handling volume.
+ * Keeps a pointer to the register with the information for the specific envelope.
+ */
 typedef
 struct envelope
 {
@@ -22,6 +26,11 @@ struct envelope
 }
 envelope;
 
+#define ENV_PERIOD(e) ((*e->R) & 0x07)
+#define ENV_INC(e) ((*e->R) & 0x08)
+#define ENV_VOL(e) ((*e->R) >> 4)
+
+/* Step the envelope one tick. */
 void envelope_step (envelope* e)
 {
 	// not enabled or period is zero
@@ -30,10 +39,14 @@ void envelope_step (envelope* e)
 
 	if (-- e->cc == 0)
 	{
-		e->cc = (*e->R) & 0x07;
-		//if (!e->cc) e->cc = 8;
+		e->cc = ENV_PERIOD (e);
 
-		uint8_t vol = e->vol + ((*e->R) & 0x08 ? 1 : -1);
+		// TODO
+		// I am unsure if we are to set cc = 8 in case it is zero here
+		// Other parts of the docs indicate that the envelope is not active
+		// in case the period is zero.
+
+		uint8_t vol = e->vol + (ENV_INC (e) ? 1 : -1);
 
 		if (vol >= 0 && vol <= 15)
 			e->vol = vol;
@@ -42,22 +55,20 @@ void envelope_step (envelope* e)
 	}
 }
 
+/* Reset the envelope. */
 void envelope_reset (envelope* e)
 {
 	e->enabled = 1;
-	e->vol = (*e->R) >> 4;
-	e->cc = (*e->R) & 0x07;
+	e->vol = ENV_VOL (e);
+	e->cc = ENV_PERIOD (e);
 }
 
+/* Initialize and reset the envelope. */
 void envelope_init (envelope* e, uint8_t* r)
 {
 	e->R = r;
 	envelope_reset (e);
 }
-
-// TODO
-//
-// - DAC for each channel
 
 /* Registers ------------------------------------------------ */
 
