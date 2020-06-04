@@ -25,19 +25,7 @@ There is a sample application with source code located in `./examples/app` that 
 
 #### CPU Instructions
 
-| Test # | Status        |
-|--------|---------------|
-| 01     | Pass          |
-| 02     | Pass          |
-| 03     | Pass          |
-| 04     | Pass          |
-| 05     | Pass          |
-| 06     | Pass          |
-| 07     | Pass          |
-| 08     | Pass          |
-| 09     | Pass          |
-| 10     | Pass          |
-| 11     | Pass          |
+*Passed*
 
 #### Instruction timing
 
@@ -49,8 +37,8 @@ There is a sample application with source code located in `./examples/app` that 
 Not really aiming for supporting that many but at least the comon ones:
 
 * [x] MBC0
-* [x] MBC1 **But there might be some error in bank switching**
-* [ ] MBC2
+* [x] MBC1 **But there might be some error in bank switching (see Donkey Kong 3)**
+* [x] MBC2
 * [x] MBC3 **Not Timer though**
 * [x] MBC5
 
@@ -68,7 +56,8 @@ I think there is an error with the implementation of MBC1 at the moment because 
 	* The fix was to initiate RAM to $FF - I can't find any documentation on this anywhere.
 * Street Fighter II: a lot of flickering.
 * Bomberman: freezes when selecting mode.
-* Super Mario Land 2 - 6 Golden Coins: Mario is invisble.
+* Super Mario Land 2 - 6 Golden Coins: No sprites - OAM seems crazy.
+* Donkey Kong 3: Crashes after a while because of incorrect ROM bank switching (ROM bank numbers are too large).
 * Pokemon Gold/Silver: goes back to title screen randomly when changing location (exiting/entering houses) - I think this is because of RTC support not available.
 
 

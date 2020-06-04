@@ -3,6 +3,7 @@
 
 #include "gameboy/mbc0.h"
 #include "gameboy/mbc1.h"
+#include "gameboy/mbc2.h"
 #include "gameboy/mbc3.h"
 #include "gameboy/mbc5.h"
 
