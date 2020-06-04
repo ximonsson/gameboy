@@ -46,19 +46,28 @@ Not really aiming for supporting that many but at least the comon ones:
 
 I think there is an error with the implementation of MBC1 at the moment because there are many games there that seem to have errors. There is of course the possibility that these games are trying to interract with the APU and not succeeding which is causing issues.
 
-* ~Pokemon Red/Blue: experience bar is not showing.~ <span style="color:FF0000">seems to be my imagination that there was one, must be the other games...</span>
+* **Pokemon Red/Blue:**
+	* ~experience bar is not showing.~ <span style="color:FF0000">seems to be my imagination that there was one, must be the other games...</span>
 	* ~Also some time the noise channel is not correctly turned off when you first appear in your house.~
-* Asterix: stops working after title screen.
+* **Asterix:**
+	* stops working after title screen.
 	* Gets stuck in a loop waiting for PPU mode 3 while the LCD is turned off.
-* Earthworm Jim: Does not get past credits.
+* **Earthworm Jim:**
+	* Does not get past credits.
 	* Gets stuck in a loop waiting for PPU mode 3 while the LCD is turned off.
 * ~Dragon Ball Z: skips intro clip.~
 	* The fix was to initiate RAM to $FF - I can't find any documentation on this anywhere.
-* Street Fighter II: a lot of flickering.
-* Bomberman: freezes when selecting mode.
-* Super Mario Land 2 - 6 Golden Coins: No sprites - OAM seems crazy.
-* Donkey Kong 3: Crashes after a while because of incorrect ROM bank switching (ROM bank numbers are too large).
-* Pokemon Gold/Silver: goes back to title screen randomly when changing location (exiting/entering houses) - I think this is because of RTC support not available.
+* **Street Fighter II:**
+	* a lot of flickering.
+* **Bomberman:**
+	* Can't choose mode. Nothing happens.
+* **Super Mario Land 2 - 6 Golden Coins:**
+	* No sprites - OAM seems crazy.
+	* Noise channel goes crazy in when starting.
+* **Donkey Kong 3:**
+	* Crashes after a while because of incorrect ROM bank switching (ROM bank numbers are too large).
+* ~**Pokemon Gold/Silver: goes back to title screen randomly when changing location (exiting/entering houses) - I think this is because of RTC support not available.**~
+	* No idea what fixed it but it sure was not RTC because I have not implemented that.
 
 
 ### TODO
