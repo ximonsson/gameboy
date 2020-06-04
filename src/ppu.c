@@ -402,7 +402,7 @@ void gb_ppu_step (int cc)
 }
 
 #ifdef DEBUG_PPU
-static void print_tile (uint8_t* t)
+static inline void print_tile (uint8_t* t)
 {
 	uint8_t c;
 	for (uint8_t y = 0; y < 8; y ++)
@@ -424,7 +424,7 @@ static void print_tile (uint8_t* t)
 	printf ("\n");
 }
 
-static void print_sprite (uint8_t s)
+static inline void print_sprite (uint8_t s)
 {
 	uint8_t* sprite = oam + (s << 2);
 
@@ -442,13 +442,13 @@ static void print_sprite (uint8_t s)
 	print_tile (tile);
 }
 
-static void print_oam ()
+static inline void print_oam ()
 {
 	for (int i = 0; i < 40; i ++)
 		print_sprite (i);
 }
 
-static void print_bg (uint8_t bg)
+static inline void print_bg (uint8_t bg)
 {
 
 }
