@@ -7,6 +7,7 @@
 #include "gb.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 static uint8_t* ROM;
 static uint8_t* RAM;
@@ -80,19 +81,37 @@ int gb_load (const char* file)
 {
 	int ret = 0;
 
+	// read file
+
+	FILE* fp = fopen (file, "rb");
+	gb_file_header h;
+
+	if (!fp)
+	{
+		fprintf (stderr, "Failed to open file '%s'\n", file);
+		return 1;
+	}
+	else if ((ret = gb_load_file (fp, &h, &ROM)) != 0)
+		return ret;
+
+	gb_print_header_info (h);
+
+	// allocate RAM
+	RAM = (uint8_t *) malloc (h.ram_size << 12);
+	memset (RAM, 0xFF, h.ram_size << 12);
+
+	// reset all units
 	gb_cpu_reset ();
 	gb_ppu_reset ();
 	gb_io_reset ();
 	gb_apu_reset (sample_rate);
 
-	uint8_t mbc;
-	if ((ret = gb_load_file (file, &mbc, &ROM, &RAM)) != 0)
-		return ret;
-
+	// load first ROM banks
 	gb_cpu_load_rom (0, ROM);
 	gb_cpu_load_rom (1, ROM + 0x4000);
 
-	return load_mbc (mbc);
+	// load MBC
+	return load_mbc (h.mbc);
 }
 
 void gb_press_button (gb_button b) { gb_io_press_button (b); }

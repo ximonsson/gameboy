@@ -4,16 +4,12 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define HEADER_LOCATION 0x0100
-#define HEADER_SIZE 0x4F
-
 /*
  * Nintendo logo data.
  * When reading the header the gameboy makes sure that the logo @ $0104-$0133 matches the below
  * bitmap. Else there is an error.
  */
-#define LOGO_SIZE 48
-static const uint8_t LOGO[LOGO_SIZE] =
+static const uint8_t LOGO[GB_HEADER_LOGO_SIZE] =
 {
 	0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D,
 	0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99,
@@ -24,14 +20,14 @@ static const uint8_t LOGO[LOGO_SIZE] =
  * print_nintendo_logo prints the nintendo logo to stdout from the buffer pointed at by logo.
  * this function is used to make sure the header is loaded correctly.
  */
-static void print_nintendo_logo (uint8_t* logo)
+static void print_nintendo_logo (const uint8_t* logo)
 {
-	uint8_t bitmap[LOGO_SIZE << 3];
+	uint8_t bitmap[GB_HEADER_LOGO_SIZE << 3];
 	int w = 12;
 	int h = 8;
-	int bw = LOGO_SIZE;
+	int bw = GB_HEADER_LOGO_SIZE;
 
-	for (int i = 0; i < LOGO_SIZE; i ++)
+	for (int i = 0; i < GB_HEADER_LOGO_SIZE; i ++)
 	{
 		uint8_t b = logo[i];
 		int scanln = (i / 24) * 2 ;
@@ -66,6 +62,9 @@ static void print_nintendo_logo (uint8_t* logo)
 	printf ("\n");
 }
 
+/**
+ * validate_checksum of the header to make sure it is valid.
+ */
 static int validate_checksum (uint8_t* header)
 {
 	int x = 0;
@@ -74,160 +73,134 @@ static int validate_checksum (uint8_t* header)
 	return header[0x4D] == (x & 0xFF);
 }
 
-static const char* MBC[0x100] =
+static inline int load_header (uint8_t* rom, gb_file_header* hdr)
 {
-	"ROM ONLY",
-	"MBC1",
-	"MBC1+RAM",
-	"MBC1+RAM+BATTERY",
-	"0x04 unsupported",
-	"MBC2",
-	"MBC2+BATTERY",
-	"0x07 unsupported",
-	"ROM+RAM",
-	"ROM+RAM+BATTERY",
-	"0x0A unsupported",
-	"MMM01",
-	"MMM01+RAM",
-	"MMM01+RAM+BATTERY",
-	"0x0E unsupported",
-	"MBC3+TIMER+BATTERY",
-	"MBC3+TIMER+RAM+BATTERY",
-	"MBC3",
-	"MBC3+RAM",
-	"MBC3+RAM+BATTERY",
-	"0x14 Unsupported",
-	"MBC4",
-	"MBC4+RAM",
-	"MBC4+RAM+BATTERY",
-	"0x18 Unsupported",
-	"MBC5",
-	"MBC5+RAM",
-	"MBC5+RAM+BATTERY",
-	"MBC5+RUMBLE",
-	"MBC5+RUMBLE+RAM",
-	"MBC5+RUMBLE+RAM+BATTERY",
-	"0x21 Unsupported",
-	"MBC6",
-	"MBC7+SENSOR+RUMBLE+RAM+BATTERY",
-	// 0x23 -> 0xFB unsupported TODO
-	"POCKET CAMERA",
-	"BANDAI TAMA5",
-	"HuC3",
-	"HuC1+RAM+BATTERY"
-};
+	// point to header
+	uint8_t* header = rom + GB_HEADER_LOCATION;
 
-static int read_header (FILE* fp, uint8_t* mbc, size_t* rom, size_t* ram)
-{
-	uint8_t header[HEADER_SIZE];
-	fseek (fp, HEADER_LOCATION, SEEK_SET);
-	fread (header, 1, HEADER_SIZE, fp);
-
-	// print the logo to stdout to make sure all is g00d
-	print_nintendo_logo (&header[4]);
-
-	// compare logo bytes to make sure they are correct
-	if (memcmp (header + 4, LOGO, LOGO_SIZE) != 0)
+	// copy logo from cartridge
+	// and compare to correct logo, making sure they are correct
+	memcpy (hdr->logo, header + 4, GB_HEADER_LOGO_SIZE);
+	if (memcmp (hdr->logo, LOGO, GB_HEADER_LOGO_SIZE) != 0)
 	{
 		fprintf (stderr, "Logos do not match!\n");
 		return 1;
 	}
 
+	// validate checksum
 	if (validate_checksum (header) != 1)
 	{
-		fprintf (stderr, "checksum does not match!\n");
+		fprintf (stderr, "Checksum does not match!\n");
 		return 1;
 	}
 
-	// print title of the cartridge
-	char title[16];
-	memcpy (title, header + 0x34, 16); title[15] = 0;
-	printf ("TITLE                > %s\n", title);
+	// copy title
+	memcpy (hdr->title, header + 0x34, GB_HEADER_TITLE_SIZE);
+	hdr->title[GB_HEADER_TITLE_SIZE - 1] = 0; // make sure it is null-terminated
 
-	// CGB support
-	printf ("SUPPORT              > ");
-	switch (header[0x43])
+	// support flags
+	hdr->cgb = header[0x43];
+	hdr->sgb = header[0x46];
+	hdr->mbc = header[0x47];
+
+	// ROM size in 8KB banks
+	// TODO
+	// there are some special cases that are not covered here - one day will probably have to deal with them.
+	hdr->rom_size = 1 << (header[0x48] + 1);
+
+	// RAM size in 4KB banks
+	switch (header[0x49])
 	{
-	case 0x80:
-		printf ("CGB Support\n");
-		break;
-	case 0xC0:
-		printf ("CGB _ONLY_ cartdridge\n");
-		break;
-	default:
-		printf ("Ordinary GB cartdridge\n");
-		break;
+		case 0: hdr->ram_size = 0; break;
+		case 1: hdr->ram_size = 1; break;
+		case 2: hdr->ram_size = 1; break;
+		case 3: hdr->ram_size = 4; break;
+		case 4: hdr->ram_size = 16; break;
+		case 5: hdr->ram_size = 8; break;
 	}
-
-	// SGB support
-	printf ("SGB SUPPORT          > ");
-	switch (header[0x46])
-	{
-	case 0x03:
-		printf ("SGB Support\n");
-		break;
-	default:
-		printf ("Normal Gameboy or CGB only game\n");
-		break;
-	}
-
-	// Cartridge type
-	* mbc = header[0x47];
-	printf ("CARTRIDGE TYPE (MBC) > [0x%.2X] %s\n", *mbc, MBC[*mbc]);
-
-	// ROM size
-	* rom = 1 << (15 + header[0x48]);
-	printf ("ROM SIZE             > [%u] %lu KB (%lu banks)\n",  header[0x48], (* rom) >> 10, (* rom) >> 14);
-
-	// RAM size
-	* ram = header[0x49];
-	printf ("RAM SIZE             > [%lu]", * ram);
-	switch (*ram)
-	{
-		case 0: * ram = 0; break;
-		case 1: * ram = 2 << 10; break;
-		case 2: * ram = 8 << 10; break;
-		case 3: * ram = 32 << 10; break;
-		case 4: * ram = 128 << 10; break;
-		case 5: * ram = 64 << 10; break;
-	}
-	printf (" %ld kB\n", (*ram) >> 10);
 
 	return 0;
 }
 
-int gb_load_file (const char* file, uint8_t* mbc, uint8_t** rom, uint8_t** ram)
+int gb_load_file (FILE* fp, gb_file_header* hdr, uint8_t** rom)
 {
-	// open file for reading
-	FILE* fp = fopen (file, "rb");
 	int ret = 0;
-	if (!fp)
-	{
-		fprintf (stderr, "Failed to open file '%s'\n", file);
-		return 1;
-	}
-
-	// read the header
-	size_t rom_size, ram_size;
-	if (read_header (fp, mbc, &rom_size, &ram_size) != 0)
-		ret = 1; // faulty header
-
-	fseek (fp, 0, SEEK_SET);
 
 	// load ROM data
+
+	fseek (fp, 0, SEEK_END);
+	size_t rom_size = ftell (fp);
 	*rom = (uint8_t *) malloc (rom_size);
+
+	fseek (fp, 0, SEEK_SET);
 	ret = fread (*rom, 1, rom_size, fp);
 	if (ret != rom_size)
 	{
 		fprintf (stderr, "Did not manage to read the ROM data! (read only %d B out of %lu) \n", ret, rom_size);
-		return 1;
+		ret = 1;
+		goto end;
 	}
 	else ret = 0;
 
-	// allocate RAM
-	*ram = (uint8_t *) malloc (ram_size);
-	memset (*ram, 0xFF, ram_size);
+	// load header
+	ret = load_header (*rom, hdr);
+	if (ret != 0)
+		goto end;
 
-	fclose (fp);
+end:
 	return ret;
+}
+
+void gb_print_header_info (gb_file_header h)
+{
+	static const char* MBC[0x100] =
+	{
+		"ROM ONLY",
+		"MBC1",
+		"MBC1+RAM",
+		"MBC1+RAM+BATTERY",
+		"0x04 unsupported",
+		"MBC2",
+		"MBC2+BATTERY",
+		"0x07 unsupported",
+		"ROM+RAM",
+		"ROM+RAM+BATTERY",
+		"0x0A unsupported",
+		"MMM01",
+		"MMM01+RAM",
+		"MMM01+RAM+BATTERY",
+		"0x0E unsupported",
+		"MBC3+TIMER+BATTERY",
+		"MBC3+TIMER+RAM+BATTERY",
+		"MBC3",
+		"MBC3+RAM",
+		"MBC3+RAM+BATTERY",
+		"0x14 Unsupported",
+		"MBC4",
+		"MBC4+RAM",
+		"MBC4+RAM+BATTERY",
+		"0x18 Unsupported",
+		"MBC5",
+		"MBC5+RAM",
+		"MBC5+RAM+BATTERY",
+		"MBC5+RUMBLE",
+		"MBC5+RUMBLE+RAM",
+		"MBC5+RUMBLE+RAM+BATTERY",
+		"0x21 Unsupported",
+		"MBC6",
+		"MBC7+SENSOR+RUMBLE+RAM+BATTERY",
+		// 0x23 -> 0xFB unsupported TODO
+		"POCKET CAMERA",
+		"BANDAI TAMA5",
+		"HuC3",
+		"HuC1+RAM+BATTERY"
+	};
+
+	print_nintendo_logo (h.logo);
+	printf ("%-15s > %s\n", "TITLE", h.title);
+	printf ("%-15s > %s\n", "MBC", MBC[h.mbc]);
+	printf ("%-15s > %-3d x 8KB\n", "ROM", h.rom_size);
+	printf ("%-15s > %-3d x 4KB\n", "RAM", h.ram_size);
+	printf ("%-15s > %s\n", "CGB", h.cgb == 0x80 ? "CGB SUPPORT" : h.cgb == 0xC0 ? "CGB _ONLY_" : "DMG");
+	printf ("%-15s > %s\n", "SGB", h.sgb == 0x03 ? "YES" : "NO");
 }
