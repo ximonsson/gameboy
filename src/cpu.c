@@ -69,8 +69,7 @@ void gb_cpu_load_rom (int banks, const uint8_t* data)
 {
 	n_rom_banks = banks;
 	ROM = data;
-	memcpy (ram, ROM, ROM_BANK_SIZE);
-	memcpy (ram + ROM_BANK_SIZE, ROM + ROM_BANK_SIZE, ROM_BANK_SIZE);
+	memcpy (ram, ROM, ROM_BANK_SIZE << 1);
 }
 
 void gb_cpu_switch_rom_bank (int b)

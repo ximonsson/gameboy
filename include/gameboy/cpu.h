@@ -28,11 +28,14 @@ void gb_cpu_reset () ;
 uint8_t* gb_cpu_mem (uint16_t /* offset */) ;
 
 /**
- * Load data into the ROM Bank.
+ * Load data total ROM data and give the number of banks.
  */
-void gb_cpu_load_rom (int /* bank */, const uint8_t* /* data */) ;
+void gb_cpu_load_rom (int /* banks */, const uint8_t* /* data */) ;
 
-void gb_cpu_switch_rom_bank (int );
+/**
+ * Switch ROM bank one with the given bank number (of total in ROM).
+ */
+void gb_cpu_switch_rom_bank (int /* bank */);
 
 /**
  * Load data into RAM bank.

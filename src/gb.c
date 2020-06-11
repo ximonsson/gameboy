@@ -106,10 +106,7 @@ int gb_load (const char* file)
 	gb_io_reset ();
 	gb_apu_reset (sample_rate);
 
-	// load first ROM banks
-	//gb_cpu_load_rom (0, ROM);
-	//gb_cpu_load_rom (1, ROM + 0x4000);
-
+	// load ROM
 	gb_cpu_load_rom (h.rom_size, ROM);
 
 	// load MBC
