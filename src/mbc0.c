@@ -13,7 +13,7 @@ static int write_rom_h (uint16_t addr, uint8_t v)
 /**
  *
  */
-void gb_mbc0_load (uint8_t* rom, uint8_t* ram)
+void gb_mbc0_load (uint8_t* ram)
 {
 	gb_cpu_register_store_handler (write_rom_h);
 }

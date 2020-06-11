@@ -3,6 +3,6 @@
 
 #include <stdint.h>
 
-void gb_mbc0_load (uint8_t*, uint8_t*) ;
+void gb_mbc0_load (uint8_t*) ;
 
 #endif

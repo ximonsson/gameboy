@@ -58,14 +58,33 @@ static uint8_t ram[1 << 16];
 
 uint8_t* gb_cpu_mem (uint16_t p) { return ram + p; }
 
-void gb_cpu_load_rom (uint8_t b, uint8_t* data) { memcpy (ram + ROM_BANK_SIZE * b, data, ROM_BANK_SIZE); }
+/**
+ * n_rom_banks keeps track of the total number of banks in the cartridge.
+ * This is needed because some games seem to write a higher value than allowed.
+ */
+static int n_rom_banks;
+static const uint8_t* ROM;
+
+void gb_cpu_load_rom (int banks, const uint8_t* data)
+{
+	n_rom_banks = banks;
+	ROM = data;
+	memcpy (ram, ROM, ROM_BANK_SIZE);
+	memcpy (ram + ROM_BANK_SIZE, ROM + ROM_BANK_SIZE, ROM_BANK_SIZE);
+}
+
+void gb_cpu_switch_rom_bank (int b)
+{
+	memcpy (ram + ROM_BANK_SIZE, ROM + (b % n_rom_banks) * ROM_BANK_SIZE, ROM_BANK_SIZE);
+}
+
 void gb_cpu_load_ram (uint8_t* data) { memcpy (ram + 0xA000, data, RAM_BANK_SIZE); }
 
 /* Transfer memory to OAM location. */
 static void oam_dma_transfer (uint8_t v)
 {
 #ifdef DEBUG_CPU
-	printf ("                   >>> OAM transfer\n");
+	printf ("                   >>> OAM transfer [$%.2X => $%.4X]\n", v, v << 8);
 #endif
 	uint16_t src = v << 8;
 	memcpy (ram + OAM_LOC, ram + src, 0xA0);
@@ -192,7 +211,6 @@ static int read_echo_ram_h (uint16_t adr, uint8_t* v)
 	}
 	return 0;
 }
-
 
 /* Special Registers ---------------------------------------------------------------- */
 

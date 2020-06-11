@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 
-static uint8_t* rom;
 static uint8_t* ram;
 
 /* RAM enabled register. */
@@ -26,7 +25,7 @@ static int write_rom_bank_h (uint16_t adr, uint8_t v)
 
 	rom_bank = v & 0x7f;
 	if (rom_bank == 0) rom_bank = 1;
-	gb_cpu_load_rom (1, rom + (rom_bank << 14));
+	gb_cpu_switch_rom_bank (rom_bank);
 
 	return 1;
 }
@@ -113,9 +112,8 @@ static int write_ram_h (uint16_t adr, uint8_t v)
 	return 1;
 }
 
-void gb_mbc3_load (uint8_t* rom_, uint8_t* ram_)
+void gb_mbc3_load (uint8_t* ram_)
 {
-	rom = rom_;
 	ram = ram_;
 
 	memset (rtc, 0, 5);

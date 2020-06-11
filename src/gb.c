@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static uint8_t* ROM;
+static const uint8_t* ROM;
 static uint8_t* RAM;
 
 static int sample_rate;
@@ -73,7 +73,7 @@ static int load_mbc (uint8_t mbc)
 		fprintf (stderr, "MBC [%.2X] not supported\n", mbc);
 		return 1;
 	}
-	ld (ROM, RAM);
+	ld (RAM);
 	return 0;
 }
 
@@ -107,8 +107,10 @@ int gb_load (const char* file)
 	gb_apu_reset (sample_rate);
 
 	// load first ROM banks
-	gb_cpu_load_rom (0, ROM);
-	gb_cpu_load_rom (1, ROM + 0x4000);
+	//gb_cpu_load_rom (0, ROM);
+	//gb_cpu_load_rom (1, ROM + 0x4000);
+
+	gb_cpu_load_rom (h.rom_size, ROM);
 
 	// load MBC
 	return load_mbc (h.mbc);

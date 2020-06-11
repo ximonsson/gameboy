@@ -65,7 +65,7 @@ static void print_nintendo_logo (const uint8_t* logo)
 /**
  * validate_checksum of the header to make sure it is valid.
  */
-static int validate_checksum (uint8_t* header)
+static int validate_checksum (const uint8_t* header)
 {
 	int x = 0;
 	for (int i = 0x34; i < 0x4D; i ++)
@@ -73,10 +73,10 @@ static int validate_checksum (uint8_t* header)
 	return header[0x4D] == (x & 0xFF);
 }
 
-static inline int load_header (uint8_t* rom, gb_file_header* hdr)
+static inline int load_header (const uint8_t* rom, gb_file_header* hdr)
 {
 	// point to header
-	uint8_t* header = rom + GB_HEADER_LOCATION;
+	const uint8_t* header = rom + GB_HEADER_LOCATION;
 
 	// copy logo from cartridge
 	// and compare to correct logo, making sure they are correct
@@ -122,7 +122,7 @@ static inline int load_header (uint8_t* rom, gb_file_header* hdr)
 	return 0;
 }
 
-int gb_load_file (FILE* fp, gb_file_header* hdr, uint8_t** rom)
+int gb_load_file (FILE* fp, gb_file_header* hdr, const uint8_t** rom)
 {
 	int ret = 0;
 
@@ -133,7 +133,7 @@ int gb_load_file (FILE* fp, gb_file_header* hdr, uint8_t** rom)
 	*rom = (uint8_t *) malloc (rom_size);
 
 	fseek (fp, 0, SEEK_SET);
-	ret = fread (*rom, 1, rom_size, fp);
+	ret = fread ((uint8_t*)*rom, 1, rom_size, fp);
 	if (ret != rom_size)
 	{
 		fprintf (stderr, "Did not manage to read the ROM data! (read only %d B out of %lu) \n", ret, rom_size);

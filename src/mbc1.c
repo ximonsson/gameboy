@@ -5,7 +5,7 @@
 #include "gameboy/cpu.h"
 #include <string.h>
 
-static uint8_t* rom;
+//static uint8_t* rom;
 static uint8_t* ram;
 
 /* RAM enabled register. */
@@ -46,7 +46,8 @@ static void reload_banks ()
 		bank_ram = bank_hi;
 	}
 
-	gb_cpu_load_rom (1, rom + (b << 14));
+	//gb_cpu_load_rom (1, rom + (b << 14));
+	gb_cpu_switch_rom_bank (b);
 }
 
 static int write_select_mode_h (uint16_t adr, uint8_t v)
@@ -92,9 +93,8 @@ static int write_ram_h (uint16_t adr, uint8_t v)
 	return 1;
 }
 
-void gb_mbc1_load (uint8_t* rom_, uint8_t* ram_)
+void gb_mbc1_load (uint8_t* ram_)
 {
-	rom = rom_;
 	ram = ram_;
 
 	bank_hi = 0;

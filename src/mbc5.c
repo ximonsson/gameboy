@@ -5,8 +5,7 @@
 #include "gameboy/cpu.h"
 #include <string.h>
 
-static uint8_t* ROM;
-static uint8_t* RAM;
+static uint8_t* ram;
 
 /* RAM enabled register. */
 static uint8_t ram_enabled;
@@ -35,8 +34,8 @@ static int write_bank_number_h (uint16_t adr, uint8_t v)
 	else
 		bank_rom_hi = v & 1;
 
-	uint32_t b = ((bank_rom_hi << 8) | bank_rom_lo) << 14;
-	gb_cpu_load_rom (1, ROM + b);
+	uint32_t b = ((bank_rom_hi << 8) | bank_rom_lo);
+	gb_cpu_switch_rom_bank (b);
 
 	return 1;
 }
@@ -55,7 +54,7 @@ static int read_ram_h (uint16_t address, uint8_t* v)
 	if (address < 0xA000 || address > 0xBFFF) return 0;
 
 	address = address - 0xA000 + (bank_ram << 13);
-	*v = RAM[address];
+	*v = ram[address];
 	return 1;
 }
 
@@ -65,14 +64,13 @@ static int write_ram_h (uint16_t address, uint8_t v)
 	if (address < 0xA000 || address > 0xBFFF) return 0;
 
 	address = address - 0xA000 + (bank_ram << 13);
-	RAM[address] = v;
+	ram[address] = v;
 	return 1;
 }
 
-void gb_mbc5_load (uint8_t* rom, uint8_t* ram)
+void gb_mbc5_load (uint8_t* ram_)
 {
-	ROM = rom;
-	RAM = ram;
+	ram = ram_;
 
 	bank_rom_hi = 0;
 	bank_rom_lo = 0;

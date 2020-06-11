@@ -3,6 +3,6 @@
 
 #include <stdint.h>
 
-void gb_mbc2_load (uint8_t* /* ROM */, uint8_t* /* RAM */);
+void gb_mbc2_load (uint8_t* /* RAM */);
 
 #endif

@@ -4,7 +4,7 @@
 #include "gameboy/mbc2.h"
 #include "gameboy/cpu.h"
 
-static uint8_t* rom, * ram;
+static uint8_t* ram;
 
 #define RAM(a) ram[a - 0xA000]
 
@@ -52,13 +52,12 @@ static int write_bank_number_h (uint16_t adr, uint8_t v)
 		return 0;
 
 	uint8_t b = v & 0x0F;
-	gb_cpu_load_rom (1, rom + (b << 14));
+	gb_cpu_switch_rom_bank (b);
 	return 1;
 }
 
-void gb_mbc2_load (uint8_t* rom_, uint8_t* ram_)
+void gb_mbc2_load (uint8_t* ram_)
 {
-	rom = rom_;
 	ram = ram_;
 
 	ram_enabled = 0;

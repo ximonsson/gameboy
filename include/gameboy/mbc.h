@@ -12,6 +12,6 @@
  *
  * Each kind of supported MBC should implement a version of this.
  * */
-typedef void (* mbc_loader) (uint8_t*, uint8_t*) ;
+typedef void (* mbc_loader) (uint8_t*) ;
 
 #endif

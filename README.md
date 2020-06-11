@@ -46,7 +46,7 @@ Not really aiming for supporting that many but at least the comon ones:
 
 I think there is an error with the implementation of MBC1 at the moment because there are many games there that seem to have errors. There is of course the possibility that these games are trying to interract with the APU and not succeeding which is causing issues.
 
-* **Pokemon Red/Blue:**
+* ~**Pokemon Red/Blue:**~
 	* ~experience bar is not showing.~ <span style="color:FF0000">seems to be my imagination that there was one, must be the other games...</span>
 	* ~Also some time the noise channel is not correctly turned off when you first appear in your house.~
 * **Asterix:**
@@ -55,7 +55,7 @@ I think there is an error with the implementation of MBC1 at the moment because 
 * **Earthworm Jim:**
 	* Does not get past credits.
 	* Gets stuck in a loop waiting for PPU mode 3 while the LCD is turned off.
-* ~Dragon Ball Z: skips intro clip.~
+* ~**Dragon Ball Z: skips intro clip.**~
 	* The fix was to initiate RAM to $FF - I can't find any documentation on this anywhere.
 * **Street Fighter II:**
 	* a lot of flickering.
