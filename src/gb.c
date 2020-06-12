@@ -97,8 +97,8 @@ int gb_load (const char* file)
 	gb_print_header_info (h);
 
 	// allocate RAM
-	RAM = (uint8_t *) malloc (h.ram_size << 12);
-	memset (RAM, 0xFF, h.ram_size << 12);
+	RAM = (uint8_t *) malloc (h.ram_size << 13);
+	memset (RAM, 0xFF, h.ram_size << 13);
 
 	// reset all units
 	gb_cpu_reset ();
