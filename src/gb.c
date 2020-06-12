@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static const uint8_t* ROM;
+static uint8_t* ROM;
 static uint8_t* RAM;
 
 static int sample_rate;
@@ -22,7 +22,7 @@ void gb_init (int sample_rate_)
 /**
  * Map MBC identifiers to loader functions.
  */
-static const void (*MBC[0x100]) (uint8_t*, uint8_t*) =
+static const void (*MBC[0x100]) (uint8_t*) =
 {
 	gb_mbc0_load, // "ROM ONLY",
 	gb_mbc1_load, // "MBC1",
