@@ -37,7 +37,7 @@ There is a sample application with source code located in `./examples/app` that 
 Not really aiming for supporting that many but at least the comon ones:
 
 * [x] MBC0
-* [x] MBC1 **But there might be some error in bank switching (see Donkey Kong 3)**
+* [x] MBC1 ~**But there might be some error in bank switching (see Donkey Kong 3)**~
 * [x] MBC2
 * [x] MBC3 **Not Timer though**
 * [x] MBC5
@@ -64,7 +64,7 @@ I think there is an error with the implementation of MBC1 at the moment because 
 * **Super Mario Land 2 - 6 Golden Coins:**
 	* No sprites - OAM seems crazy.
 	* Noise channel goes crazy in when starting.
-* **Donkey Kong 3:**
+* ~**Donkey Kong 3:**~
 	* Crashes after a while because of incorrect ROM bank switching (ROM bank numbers are too large).
 * ~**Pokemon Gold/Silver: goes back to title screen randomly when changing location (exiting/entering houses) - I think this is because of RTC support not available.**~
 	* No idea what fixed it but it sure was not RTC because I have not implemented that.
