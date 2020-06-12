@@ -46,7 +46,6 @@ static void reload_banks ()
 		bank_ram = bank_hi;
 	}
 
-	//gb_cpu_load_rom (1, rom + (b << 14));
 	gb_cpu_switch_rom_bank (b);
 }
 
