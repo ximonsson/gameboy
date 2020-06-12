@@ -122,7 +122,7 @@ static inline int load_header (const uint8_t* rom, gb_file_header* hdr)
 	return 0;
 }
 
-int gb_load_file (FILE* fp, gb_file_header* hdr, const uint8_t** rom)
+int gb_load_file (FILE* fp, gb_file_header* hdr, uint8_t** rom)
 {
 	int ret = 0;
 
