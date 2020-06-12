@@ -693,8 +693,8 @@ void gb_apu_step (int cc)
 		{
 			static uint8_t l, r;
 			sample (&l, &r);
-			samples[samples_len ++] = l / 30.0 - 1.0;
-			samples[samples_len ++] = r / 30.0 - 1.0;
+			samples[samples_len ++] = l / 60.0 - 1.0;
+			samples[samples_len ++] = r / 60.0 - 1.0;
 			apucc = 0;
 		}
 	}
