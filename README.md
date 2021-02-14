@@ -20,6 +20,8 @@ There is a sample application with source code located in `./examples/app` that 
 * [x] *Solved* Timing: Seems like timing of the emulator is super off. I have no idea why though... I do think this is the reason for the games that are not working properly.
 * [x] Behavior when LCD disabled: from what I understand the PPU should do nothing and stay in VBLANK mode (maybe). However a lot games are not working if the PPU is not ticking even while off. No idea what the error can be here. If I let the PPU tick even when it is disabled other games will crash. I sticking to keeping it off and try to find other solutions. <span style="color:FF0000">Not sure this is solved but setting default values of LCDC at least gets a lot of games started. Some games still have some isses.</span>
 * [x] Sweep for channel 1.
+* [ ] Seems to be an issue writing to external RAM in at least MBC1.
+* [ ] I find this to be laggy - this can be just on the laptop that does not like the OpenGL version; should test OpenGL ES.
 
 ### Blargg's Tests
 
@@ -62,7 +64,7 @@ I think there is an error with the implementation of MBC1 at the moment because 
 * **Bomberman:**
 	* Can't choose mode. Nothing happens.
 * **Super Mario Land 2 - 6 Golden Coins:**
-	* No sprites - OAM seems crazy.
+	* No sprites - OAM seems crazy. OAM seems to be just zero.
 	* Noise channel goes crazy in when starting.
 * ~**Donkey Kong 3:**~
 	* Crashes after a while because of incorrect ROM bank switching (ROM bank numbers are too large).
@@ -72,7 +74,7 @@ I think there is an error with the implementation of MBC1 at the moment because 
 
 ### TODO
 
-* [-] Audio support!
+* [ ] Audio support!
 	* ~There is sound but there are some errors.~
 	* Everything sounds correct now but there is a lot special behavior that has not been solved so we are not really passing the tests at the moment.
 * [x] Sprite - BG priority needs to be solved.
