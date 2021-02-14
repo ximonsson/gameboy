@@ -4,13 +4,14 @@
 #include "gameboy/mbc1.h"
 #include "gameboy/cpu.h"
 #include <string.h>
+#include <stdio.h>
 
 //static uint8_t* rom;
 static uint8_t* ram;
 
 /* RAM enabled register. */
 static uint8_t ram_enabled;
-#define RAM_ENABLED ((ram_enabled & 0x0A) == 0x0A)
+#define RAM_ENABLED ((ram_enabled & 0x0F) == 0x0A)
 
 static int write_ram_enable_h (uint16_t adr, uint8_t v)
 {
@@ -29,7 +30,7 @@ static uint8_t bank_hi;
 static uint8_t bank_ram;
 
 /* points correctly to address within current RAM bank. */
-#define RAM(adr) ram[adr - 0xA000 + (bank_ram << 13)]
+#define RAM(adr) ram[adr - 0xA000 + (bank_ram * RAM_BANK_SIZE)]
 
 static void reload_banks ()
 {
@@ -78,17 +79,21 @@ static int read_ram_h (uint16_t adr, uint8_t* v)
 {
 	if (adr < 0xA000 || adr >= 0xC000)
 		return 0;
-	*v = RAM_ENABLED ? RAM (adr) : 0;
+	*v = RAM_ENABLED ? RAM (adr) : 0x00;
 	return 1;
 }
 
 /* Handles writing to RAM $A000 - $BFFF. */
 static int write_ram_h (uint16_t adr, uint8_t v)
 {
-	if (adr < 0xA000 || adr > 0xBFFF)
+	if (adr < 0xA000 || adr >= 0xC000)
 		return 0;
 	else if (RAM_ENABLED)
+	{
+		printf("MBC1 : $%.4X = $%.2X\n", adr, v);
 		RAM (adr) = v;
+	}
+
 	return 1;
 }
 
