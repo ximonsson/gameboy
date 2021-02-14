@@ -64,7 +64,8 @@ I think there is an error with the implementation of MBC1 at the moment because 
 * **Bomberman:**
 	* Can't choose mode. Nothing happens.
 * **Super Mario Land 2 - 6 Golden Coins:**
-	* No sprites - OAM seems crazy. OAM seems to be just zero.
+	* ~No sprites - OAM seems crazy. OAM seems to be just zero.~
+		* Solution was that the game was not reading from external RAM during OAM transfer.
 	* Noise channel goes crazy in when starting.
 * ~**Donkey Kong 3:**~
 	* Crashes after a while because of incorrect ROM bank switching (ROM bank numbers are too large).

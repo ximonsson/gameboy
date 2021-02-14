@@ -2,9 +2,9 @@
 #include <string.h>
 #include <assert.h>
 
-#ifdef DEBUG_CPU
+//#ifdef DEBUG_CPU
 #include <stdio.h>
-#endif
+//#endif
 
 /* CPU Registers */
 
@@ -79,16 +79,6 @@ void gb_cpu_switch_rom_bank (int b)
 
 void gb_cpu_load_ram (uint8_t* data) { memcpy (ram + 0xA000, data, RAM_BANK_SIZE); }
 
-/* Transfer memory to OAM location. */
-static void oam_dma_transfer (uint8_t v)
-{
-#ifdef DEBUG_CPU
-	printf ("                   >>> OAM transfer [$%.2X => $%.4X]\n", v, v << 8);
-#endif
-	uint16_t src = v << 8;
-	memcpy (ram + OAM_LOC, ram + src, 0xA0);
-}
-
 #define MAX_HANDLERS 32
 
 /* Currently registered read handlers. */
@@ -139,6 +129,18 @@ static void mem_store (uint16_t adr, uint8_t v)
 
 /* Define some memory handlers here. */
 
+/* Transfer memory to OAM location. */
+static void oam_dma_transfer (uint8_t v)
+{
+	uint16_t src = v << 8, dst = OAM_LOC;
+	for (int i = 0; i < 0xA0; i ++, dst ++, src ++)
+		STORE(dst, RAM(src));
+
+#ifdef DEBUG_CPU
+	printf ("\t\t>>> OAM transfer [$%.2X => $%.4X]\n", v, src);
+#endif
+}
+
 /* check writes to initiate OAM DMA transfer. */
 static int oam_dma_transf_handler (uint16_t address, uint8_t v)
 {
@@ -153,7 +155,7 @@ static int oam_dma_transf_handler (uint16_t address, uint8_t v)
 void stack_push (uint16_t v)
 {
 #ifdef DEBUG_CPU
-	printf ("    PUSH %.4X @ $%.4X\n", v, sp);
+	printf ("\tPUSH %.4X @ $%.4X\n", v, sp);
 #endif
 	STORE (--sp, v >> 8); // msb
 	STORE (--sp, v);      // lsb
@@ -169,7 +171,7 @@ uint16_t stack_pop ()
 	uint16_t lo = RAM (sp++);
 	uint16_t hi = RAM (sp++);
 #ifdef DEBUG_CPU
-	printf ("    POP %.4X\n", (hi << 8) | lo);
+	printf ("\tPOP %.4X\n", (hi << 8) | lo);
 #endif
 	return (hi << 8) | lo;
 }

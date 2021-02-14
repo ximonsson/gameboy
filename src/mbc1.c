@@ -89,11 +89,7 @@ static int write_ram_h (uint16_t adr, uint8_t v)
 	if (adr < 0xA000 || adr >= 0xC000)
 		return 0;
 	else if (RAM_ENABLED)
-	{
-		printf("MBC1 : $%.4X = $%.2X\n", adr, v);
 		RAM (adr) = v;
-	}
-
 	return 1;
 }
 
