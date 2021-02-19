@@ -41,6 +41,7 @@ static uint8_t* reg_l = ((uint8_t *) &reg_hl);
 #define L (* reg_l)
 
 #define SP sp
+#define PC pc
 
 /* define flags */
 enum flags
@@ -155,10 +156,10 @@ static int oam_dma_transf_handler (uint16_t address, uint8_t v)
 void stack_push (uint16_t v)
 {
 #ifdef DEBUG_CPU
-	printf ("\tPUSH %.4X @ $%.4X\n", v, sp);
+	printf ("\tPUSH %.4X @ $%.4X\n", v, SP);
 #endif
-	STORE (--sp, v >> 8); // msb
-	STORE (--sp, v);      // lsb
+	STORE (--SP, v >> 8); // msb
+	STORE (--SP, v);      // lsb
 }
 
 #define PUSH(v) stack_push (v)
@@ -168,8 +169,8 @@ void stack_push (uint16_t v)
  */
 uint16_t stack_pop ()
 {
-	uint16_t lo = RAM (sp++);
-	uint16_t hi = RAM (sp++);
+	uint16_t lo = RAM (SP++);
+	uint16_t hi = RAM (SP++);
 #ifdef DEBUG_CPU
 	printf ("\tPOP %.4X\n", (hi << 8) | lo);
 #endif
@@ -689,10 +690,10 @@ void res (uint8_t* r, uint8_t b)
 void jp (uint16_t nn)
 {
 	printf (">>> JUMP @ $%.4X\n", nn);
-	pc = nn;
+	PC = nn;
 }
 #else
-#define jp(nn) pc = nn
+#define jp(nn) PC = nn
 #endif
 
 enum jump_cc
@@ -727,11 +728,11 @@ void jpcc (enum jump_cc cond, uint16_t nn)
 #ifdef DEBUG_CPU
 void jr (int8_t n)
 {
-	printf ("    JUMP @ PC +/- %d (=> $%.4X)\n", n, pc + n);
-	pc += n;
+	printf ("    JUMP @ PC +/- %d (=> $%.4X)\n", n, PC + n);
+	PC += n;
 }
 #else
-#define jr(n) pc += (int8_t) n
+#define jr(n) PC += (int8_t) n
 #endif
 
 void jrcc (enum jump_cc cond, int8_t n)
@@ -739,7 +740,7 @@ void jrcc (enum jump_cc cond, int8_t n)
 	CONDITIONAL (jr (n), cond, 4);
 }
 
-#define call(nn) { PUSH (pc); jp (nn); }
+#define call(nn) { PUSH (PC); jp (nn); }
 
 void callcc (enum jump_cc cond, uint16_t nn)
 {
@@ -798,11 +799,11 @@ void interrupt ()
 
 	ime = 0;
 	IF &= ~f;
-	PUSH (pc);
-	pc = 0x40 + 0x8 * b;
+	PUSH (PC);
+	PC = 0x40 + 0x8 * b;
 
 #ifdef DEBUG_CPU
-	printf (" <INT>; calling handler @ $%.4X\n", pc);
+	printf (" <INT>; calling handler @ $%.4X\n", PC);
 #endif
 }
 
@@ -811,8 +812,8 @@ void interrupt ()
  */
 void gb_cpu_reset ()
 {
-	pc = 0x100;
-	sp = 0xFFFE;
+	PC = 0x100;
+	SP = 0xFFFE;
 
 	AF = 0x01B0;
 	BC = 0x0013;
@@ -880,14 +881,14 @@ int gb_cpu_step ()
 	// step the PC and clock the number of cycles
 
 #ifdef DEBUG_CPU
-	printf ("$%.4X: ", pc);
+	printf ("$%.4X: ", PC);
 #endif
 
-	uint8_t opcode = RAM (pc ++);
+	uint8_t opcode = RAM (PC ++);
 	const operation* op = &operations[opcode];
 
 #ifdef DEBUG_CPU
-	if (opcode == 0xCB) op = &operations_cb[RAM (pc ++)]; // hijack in debug mode so we can print the operation
+	if (opcode == 0xCB) op = &operations_cb[RAM (PC ++)]; // hijack in debug mode so we can print the operation
 	printf ("%-20s AF = x%.4X BC = x%.4X DE = x%.4X HL = x%.4X SP = x%.4X IF = x%.2X IE = 0x%.2X IME = %d\n",
 			op->name, AF, BC, DE, HL, SP, IF, IE, ime);
 #endif
