@@ -31,10 +31,12 @@ static uint8_t* obp1_;
 #define obp0 (* obp0_)
 #define obp1 (* obp1_)
 
+#define LY_LOC 0xFF44
+
 /* LY register is read only. */
 static int write_ly_h (uint16_t adr, uint8_t v)
 {
-	return adr == 0xFF44;
+	return adr == LY_LOC;
 }
 
 /**
@@ -80,28 +82,30 @@ static uint8_t* lcdc_;
 
 #define STATUS_LOC 0xFF41
 static uint8_t* status_;
-#define status (* status_)
+#define STATUS (* status_)
 
-#define LYC_EQ_LY_INT ((status & 0x40) == 0x40)
-#define MODE_2_OAM_INT ((status & 0x20) == 0x20)
-#define MODE_1_VBLANK_INT ((status & 0x10) == 0x10)
-#define MODE_0_HBLANK_INT ((status & 0x08) == 0x08)
-#define LYC_EQ_LY ((status & 0x04) == 0x04)
+#define LYC_EQ_LQ_FLAG 0x04
 
-#define MODE (status & 0x03)
+#define LYC_EQ_LY_INT ((STATUS & 0x40) == 0x40)
+#define MODE_2_OAM_INT ((STATUS & 0x20) == 0x20)
+#define MODE_1_VBLANK_INT ((STATUS & 0x10) == 0x10)
+#define MODE_0_HBLANK_INT ((STATUS & 0x08) == 0x08)
+#define LYC_EQ_LY ((STATUS & LYC_EQ_LQ_FLAG) == LYC_EQ_LQ_FLAG)
+
+#define MODE (STATUS & 0x03)
 #define MODE_HBLANK 0
 #define MODE_VBLANK 1
 #define MODE_SEARCH_OAM 2
 #define MODE_TRANSFER_LCD 3
 
-#define SET_MODE(x) { status = (status & 0xFC) | x; }
+#define SET_MODE(x) { STATUS = (STATUS & 0xFC) | x; }
 
 static int write_status_h (uint16_t addr, uint8_t v)
 {
 	if (addr != STATUS_LOC) return 0;
 
 	// do not overwrite mode bits and LY=LYC
-	status = (v & 0xF8) | (status & 0x07);
+	STATUS = (v & 0xF8) | (STATUS & 0x07);
 
 	return 1;
 }
@@ -119,7 +123,6 @@ static int write_lcdc_h (uint16_t adr, uint8_t v)
 		dot = ly = 0;
 		SET_MODE (MODE_VBLANK);
 	}
-
 	return 1;
 }
 
@@ -133,9 +136,11 @@ static uint8_t* oam;
 #define SPRITE_VRAM(sprite) ((sprite[3] & 0x08) >> 3)
 #define SPRITE_PALETTE_CGB(sprite) (sprite[3] & 0x07)
 
+#define NPIXELS 69120 // width x height x rgb
+
 /* switchable screen buffer for rendering. */
-static uint8_t lcd_buffer[GB_LCD_WIDTH * GB_LCD_HEIGHT * 3];
-static uint8_t lcd[GB_LCD_WIDTH * GB_LCD_HEIGHT * 3];
+static uint8_t lcd_buffer[NPIXELS];
+static uint8_t lcd[NPIXELS];
 
 const uint8_t* gb_ppu_lcd () { return lcd; }
 
@@ -313,12 +318,12 @@ static void step ()
 	// LYC=LY
 	if (lyc == ly && x == 0)
 	{
-		status |= 0x04;
+		STATUS |= LYC_EQ_LQ_FLAG;
 		if (LYC_EQ_LY_INT)
 			gb_cpu_flag_interrupt (INT_FLAG_LCD_STAT);
 	}
 	else if (LYC_EQ_LY && lyc != ly)
-		status &= ~0x04;
+		STATUS &= ~LYC_EQ_LQ_FLAG;
 
 	// V-BLANK
 	if (ly == GB_LCD_HEIGHT && x == 0)
@@ -328,7 +333,7 @@ static void step ()
 		if (MODE_1_VBLANK_INT)
 			gb_cpu_flag_interrupt (INT_FLAG_LCD_STAT);
 		// Transfer data to LCD
-		memcpy (lcd, lcd_buffer, GB_LCD_HEIGHT * GB_LCD_WIDTH * 3);
+		memcpy (lcd, lcd_buffer, NPIXELS);
 	}
 	// Visible line
 	else if (ly < GB_LCD_HEIGHT)
@@ -387,13 +392,16 @@ void gb_ppu_reset ()
 	vram = gb_cpu_mem (VRAM_LOC);
 	oam = gb_cpu_mem (OAM_LOC);
 
-	dot = 0;
+	dot = ly = 0;
 
 	RESET_LINE_SPRITES;
 
 	gb_cpu_register_store_handler (write_status_h);
 	gb_cpu_register_store_handler (write_lcdc_h);
 	gb_cpu_register_store_handler (write_ly_h);
+
+	memset (lcd_buffer, 0, NPIXELS);
+	memset (lcd, 0, NPIXELS);
 }
 
 void gb_ppu_step (int cc)
