@@ -144,8 +144,8 @@ static int compile_shaders ()
 
 int init_screen (int w, int h)
 {
-	width	= w;
-	height	= h;
+	width = w;
+	height = h;
 
 	if (SDL_Init (SDL_INIT_VIDEO) < 0)
 	{
@@ -164,7 +164,7 @@ int init_screen (int w, int h)
 		SDL_WINDOWPOS_UNDEFINED,
 		width,
 		height,
-		SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN
+		SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_BORDERLESS
 	);
 	sdl_context = SDL_GL_CreateContext (sdl_window);
 	SDL_GL_SetSwapInterval (1);
@@ -187,7 +187,6 @@ int init_opengl ()
 		return 1;
 
 	glClearColor (.1f, .1f, .1f, 1.f);
-	glViewport (0, 0, width, height);
 
 	// gen texture
 	glEnable 		(GL_TEXTURE_2D);
@@ -223,7 +222,6 @@ int init_opengl ()
 	return 0;
 }
 
-
 void quit_opengl ()
 {
 	SDL_GL_DeleteContext (sdl_context);
@@ -233,6 +231,10 @@ void quit_opengl ()
 
 void draw ()
 {
+	// in case window has been resized get the new size
+	SDL_GetWindowSize (sdl_window, &width, &height);
+	glViewport (0, 0, width, height);
+
 	const uint8_t* screen = gb_lcd ();
 	glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, GB_LCD_WIDTH, GB_LCD_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, screen);
 
@@ -260,7 +262,7 @@ static void audio_init (int rate)
 	if (!audioconn)
 	{
 		fprintf (stderr, "error pa_simple_new: %s\n", pa_strerror (error));
-		exit(1);
+		exit (1);
 	}
 }
 
