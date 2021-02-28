@@ -119,8 +119,8 @@ void gb_release_button (gb_button b) { gb_io_release_button (b); }
 
 void gb_step ()
 {
-	int cc;
-	for (int cpucc = 0; cpucc < GB_FRAME; )
+	static int cpucc, cc;
+	for (; cpucc < GB_FRAME; )
 	{
 		cc = gb_cpu_step ();
 
@@ -129,6 +129,7 @@ void gb_step ()
 
 		cpucc += cc;
 	}
+	cpucc %= GB_FRAME;
 }
 
 const uint8_t* gb_lcd () { return gb_ppu_lcd (); }
