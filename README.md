@@ -21,7 +21,7 @@ There is a sample application with source code located in `./examples/app` that 
 * [x] Behavior when LCD disabled: from what I understand the PPU should do nothing and stay in VBLANK mode (maybe). However a lot games are not working if the PPU is not ticking even while off. No idea what the error can be here. If I let the PPU tick even when it is disabled other games will crash. I sticking to keeping it off and try to find other solutions. <span style="color:FF0000">Not sure this is solved but setting default values of LCDC at least gets a lot of games started. Some games still have some isses.</span>
 * [x] Sweep for channel 1.
 * [x] Seems to be an issue writing to external RAM in at least MBC1. (Was only during OAM transfer)
-* [ ] I find the emulator to be very laggy - this can be just on the laptop that does not like the OpenGL version; should test OpenGL ES.
+* [ ] I find the emulator to be very laggy - apparently the audio is behind this, is it the emulator or the app playback?
 
 ### Blargg's Tests
 
