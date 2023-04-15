@@ -294,7 +294,8 @@ static void inc_tima (int cc)
 
 /* CPU Instructions ----------------------------------------------------------------- */
 
-// NOTE : LD instructions are not implemented here; they are all implemented in the autogeneretade code instead.
+// NOTE : LD instructions are not implemented here; they are all implemented in the
+// autogeneretade code instead.
 
 void ldhl (uint8_t n)
 {

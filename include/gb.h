@@ -40,8 +40,9 @@ void gb_quit () ;
 /**
  * Get pointer to the screen buffer.
  *
- * Then underlying array has length GB_LCD_WIDTH * GB_LCD_HEIGHT * 3, where the 3 represents the three
- * color channels RGB. The pointer can be directly fed as an OpenGL texture.
+ * Then underlying array has length GB_LCD_WIDTH * GB_LCD_HEIGHT * 3, where the 3
+ * represents the three color channels RGB. The pointer can be directly fed as an
+ * OpenGL texture.
  *
  * This can change between frames so it is recommended to make a call each time
  * AFTER stepping the emulator and drawing while it is paused before stepping again.
