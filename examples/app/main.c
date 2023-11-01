@@ -250,6 +250,7 @@ static float* audio_samples_buffer;
 // initialize audio connection
 static void audio_init (int rate)
 {
+	/*
 	pa_sample_spec ss;
 	ss.format = PA_SAMPLE_FLOAT32NE;
 	ss.channels = 2;
@@ -258,10 +259,30 @@ static void audio_init (int rate)
 	audio_samples_buffer = malloc (rate * sizeof (float));
 
 	int error;
-	audioconn = pa_simple_new (NULL, TITLE, PA_STREAM_PLAYBACK, NULL, TITLE, &ss, NULL, NULL, &error);
+	audioconn = pa_simple_new
+	(
+		NULL, TITLE, PA_STREAM_PLAYBACK, NULL, TITLE, &ss, NULL, NULL, &error
+	);
 	if (!audioconn)
 	{
 		fprintf (stderr, "error pa_simple_new: %s\n", pa_strerror (error));
+		exit (1);
+	}
+	*/
+
+	SDL_AudioSpec wanted;
+
+	// set audio format
+	wanted.freq = rate;
+	wanted.format = AUDIO_S32;
+	wanted.channels = 2;
+	wanted.sampled = 1024;
+	wanted.callback = NULL;
+	wanted.userdata = NULL;
+
+	if (SDL_OpenAudio (&wanted, NULL) < 0)
+	{
+		fprintf (stderr, "error opening audio: %s\n", SDL_GetError ());
 		exit (1);
 	}
 }
@@ -269,6 +290,7 @@ static void audio_init (int rate)
 // play audio samples
 static int audio_play ()
 {
+	/*
 	static int err;
 	static size_t size;
 
@@ -278,16 +300,22 @@ static int audio_play ()
 		fprintf (stderr, "pa_simple_write: %s\n", pa_strerror (err));
 
 	return err;
+	*/
+
 }
 
 // deinitialize audio
 static void audio_quit ()
 {
+	/*
 	int err;
 	if (pa_simple_flush (audioconn, &err) < 0)
 		fprintf (stderr, "pa_simple_flush: %s\n", pa_strerror (err));
 	pa_simple_free (audioconn);
 	free (audio_samples_buffer);
+	*/
+
+	SDL_CloseAudio ();
 }
 
 // if the game is running
@@ -353,7 +381,7 @@ static void handle_events ()
 	}
 }
 
-#define SAMPLE_RATE 44100
+#define SAMPLE_RATE 48000
 
 int main (int argc, char** argv)
 {
@@ -378,12 +406,14 @@ int main (int argc, char** argv)
 	// run game
 	printf ("starting game.\n");
 	running = 1;
+
 	while (running)
 	{
 		gb_step ();
 		draw ();
 		audio_play ();
 		handle_events ();
+		//if (usleep (10000) != 0) fprintf (stderr, "usleep not working?\n");
 	}
 
 	// deinit

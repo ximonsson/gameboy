@@ -673,7 +673,7 @@ static void sample (uint8_t* l, uint8_t* r)
 }
 
 static int sample_rate;
-static float samples[4096];
+static float samples[8192];
 static int samples_len;
 static int apucc;
 
@@ -903,7 +903,6 @@ static int write_apu_h (uint16_t adr, uint8_t v)
 static int read_apu_h (uint16_t adr, uint8_t* v)
 {
 	// TODO clean this later
-	//
 
 	if (adr >= 0xFF10 && adr <= 0xFF25)
 	{
