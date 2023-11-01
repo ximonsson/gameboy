@@ -250,13 +250,15 @@ static SDL_AudioDeviceID audio_devid;
 // initialize audio connection
 static void audio_init (int rate)
 {
-	SDL_AudioSpec wanted;
+	printf ("SDL_GetAudioDeviceName = %s\n", SDL_GetAudioDeviceName (0, 0));
+
+	SDL_AudioSpec wanted = { 0 };
 	wanted.freq = rate;
 	wanted.format = AUDIO_F32SYS;
 	wanted.channels = 2;
-	wanted.samples = 8192;  // 1024
-	wanted.callback = NULL;
-	wanted.userdata = NULL;
+	wanted.samples = 4096;  // 1024
+	//wanted.callback = NULL;
+	//wanted.userdata = NULL;
 
 	audio_devid = SDL_OpenAudioDevice (NULL, 0, &wanted, NULL, 0);
 
