@@ -274,7 +274,7 @@ static void audio_init (int rate)
 
 	// set audio format
 	wanted.freq = rate;
-	wanted.format = AUDIO_S32;
+	wanted.format = AUDIO_F32SYS;
 	wanted.channels = 2;
 	wanted.sampled = 1024;
 	wanted.callback = NULL;
