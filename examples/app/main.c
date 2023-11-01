@@ -147,7 +147,7 @@ int init_screen (int w, int h)
 	width = w;
 	height = h;
 
-	if (SDL_Init (SDL_INIT_VIDEO) < 0)
+	if (SDL_Init (SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0)
 	{
 		fprintf (stderr, "error init sdl video\n");
 		return 1;
@@ -244,78 +244,48 @@ void draw ()
 }
 
 // connection to Pulse Audio server
-static pa_simple* audioconn;
-static float* audio_samples_buffer;
+static float *audio_samples_buffer;
+static SDL_AudioDeviceID audio_devid;
 
 // initialize audio connection
 static void audio_init (int rate)
 {
-	/*
-	pa_sample_spec ss;
-	ss.format = PA_SAMPLE_FLOAT32NE;
-	ss.channels = 2;
-	ss.rate = rate;
-
-	audio_samples_buffer = malloc (rate * sizeof (float));
-
-	int error;
-	audioconn = pa_simple_new
-	(
-		NULL, TITLE, PA_STREAM_PLAYBACK, NULL, TITLE, &ss, NULL, NULL, &error
-	);
-	if (!audioconn)
-	{
-		fprintf (stderr, "error pa_simple_new: %s\n", pa_strerror (error));
-		exit (1);
-	}
-	*/
-
 	SDL_AudioSpec wanted;
-
-	// set audio format
 	wanted.freq = rate;
 	wanted.format = AUDIO_F32SYS;
 	wanted.channels = 2;
-	wanted.sampled = 1024;
+	wanted.samples = 8192;  // 1024
 	wanted.callback = NULL;
 	wanted.userdata = NULL;
 
-	if (SDL_OpenAudio (&wanted, NULL) < 0)
+	audio_devid = SDL_OpenAudioDevice (NULL, 0, &wanted, NULL, 0);
+
+	if (audio_devid == 0)
 	{
 		fprintf (stderr, "error opening audio: %s\n", SDL_GetError ());
 		exit (1);
 	}
+
+	audio_samples_buffer = malloc (8192 * sizeof (float));
 }
 
 // play audio samples
 static int audio_play ()
 {
-	/*
-	static int err;
+	static int ret;
 	static size_t size;
 
 	gb_audio_samples (audio_samples_buffer, &size);
+	ret = SDL_QueueAudio (audio_devid, audio_samples_buffer, size * sizeof (float));
 
-	if (pa_simple_write (audioconn, audio_samples_buffer, size, &err) < 0)
-		fprintf (stderr, "pa_simple_write: %s\n", pa_strerror (err));
-
-	return err;
-	*/
-
+	return ret;
 }
 
 // deinitialize audio
 static void audio_quit ()
 {
-	/*
-	int err;
-	if (pa_simple_flush (audioconn, &err) < 0)
-		fprintf (stderr, "pa_simple_flush: %s\n", pa_strerror (err));
-	pa_simple_free (audioconn);
+	SDL_CloseAudioDevice (audio_devid);
 	free (audio_samples_buffer);
-	*/
-
-	SDL_CloseAudio ();
 }
 
 // if the game is running
@@ -400,7 +370,7 @@ int main (int argc, char** argv)
 	init_screen (GB_LCD_WIDTH * 4, GB_LCD_HEIGHT * 4);
 	init_opengl ();
 
-	printf ("initializing pulse audio output.\n");
+	printf ("initializing audio device.\n");
 	audio_init (SAMPLE_RATE);
 
 	// run game
@@ -411,7 +381,8 @@ int main (int argc, char** argv)
 	{
 		gb_step ();
 		draw ();
-		audio_play ();
+		if (audio_play () != 0)
+			fprintf (stderr, "error playing audio samples: %s\n", SDL_GetError ());
 		handle_events ();
 		//if (usleep (10000) != 0) fprintf (stderr, "usleep not working?\n");
 	}
