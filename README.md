@@ -10,7 +10,7 @@ As stated, the emulator itself is a shared library, so there is nothing to run, 
 
 ### Requirements
 
-None for the actual library. For the test application you need to install `sdl2`, `libpulse` and have OpenGL support. Everything is usually available through the package manager in Linux.
+None for the actual library. For the test application you need to install `sdl2` and have OpenGL support. Everything is usually available through the package manager in Linux.
 
 
 ### Building
