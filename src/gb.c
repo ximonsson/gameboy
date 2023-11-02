@@ -121,12 +121,12 @@ const uint8_t* gb_lcd () { return gb_ppu_lcd (); }
 
 void gb_audio_samples (float* buf, size_t* n) { gb_apu_samples (buf, n); }
 
-int gb_step (int ccs)
+uint32_t gb_step (uint32_t ccs)
 {
-	static int cpucc = 0;
-	int prev_cpucc = cpucc, cc = 0;
+	static uint32_t cpucc = 0;
+	uint32_t prev_cpucc = cpucc, cc = 0;
 
-	for (; cpucc < ccs;)
+	while (cpucc < ccs)
 	{
 		// step all units
 		cc = gb_cpu_step ();
@@ -136,7 +136,7 @@ int gb_step (int ccs)
 		cpucc += cc;
 	}
 
-	int ret = cpucc - prev_cpucc;  // number of cycles that ran
+	uint32_t ret = cpucc - prev_cpucc;  // number of cycles that ran
 	cpucc -= ccs;
 
 	return ret;

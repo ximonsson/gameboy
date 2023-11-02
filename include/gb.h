@@ -33,7 +33,7 @@ int gb_load (const char * /* file */) ;
  * instruction is different, therefore the input act as a minimum of cycles to
  * iterate.
  */
-int gb_step (int /* cc */) ;
+uint32_t gb_step (uint32_t /* cc */) ;
 
 /**
  * Deinitiliaze the Game Boy emulator.

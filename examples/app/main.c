@@ -282,8 +282,16 @@ static int audio_play ()
 	gb_audio_samples (audio_samples_buffer, &size);
 	ret = SDL_QueueAudio (audio_devid, audio_samples_buffer, size);
 
-	// halt emulation while we have played all the samples
-	// TODO
+	// halt emulation while we are playing the audio
+
+	//printf ("%lu bytes of audio samples from the emulator.\n", size);
+
+	Uint32 q = SDL_GetQueuedAudioSize (audio_devid);
+	while (q >= 1024 * 2 * sizeof (float)) // while more than 1024 samples are queued we pause emulation
+	{
+		usleep (200);
+		q = SDL_GetQueuedAudioSize (audio_devid);
+	}
 
 	return ret;
 }
@@ -358,15 +366,7 @@ static void handle_events ()
 	}
 }
 
-#define SAMPLE_RATE 48000
-
-/*
-void audio_cb (void *userdata, Uint8 *stream, int len)
-{
-
-
-}
-//*/
+#define SAMPLE_RATE 44100
 
 int main (int argc, char** argv)
 {
@@ -395,7 +395,7 @@ int main (int argc, char** argv)
 
 	while (running)
 	{
-		cc += gb_step (1024);
+		cc += gb_step (95 * 1024);  // should be number of cycles to produce 1024 samples
 
 		// did we get a frame?
 		if (cc >= GB_FRAME)
