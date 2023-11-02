@@ -2,6 +2,7 @@
 #define GB_H
 
 #include "gameboy/io.h"
+#include "gameboy/ppu.h"
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -22,15 +23,17 @@ void gb_init (int /* sample rate */);
  * I would like to change this to a FILE pointer instead so the calling application
  * is repsonsible for finding and opening the file for more flexibility.
  */
-int gb_load (const char* file) ;
+int gb_load (const char * /* file */) ;
 
 /**
- * Step the emulator.
+ * Step the emulator for *at least* a given number of CPU cycles. The function returns
+ * the *actual* number of cycles that ran.
  *
- * This equals stepping until an entire new frame is ready. After one step one can draw the
- * LCD screen buffer.
+ * There is no way to guarantee the number of cycles to step because each CPU
+ * instruction is different, therefore the input act as a minimum of cycles to
+ * iterate.
  */
-void gb_step () ;
+int gb_step (int /* cc */) ;
 
 /**
  * Deinitiliaze the Game Boy emulator.
@@ -68,6 +71,6 @@ void gb_release_button (gb_button) ;
 /**
  * Get audio samples generated.
  */
-void gb_audio_samples (float* /* buffer */, size_t* /* n */) ;
+void gb_audio_samples (float * /* buffer */, size_t * /* n */) ;
 
 #endif /* GB_H */

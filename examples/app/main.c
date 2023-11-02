@@ -256,7 +256,7 @@ static void audio_init (int rate)
 	wanted.freq = rate;
 	wanted.format = AUDIO_F32SYS;
 	wanted.channels = 2;
-	wanted.samples = 4096;  // 1024
+	wanted.samples = 1024;  // 1024
 	//wanted.callback = NULL;
 	//wanted.userdata = NULL;
 
@@ -281,6 +281,9 @@ static int audio_play ()
 
 	gb_audio_samples (audio_samples_buffer, &size);
 	ret = SDL_QueueAudio (audio_devid, audio_samples_buffer, size);
+
+	// halt emulation while we have played all the samples
+	// TODO
 
 	return ret;
 }
@@ -357,6 +360,14 @@ static void handle_events ()
 
 #define SAMPLE_RATE 48000
 
+/*
+void audio_cb (void *userdata, Uint8 *stream, int len)
+{
+
+
+}
+//*/
+
 int main (int argc, char** argv)
 {
 	gb_init (SAMPLE_RATE);
@@ -380,15 +391,25 @@ int main (int argc, char** argv)
 	// run game
 	printf ("starting game.\n");
 	running = 1;
+	int cc = 0;
 
 	while (running)
 	{
-		gb_step ();
-		draw ();
+		cc += gb_step (1024);
+
+		// did we get a frame?
+		if (cc >= GB_FRAME)
+		{
+			draw ();
+			cc -= GB_FRAME;
+		}
+
 		if (audio_play () != 0)
 			fprintf (stderr, "error playing audio samples: %s\n", SDL_GetError ());
+
 		handle_events ();
-		if (usleep (10000) != 0) fprintf (stderr, "usleep not working?\n");
+
+		//if (usleep (10000) != 0) fprintf (stderr, "usleep not working?\n");
 	}
 
 	// deinit

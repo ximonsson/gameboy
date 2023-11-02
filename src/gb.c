@@ -117,26 +117,30 @@ void gb_press_button (gb_button b) { gb_io_press_button (b); }
 
 void gb_release_button (gb_button b) { gb_io_release_button (b); }
 
-void gb_step ()
-{
-	static int cpucc = 0, cc = 0;
-	for (; cpucc < GB_FRAME;)
-	{
-		//for (; cc < GB_LCD_WIDTH;)  // step one line
-		cc = gb_cpu_step ();
+const uint8_t* gb_lcd () { return gb_ppu_lcd (); }
 
+void gb_audio_samples (float* buf, size_t* n) { gb_apu_samples (buf, n); }
+
+int gb_step (int ccs)
+{
+	static int cpucc = 0;
+	int prev_cpucc = cpucc, cc = 0;
+
+	for (; cpucc < ccs;)
+	{
+		// step all units
+		cc = gb_cpu_step ();
 		gb_ppu_step (cc);
 		gb_apu_step (cc);
 
 		cpucc += cc;
-		//cc %= GB_LCD_WIDTH;
 	}
-	cpucc %= GB_FRAME;
+
+	int ret = cpucc - prev_cpucc;  // number of cycles that ran
+	cpucc -= ccs;
+
+	return ret;
 }
-
-const uint8_t* gb_lcd () { return gb_ppu_lcd (); }
-
-void gb_audio_samples (float* buf, size_t* n) { gb_apu_samples (buf, n); }
 
 void gb_stop ()
 {
