@@ -276,15 +276,17 @@ static void audio_init (int rate)
 // play audio samples
 static int audio_play ()
 {
-	static int ret;
-	static size_t size;
+	int ret = 0;
+	size_t size;
 
 	gb_audio_samples (audio_samples_buffer, &size);
-	ret = SDL_QueueAudio (audio_devid, audio_samples_buffer, size);
+	if ((ret = SDL_QueueAudio (audio_devid, audio_samples_buffer, size)) != 0)
+	{
+		fprintf (stderr, "[error] audio_play > could not queue samples.\n");
+		return ret;
+	}
 
 	// halt emulation while we are playing the audio
-
-	//printf ("%lu bytes of audio samples from the emulator.\n", size);
 
 	Uint32 q = SDL_GetQueuedAudioSize (audio_devid);
 	while (q >= 1024 * 2 * sizeof (float)) // while more than 1024 samples are queued we pause emulation
@@ -293,7 +295,7 @@ static int audio_play ()
 		q = SDL_GetQueuedAudioSize (audio_devid);
 	}
 
-	return ret;
+	return 0;
 }
 
 // deinitialize audio
