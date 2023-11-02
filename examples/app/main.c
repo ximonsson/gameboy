@@ -269,6 +269,8 @@ static void audio_init (int rate)
 	}
 
 	audio_samples_buffer = malloc (8192 * sizeof (float));
+
+	SDL_PauseAudioDevice (audio_devid, 0);
 }
 
 // play audio samples
@@ -278,7 +280,7 @@ static int audio_play ()
 	static size_t size;
 
 	gb_audio_samples (audio_samples_buffer, &size);
-	ret = SDL_QueueAudio (audio_devid, audio_samples_buffer, size * sizeof (float));
+	ret = SDL_QueueAudio (audio_devid, audio_samples_buffer, size);
 
 	return ret;
 }
@@ -386,7 +388,7 @@ int main (int argc, char** argv)
 		if (audio_play () != 0)
 			fprintf (stderr, "error playing audio samples: %s\n", SDL_GetError ());
 		handle_events ();
-		//if (usleep (10000) != 0) fprintf (stderr, "usleep not working?\n");
+		if (usleep (10000) != 0) fprintf (stderr, "usleep not working?\n");
 	}
 
 	// deinit
