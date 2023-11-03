@@ -21,15 +21,15 @@ static uint8_t* bgp_;
 static uint8_t* obp0_;
 static uint8_t* obp1_;
 
-#define scy (* scy_)
-#define scx (* scx_)
-#define ly (* ly_)
-#define lyc (* lyc_)
-#define wy (* wy_)
-#define wx (* wx_)
-#define bgp (* bgp_)
-#define obp0 (* obp0_)
-#define obp1 (* obp1_)
+#define SCY (* scy_)
+#define SCX (* scx_)
+#define LY (* ly_)
+#define LYC (* lyc_)
+#define WY (* wy_)
+#define WX (* wx_)
+#define BGP (* bgp_)
+#define OBP0 (* obp0_)
+#define OBP1 (* obp1_)
 
 #define LY_LOC 0xFF44
 
@@ -54,16 +54,16 @@ static int write_ly_h (uint16_t adr, uint8_t v)
 
 #define LCDC_LOC 0xFF40
 static uint8_t* lcdc_;
-#define lcdc (* lcdc_)
+#define LCDC (* lcdc_)
 
-#define LCD_ENABLED ((lcdc & 0x80) == 0x80)
-#define WIN_TILE_MAP (0x1800 | ((lcdc & 0x40) << 4))
-#define WIN_DISP_ENABLED ((lcdc & 0x20) == 0x20)
-#define BG_WIN_TILE (0x0800 & ~((lcdc & 0x10) << 7))
-#define BG_TILE_MAP (0x1800 | ((lcdc & 0x08) << 7))
-#define OBJ_SIZE (8 + ((lcdc & 0x04) << 1))
-#define OBJ_ENABLED (lcdc & 0x02)
-#define BG_WIN_PRIO (lcdc & 0x01)
+#define LCD_ENABLED ((LCDC & 0x80) == 0x80)
+#define WIN_TILE_MAP (0x1800 | ((LCDC & 0x40) << 4))
+#define WIN_DISP_ENABLED ((LCDC & 0x20) == 0x20)
+#define BG_WIN_TILE (0x0800 & ~((LCDC & 0x10) << 7))
+#define BG_TILE_MAP (0x1800 | ((LCDC & 0x08) << 7))
+#define OBJ_SIZE (8 + ((LCDC & 0x04) << 1))
+#define OBJ_ENABLED (LCDC & 0x02)
+#define BG_WIN_PRIO (LCDC & 0x01)
 
 /**
  * LCD Status register
@@ -114,13 +114,13 @@ static int write_lcdc_h (uint16_t adr, uint8_t v)
 {
 	if (adr != LCDC_LOC) return 0;
 
-	lcdc = v;
+	LCDC = v;
 	if (!LCD_ENABLED)
 	{
 #ifdef DEBUG_PPU
 		printf (" >>> LCD disabled\n");
 #endif
-		dot = ly = 0;
+		dot = LY = 0;
 		SET_MODE (MODE_VBLANK);
 	}
 	return 1;
@@ -198,7 +198,7 @@ static uint8_t color_bg (uint8_t n, uint8_t x, uint8_t y)
 static uint8_t draw_bg (uint8_t x, uint8_t y)
 {
 	// BG X and Y viewport, the uint8_t type makes sure to wrap around 255.
-	uint8_t bgx = (x + scx), bgy = (y + scy);
+	uint8_t bgx = (x + SCX), bgy = (y + SCY);
 
 	// determine BG tile index in 32x32 tile map.
 	uint16_t t = (bgx >> 3) + ((bgy & 0xF8) << 2); // (x div 8) + (y div 8) * 32
@@ -208,20 +208,20 @@ static uint8_t draw_bg (uint8_t x, uint8_t y)
 
 	uint8_t c = color_bg (tn, bgx & 0x7, bgy & 0x7);
 
-	LCD_COLOR (x, y, c, bgp);
+	LCD_COLOR (x, y, c, BGP);
 
 	return c;
 }
 
 static void draw_win (uint8_t x, uint8_t y)
 {
-	uint8_t winx = x - (wx - 7), winy = y - wy;
+	uint8_t winx = x - (WX - 7), winy = y - WY;
 
 	uint16_t t = (winx >> 3) + ((winy & ~0x7) << 2);
 	uint8_t tn = *(vram + WIN_TILE_MAP + t);
 
 	uint8_t c = color_bg (tn, winx & 0x7, winy & 0x7);
-	LCD_COLOR (x, y, c, bgp);
+	LCD_COLOR (x, y, c, BGP);
 }
 
 #define SPRITES_PER_LINE 10
@@ -247,7 +247,7 @@ static void draw_obj (uint8_t x, uint8_t y, uint8_t bgc)
 
 		if (dx >= 0 && dx < 8)
 		{
-			dy = ly - sprite[0] + 16;
+			dy = LY - sprite[0] + 16;
 
 			if (SPRITE_XFLIP (sprite))
 				dx = 7 - dx;
@@ -277,7 +277,7 @@ static void draw (uint8_t x, uint8_t y)
 		bgc = draw_bg (x, y);
 
 		// WIN
-		if (WIN_DISP_ENABLED && (x >= (wx - 7)) && (y >= wy))
+		if (WIN_DISP_ENABLED && (x >= (WX - 7)) && (y >= WY))
 			draw_win (x, y);
 	}
 	// Sprite
@@ -305,7 +305,7 @@ static void inline find_line_sprites ()
 			continue;
 
 		// visible sprite on the current line
-		int16_t dy = ly - (y - 16);
+		int16_t dy = LY - (y - 16);
 		if (dy < OBJ_SIZE && dy >= 0)
 			line_sprites[n ++] = i;
 	}
@@ -322,17 +322,17 @@ static void step ()
 	int16_t x = dot % GB_SCANLINE;
 
 	// LYC=LY
-	if (lyc == ly && x == 0)
+	if (LYC == LY && x == 0)
 	{
 		STATUS |= LYC_EQ_LQ_FLAG;
 		if (LYC_EQ_LY_INT)
 			gb_cpu_flag_interrupt (INT_FLAG_LCD_STAT);
 	}
-	else if (LYC_EQ_LY && lyc != ly)
+	else if (LYC_EQ_LY && LYC != LY)
 		STATUS &= ~LYC_EQ_LQ_FLAG;
 
 	// V-BLANK
-	if (ly == GB_LCD_HEIGHT && x == 0)
+	if (LY == GB_LCD_HEIGHT && x == 0)
 	{
 		gb_cpu_flag_interrupt (INT_FLAG_VBLANK);
 		SET_MODE (MODE_VBLANK);
@@ -342,7 +342,7 @@ static void step ()
 		memcpy (lcd, lcd_buffer, NPIXELS);
 	}
 	// Visible line
-	else if (ly < GB_LCD_HEIGHT)
+	else if (LY < GB_LCD_HEIGHT)
 	{
 		x -= OAM_CC;
 
@@ -367,14 +367,14 @@ static void step ()
 		{
 			if (x == 0)
 				SET_MODE (MODE_TRANSFER_LCD);
-			draw (x, ly);
+			draw (x, LY);
 		}
 	}
 
 	// step the dot counter and line
 	dot ++;
 	dot %= GB_FRAME;
-	ly = dot / GB_SCANLINE;
+	LY = dot / GB_SCANLINE;
 }
 
 void gb_ppu_reset ()
@@ -391,14 +391,14 @@ void gb_ppu_reset ()
 	obp0_   = gb_cpu_mem (0xFF48);
 	obp1_   = gb_cpu_mem (0xFF49);
 
-	lcdc = 0x91; // NOTE a lot of games do not set the LCD enabled when starting....
-	bgp = 0xFC;
-	obp0 = obp1 = 0xFF;
+	LCDC = 0x91; // NOTE a lot of games do not set the LCD enabled when starting....
+	BGP = 0xFC;
+	OBP0 = OBP1 = 0xFF;
 
 	vram = gb_cpu_mem (VRAM_LOC);
 	oam = gb_cpu_mem (OAM_LOC);
 
-	dot = ly = 0;
+	dot = LY = 0;
 
 	RESET_LINE_SPRITES;
 
