@@ -166,7 +166,7 @@ end
 -- Main script
 
 -- open our output file
-file = io.open("include/gameboy/operations.h", "w")
+file = io.open("include/gb/operations.h", "w")
 io.output(file)
 
 -- write a comment about the file

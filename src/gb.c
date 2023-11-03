@@ -1,9 +1,9 @@
-#include "gameboy/file.h"
-#include "gameboy/cpu.h"
-#include "gameboy/ppu.h"
-#include "gameboy/mbc.h"
-#include "gameboy/io.h"
-#include "gameboy/apu.h"
+#include "gb/file.h"
+#include "gb/cpu.h"
+#include "gb/ppu.h"
+#include "gb/mbc.h"
+#include "gb/io.h"
+#include "gb/apu.h"
 #include "gb.h"
 #include <stdlib.h>
 #include <stdio.h>

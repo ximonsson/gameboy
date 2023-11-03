@@ -1,8 +1,8 @@
 /**
  * Implementation of MBC5.
  */
-#include "gameboy/mbc5.h"
-#include "gameboy/cpu.h"
+#include "gb/mbc5.h"
+#include "gb/cpu.h"
 #include <string.h>
 
 static uint8_t* ram;

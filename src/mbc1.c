@@ -1,8 +1,8 @@
 /**
  * Implementation of MBC1.
  */
-#include "gameboy/mbc1.h"
-#include "gameboy/cpu.h"
+#include "gb/mbc1.h"
+#include "gb/cpu.h"
 #include <string.h>
 #include <stdio.h>
 

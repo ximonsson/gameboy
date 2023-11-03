@@ -1,10 +1,10 @@
-#include "gameboy/cpu.h"
+#include "gb/cpu.h"
 #include <string.h>
 #include <assert.h>
 
-//#ifdef DEBUG_CPU
+#ifdef DEBUG_CPU
 #include <stdio.h>
-//#endif
+#endif
 
 /* CPU Registers */
 
@@ -767,7 +767,7 @@ void reti ()
 }
 
 /* Include generated file with operations. */
-#include "gameboy/operations.h"
+#include "gb/operations.h"
 
 void gb_cpu_flag_interrupt (interrupt_flag f)
 {
@@ -890,8 +890,11 @@ int gb_cpu_step ()
 
 #ifdef DEBUG_CPU
 	if (opcode == 0xCB) op = &operations_cb[RAM (PC ++)]; // hijack in debug mode so we can print the operation
-	printf ("%-20s AF = x%.4X BC = x%.4X DE = x%.4X HL = x%.4X SP = x%.4X IF = x%.2X IE = 0x%.2X IME = %d\n",
-			op->name, AF, BC, DE, HL, SP, IF, IE, ime);
+	printf
+	(
+		"%-20s AF = x%.4X BC = x%.4X DE = x%.4X HL = x%.4X SP = x%.4X IF = x%.2X IE = 0x%.2X IME = %d\n",
+		op->name, AF, BC, DE, HL, SP, IF, IE, ime
+	);
 #endif
 
 	cc += op->instruction () + cond_cc;

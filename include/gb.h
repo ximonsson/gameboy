@@ -1,7 +1,7 @@
 #ifndef GB_H
 #define GB_H
 
-#include "gameboy/io.h"
+#include "gb/io.h"
 #include <stdint.h>
 #include <stdlib.h>
 

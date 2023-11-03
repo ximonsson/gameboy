@@ -1,5 +1,5 @@
-#include "gameboy/file.h"
-#include "gameboy/cpu.h"
+#include "gb/file.h"
+#include "gb/cpu.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -43,7 +43,7 @@ static void print_nintendo_logo (const uint8_t* logo)
 				int x = (scanln * 2 + r) * bw + dot;
 
 				if (b & 0x80)
-					bitmap[x] = '@';
+					bitmap[x] = 'x';
 				else
 					bitmap[x] = ' ';
 

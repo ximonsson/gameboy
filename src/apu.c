@@ -1,5 +1,5 @@
-#include "gameboy/cpu.h"
-#include "gameboy/apu.h"
+#include "gb/cpu.h"
+#include "gb/apu.h"
 #include "gb.h"
 #include <stdint.h>
 #include <string.h>
@@ -881,14 +881,12 @@ static int write_apu_h (uint16_t adr, uint8_t v)
 	{
 		if (~v & 0x80)
 		{
-			printf ("APU: Power OFF\n");
 			// power off the entire APU
 			memset (nr10, 0, 0x15); // write 0 to $FF10 - $FF25
 			enabled_ch = 0; // disable everything
 		}
 		else if (APU_OFF)
 		{
-			printf ("APU: Power ON\n");
 			// power on the APU
 			fs = 0xff;
 			ch1_duty_cc = ch2_duty_cc = wav_duty = 0;
@@ -909,7 +907,6 @@ static int read_apu_h (uint16_t adr, uint8_t* v)
 	{
 		if (APU_OFF)
 		{
-			printf ("APU: off [$%.4X] => $00\n", adr);
 			* v = 0;
 			return 1;
 		}

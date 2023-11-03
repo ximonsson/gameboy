@@ -1,5 +1,5 @@
-#include "gameboy/io.h"
-#include "gameboy/cpu.h"
+#include "gb/io.h"
+#include "gb/cpu.h"
 
 static uint8_t* p1;
 #define P1 (* p1)

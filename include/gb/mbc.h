@@ -1,11 +1,11 @@
 #ifndef GB_MBC
 #define GB_MBC
 
-#include "gameboy/mbc0.h"
-#include "gameboy/mbc1.h"
-#include "gameboy/mbc2.h"
-#include "gameboy/mbc3.h"
-#include "gameboy/mbc5.h"
+#include "gb/mbc0.h"
+#include "gb/mbc1.h"
+#include "gb/mbc2.h"
+#include "gb/mbc3.h"
+#include "gb/mbc5.h"
 
 /**
  * Loader function for an MBC controller.

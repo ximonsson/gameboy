@@ -1,5 +1,5 @@
-#include "gameboy/ppu.h"
-#include "gameboy/cpu.h"
+#include "gb/ppu.h"
+#include "gb/cpu.h"
 #include "gb.h"
 #include <string.h>
 

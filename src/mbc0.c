@@ -1,4 +1,4 @@
-#include "gameboy/cpu.h"
+#include "gb/cpu.h"
 
 /*
  * Apparently there are some games that are crazy enough to atempt this and this

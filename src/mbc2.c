@@ -1,8 +1,8 @@
 /**
  * Implementation of MBC2.
  */
-#include "gameboy/mbc2.h"
-#include "gameboy/cpu.h"
+#include "gb/mbc2.h"
+#include "gb/cpu.h"
 
 static uint8_t* ram;
 
