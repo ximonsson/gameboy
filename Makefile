@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS += -Wall
-LDFLAGS += -L./lib -lgameboy -lSDL2 -lpulse -lpulse-simple
+LDFLAGS += -L./lib -lgameboy -lSDL2
 INCLUDES = -I./include
 
 SRC=gb.c file.c cpu.c ppu.c io.c apu.c mbc1.c mbc3.c mbc5.c mbc0.c mbc2.c
@@ -22,6 +22,13 @@ else
 LDFLAGS += -lGL
 CFLAGS += -DGL_GLEXT_PROTOTYPES
 endif
+
+ifdef AUDIO_PA  # pulse audio instead of SDL
+LDFLAGS += -lpulse -lpulse-simple
+else
+CFLAGS += -DAUDIO_SDL
+endif
+
 
 all: bin
 

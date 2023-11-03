@@ -6,8 +6,11 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+
+#ifndef AUDIO_SDL
 #include <pulse/simple.h>
 #include <pulse/error.h>
+#endif
 
 #ifdef GLES
 #include <GLES2/gl2.h>
@@ -243,13 +246,23 @@ void draw ()
 	SDL_GL_SwapWindow (sdl_window);
 }
 
-// connection to Pulse Audio server
+#ifdef AUDIO_SDL
+
 static float *audio_samples_buffer;
 static SDL_AudioDeviceID audio_devid;
+
+#else
+
+// connection to Pulse Audio server
+static pa_simple* audioconn;
+static float* audio_samples_buffer;
+
+#endif
 
 // initialize audio connection
 static void audio_init (int rate)
 {
+#ifdef AUDIO_SDL
 	printf ("SDL_GetAudioDeviceName = %s\n", SDL_GetAudioDeviceName (0, 0));
 
 	SDL_AudioSpec wanted = { 0 };
@@ -268,14 +281,31 @@ static void audio_init (int rate)
 		exit (1);
 	}
 
-	audio_samples_buffer = malloc (8192 * sizeof (float));
+	audio_samples_buffer = malloc (rate * sizeof (float));
 
 	SDL_PauseAudioDevice (audio_devid, 0);
+#else
+	pa_sample_spec ss;
+	ss.format = PA_SAMPLE_FLOAT32NE;
+	ss.channels = 2;
+	ss.rate = rate;
+
+	audio_samples_buffer = malloc (rate * sizeof (float));
+
+	int error;
+	audioconn = pa_simple_new (NULL, TITLE, PA_STREAM_PLAYBACK, NULL, TITLE, &ss, NULL, NULL, &error);
+	if (!audioconn)
+	{
+		fprintf (stderr, "error pa_simple_new: %s\n", pa_strerror (error));
+		exit (1);
+	}
+#endif
 }
 
 // play audio samples
 static int audio_play ()
 {
+#ifdef AUDIO_SDL
 	int ret = 0;
 	size_t size;
 
@@ -296,13 +326,37 @@ static int audio_play ()
 	}
 
 	return 0;
+#else
+	int err;
+	size_t size;
+
+	gb_audio_samples (audio_samples_buffer, &size);
+
+	if (pa_simple_write (audioconn, audio_samples_buffer, size, &err) < 0)
+		fprintf (stderr, "pa_simple_write: %s\n", pa_strerror (err));
+
+	return err;
+#endif
 }
 
 // deinitialize audio
-static void audio_quit ()
+static int audio_quit ()
 {
+#ifdef AUDIO_SDL
 	SDL_CloseAudioDevice (audio_devid);
 	free (audio_samples_buffer);
+	return 0;
+#else
+	int err;
+	size_t size;
+
+	gb_audio_samples (audio_samples_buffer, &size);
+
+	if (pa_simple_write (audioconn, audio_samples_buffer, size, &err) < 0)
+		fprintf (stderr, "pa_simple_write: %s\n", pa_strerror (err));
+
+	return err;
+#endif
 }
 
 // if the game is running
@@ -406,12 +460,8 @@ int main (int argc, char** argv)
 			cc -= GB_FRAME;
 		}
 
-		if (audio_play () != 0)
-			fprintf (stderr, "error playing audio samples: %s\n", SDL_GetError ());
-
+		audio_play ();
 		handle_events ();
-
-		//if (usleep (10000) != 0) fprintf (stderr, "usleep not working?\n");
 	}
 
 	// deinit
