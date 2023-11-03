@@ -4,13 +4,6 @@
 #include <stdint.h>
 
 /**
- * Screen size definitions.
- */
-#define GB_SCANLINE 456
-#define GB_SCANLINES 154
-#define GB_FRAME 70224
-
-/**
  * Location of VRAM in memory map.
  */
 #define VRAM_LOC 0x8000
@@ -18,7 +11,7 @@
 /**
  * Step the PPU for a certain number of cycles.
  */
-void gb_ppu_step (int /* cycles */) ;
+void gb_ppu_step (uint32_t /* cycles */) ;
 
 /**
  * Reset the PPU.

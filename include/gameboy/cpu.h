@@ -7,7 +7,6 @@
 #define RAM_BANK_SIZE 0x2000
 #define OAM_LOC 0xFE00
 
-#define GB_CPU_CLOCK 4194304
 #define GB_DIV_CLOCK 16384
 #define GB_DIV_CC 256 // CPU CLOCK / DIV CLOCK
 

@@ -1,5 +1,6 @@
 #include "gameboy/cpu.h"
 #include "gameboy/apu.h"
+#include "gb.h"
 #include <stdint.h>
 #include <string.h>
 
@@ -684,7 +685,7 @@ void gb_apu_samples (float* buf, size_t* n)
 	samples_len = 0;
 }
 
-void gb_apu_step (int cc)
+void gb_apu_step (uint32_t cc)
 {
 	for (; cc > 0; cc --)
 	{

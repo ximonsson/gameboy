@@ -2,12 +2,16 @@
 #define GB_H
 
 #include "gameboy/io.h"
-#include "gameboy/ppu.h"
 #include <stdint.h>
 #include <stdlib.h>
 
 #define GB_LCD_WIDTH 160
 #define GB_LCD_HEIGHT 144
+
+#define GB_CPU_CLOCK 4194304
+#define GB_SCANLINE 456
+#define GB_SCANLINES 154
+#define GB_FRAME 70224
 
 /**
  * Initialize the emulator.

@@ -3,9 +3,9 @@
 #include "gb.h"
 #include <string.h>
 
-#ifdef DEBUG_PPU
+//#ifdef DEBUG_PPU
 #include <stdio.h>
-#endif
+//#endif
 
 /* Dot counter within frame. */
 static uint32_t dot;
@@ -156,7 +156,7 @@ static const uint8_t SHADES [4][3] =
 	{ 0x00, 0x00, 0x00 },
 };
 
-/* get color within tile @ (x, y). */
+/* get color @ (x, y) within 8x8 tile. */
 static uint8_t color (uint8_t* tile, uint8_t x, uint8_t y)
 {
 	uint8_t shift = 7 - x;
@@ -176,7 +176,7 @@ static uint8_t color_sprite (uint8_t n, uint8_t x, uint8_t y)
 	return color (vram + (n << 4), x, y);
 }
 
-/* get color within background. */
+/* get color within background BG tile. */
 static uint8_t color_bg (uint8_t n, uint8_t x, uint8_t y)
 {
 	static int16_t offset;
@@ -192,17 +192,22 @@ static uint8_t color_bg (uint8_t n, uint8_t x, uint8_t y)
 	memcpy (&lcd_buffer[(y * GB_LCD_WIDTH + x) * 3], rgb, 3);\
 }
 
+/**
+ * Draw BG pixel @ x,y in LCD.
+ */
 static uint8_t draw_bg (uint8_t x, uint8_t y)
 {
-	// read BG tile map
+	// BG X and Y viewport, the uint8_t type makes sure to wrap around 255.
 	uint8_t bgx = (x + scx), bgy = (y + scy);
 
-	uint16_t t = (bgx >> 3) + ((bgy & ~0x7) << 2); // (x div 8) + (y div 8) * 32
+	// determine BG tile index in 32x32 tile map.
+	uint16_t t = (bgx >> 3) + ((bgy & 0xF8) << 2); // (x div 8) + (y div 8) * 32
 
 	// pointer to BG tile map
 	uint8_t tn = *(vram + BG_TILE_MAP + t);
 
 	uint8_t c = color_bg (tn, bgx & 0x7, bgy & 0x7);
+
 	LCD_COLOR (x, y, c, bgp);
 
 	return c;
@@ -270,8 +275,9 @@ static void draw (uint8_t x, uint8_t y)
 	{
 		// BG
 		bgc = draw_bg (x, y);
+
 		// WIN
-		if (WIN_DISP_ENABLED && x >= (wx - 7) && y >= wy)
+		if (WIN_DISP_ENABLED && (x >= (wx - 7)) && (y >= wy))
 			draw_win (x, y);
 	}
 	// Sprite
@@ -404,7 +410,7 @@ void gb_ppu_reset ()
 	memset (lcd, 0, NPIXELS);
 }
 
-void gb_ppu_step (int cc)
+void gb_ppu_step (uint32_t cc)
 {
 	for (; cc > 0; cc --) step ();
 }

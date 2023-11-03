@@ -423,43 +423,49 @@ static void handle_events ()
 }
 
 #define SAMPLE_RATE 44100
+#define SAMPLE_BUFFER 1024
 
 int main (int argc, char** argv)
 {
+	// init
+
+	// emulator and load ROM
 	gb_init (SAMPLE_RATE);
 
-	printf ("\n");
 	if (gb_load (argv[1]) != 0)
 	{
 		fprintf (stderr, "error opening game file\n");
 		return 1;
 	}
-	printf ("\n");
 
-	// init
-	printf ("initializing sdl with opengl.\n");
+	// video
+	printf ("initializing video.\n");
 	init_screen (GB_LCD_WIDTH * 4, GB_LCD_HEIGHT * 4);
 	init_opengl ();
 
+	// audio
 	printf ("initializing audio device.\n");
 	audio_init (SAMPLE_RATE);
 
-	// run game
+	// run
+
 	printf ("starting game.\n");
+	// the number of cpu cycles to run to get the wanted number of audio
+	// samples to buffer.
+	uint32_t step = GB_CPU_CLOCK / SAMPLE_RATE * SAMPLE_BUFFER;
+	uint32_t cc = 0;  // keep track of the CPU cycles.
 	running = 1;
-	int cc = 0;
 
 	while (running)
 	{
-		cc += gb_step (95 * 1024);  // should be number of cycles to produce 1024 samples
+		cc += gb_step (step);
 
-		// did we get a frame?
 		if (cc >= GB_FRAME)
 		{
+			// new frame
 			draw ();
 			cc -= GB_FRAME;
 		}
-
 		audio_play ();
 		handle_events ();
 	}

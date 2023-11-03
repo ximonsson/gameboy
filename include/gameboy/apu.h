@@ -11,7 +11,7 @@ void gb_apu_reset () ;
 /**
  * Step the APU according to the number CPU cycles provided.
  */
-void gb_apu_step (int /* cc */) ;
+void gb_apu_step (uint32_t /* cc */) ;
 
 /**
  * Copy sampled samples to the buffer and set the size parameter to the length of the buffer.
