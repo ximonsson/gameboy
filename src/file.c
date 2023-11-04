@@ -133,7 +133,7 @@ int gb_load_file (FILE* fp, gb_file_header* hdr, uint8_t** rom)
 	*rom = (uint8_t *) malloc (rom_size);
 
 	fseek (fp, 0, SEEK_SET);
-	ret = fread ((uint8_t*)*rom, 1, rom_size, fp);
+	ret = fread ((uint8_t*) *rom, 1, rom_size, fp);
 	if (ret != rom_size)
 	{
 		fprintf (stderr, "Did not manage to read the ROM data! (read only %d B out of %lu) \n", ret, rom_size);

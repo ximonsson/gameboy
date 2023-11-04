@@ -77,7 +77,7 @@ static int load_mbc (uint8_t mbc)
 	return 0;
 }
 
-int gb_load (const char* file)
+int gb_load (const char *file, uint8_t *ram)
 {
 	int ret = 0;
 
@@ -97,8 +97,15 @@ int gb_load (const char* file)
 	gb_print_header_info (h);
 
 	// allocate RAM
-	RAM = (uint8_t *) malloc (h.ram_size * RAM_BANK_SIZE);
-	memset (RAM, 0xFF, h.ram_size * RAM_BANK_SIZE);
+	if (ram)
+	{
+		RAM = ram;
+	}
+	else
+	{
+		RAM = (uint8_t *) malloc (h.ram_size * RAM_BANK_SIZE);
+		memset (RAM, 0xFF, h.ram_size * RAM_BANK_SIZE);
+	}
 
 	// reset all units
 	gb_cpu_reset ();

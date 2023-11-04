@@ -27,7 +27,7 @@ void gb_init (int /* sample rate */);
  * I would like to change this to a FILE pointer instead so the calling application
  * is repsonsible for finding and opening the file for more flexibility.
  */
-int gb_load (const char * /* file */) ;
+int gb_load (const char * /* file */, uint8_t * /* battery backed RAM */) ;
 
 /**
  * Step the emulator for *at least* a given number of CPU cycles. The function returns

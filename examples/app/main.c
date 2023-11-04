@@ -432,7 +432,10 @@ int main (int argc, char** argv)
 	// emulator and load ROM
 	gb_init (SAMPLE_RATE);
 
-	if (gb_load (argv[1]) != 0)
+	// TODO
+	// check for battery backed RAM
+
+	if (gb_load (argv[1], NULL) != 0)
 	{
 		fprintf (stderr, "error opening game file\n");
 		return 1;
