@@ -26,14 +26,21 @@ struct cartridge_header
 gb_cartridge_header;
 
 /**
- * gb_load_cartridge loads the game file with the file pointer.
+ * gb_load_cartridge loads the game data in the first argument. It will populate
+ * the header supplied with data from the cartridge.
+ *
+ * The last argument poinst to RAM data. In case the `*RAM` is non-NULL then it is
+ * assumed that it is pointing to previously stored RAM data, emulating battery. In
+ * case of NULL the function will allocate enough memory depending on the MBC. It
+ * is up to the caller to later free this data.
+ *
  * A non-zero return value is returned in case of error.
  */
 int gb_load_cartridge
 (
 	uint8_t * /* data */,
 	gb_cartridge_header * /* header */,
-	uint8_t ** /* ROM */
+	uint8_t ** /* RAM */
 ) ;
 
 /**

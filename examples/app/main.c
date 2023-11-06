@@ -429,13 +429,20 @@ int main (int argc, char** argv)
 {
 	// init
 
+	size_t bytes;
+
 	// emulator and load ROM
 	gb_init (SAMPLE_RATE);
 
-	uint8_t *ram = NULL;
-	size_t bytes;
-
+	// ROM data
+	uint8_t *rom;
+	if (read_file (argv[1], (void **) &rom, &bytes) != 0)
+	{
+		fprintf (stderr, "error reading game data\n");
+		exit (1);
+	}
 	// third argument is location of the battery backed ram data.
+	uint8_t *ram = NULL;
 	if (argc == 3)
 	{
 		if (read_file (argv[2], (void **) &ram, &bytes) != 0)
@@ -445,13 +452,7 @@ int main (int argc, char** argv)
 		}
 	}
 
-	uint8_t *rom;
-	if (read_file (argv[1], (void **) &rom, &bytes) != 0)
-	{
-		fprintf (stderr, "error reading game data\n");
-		exit (1);
-	}
-
+	// load the game
 	if (gb_load (rom, ram) != 0)
 		exit (1);
 

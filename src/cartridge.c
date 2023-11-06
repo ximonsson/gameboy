@@ -238,7 +238,7 @@ int gb_load_cartridge (uint8_t *data, gb_cartridge_header *h, uint8_t **ram)
 	// read header
 	if (read_header (data, h) != 0) return 1;
 
-	// if no RAM we allocate new
+	// if no previous RAM we allocate new
 	// otherwise we expect that the RAM is all good and continue
 	if (!*ram)
 	{
@@ -246,5 +246,6 @@ int gb_load_cartridge (uint8_t *data, gb_cartridge_header *h, uint8_t **ram)
 		memset (*ram, 0xFF, h->ram_size * RAM_BANK_SIZE);
 	}
 
+	// load MBC
 	return gb_load_mbc (*h, *ram);
 }

@@ -23,9 +23,16 @@ void gb_init (int /* sample rate */) ;
 /**
  * Load ROM data.
  *
- * TODO document
+ * First argument poinst to ROM data read from a cartridge.
+ *
+ * Second argument points to RAM. This can be a pointer to loaded battery backed RAM
+ * data. If a NULL pointer is supplied then the emulator will allocate the RAM, and if
+ * the MBC allows it, the data can be stored for loading at next run. It is up to
+ * the caller to later free this data and not write to it while the game runs.
+ *
+ * A non-zero return value is returned in case the ROM data is corrupt or invalid.
  */
-int gb_load (uint8_t *rom, uint8_t *ram) ;
+int gb_load (uint8_t * /* rom */, uint8_t * /* ram */) ;
 
 /**
  * Step the emulator for *at least* a given number of CPU cycles. The function returns
