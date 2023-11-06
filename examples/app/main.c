@@ -26,6 +26,33 @@
 #define VERTEX_SHADER_FILE "examples/app/shaders/vertex.glsl"
 #define FRAGMENT_SHADER_FILE "examples/app/shaders/fragment.glsl"
 
+/**
+ * helper function to read file contents to `data`.
+ */
+static int read_file (const char *fp, void **data, size_t *bytes)
+{
+	FILE* f = fopen (fp, "rb");
+	if (!f)
+	{
+		fprintf (stderr, "could not open file @ %s\n", fp);
+		return 1;
+	}
+	fseek (f, 0, SEEK_END);
+	*bytes = ftell (f);
+	rewind (f);
+	*data = malloc (*bytes);
+
+	size_t ret = fread (*data, 1, *bytes, f);
+	if (ret != *bytes)
+	{
+		fprintf (stderr, "could not read the entire file! got %ld of %ld bytes\n", ret, *bytes);
+		return 1;
+	}
+
+	fclose (f);
+	return 0;
+}
+
 static int width, height;
 static SDL_Window *sdl_window;
 static SDL_GLContext sdl_context;
@@ -55,50 +82,23 @@ static GLfloat vertex_coords[6 * 3] =
 
 static int compile_shaders ()
 {
-	int result, file_size;
-	char* fragment_shader, * vertex_shader;
+	size_t file_size;
+	char *fragment_shader, *vertex_shader;
 
-	FILE* fp = fopen (VERTEX_SHADER_FILE, "rb");
-	if (!fp)
+	if (read_file (VERTEX_SHADER_FILE, (void **) &vertex_shader, &file_size) != 0)
 	{
-		fprintf (stderr, "could not open vertex shader file\n");
-		return 1;
-	}
-	fseek (fp, 0, SEEK_END);
-	file_size = ftell (fp);
-	rewind (fp);
-	vertex_shader = (char *) malloc (file_size);
-	memset (vertex_shader, 0, file_size);
-
-	if ((result = fread (vertex_shader, 1, file_size - 1, fp)) != file_size - 1)
-	{
-		fprintf (stderr, "could not read entire vertex shader\n");
-		return 1;
-	}
-	fclose (fp);
-
-	fp = fopen (FRAGMENT_SHADER_FILE, "rb");
-	if (!fp)
-	{
-		fprintf (stderr, "could not open fragment shader file\n");
+		fprintf (stderr, "failed to read vertex shader\n");
 		return 1;
 	}
 
-	fseek (fp, 0, SEEK_END);
-	file_size = ftell (fp);
-	rewind (fp);
-	fragment_shader = (char*) malloc (file_size);
-	memset (fragment_shader, 0, file_size);
-
-	if ((result = fread (fragment_shader, 1, file_size - 1, fp)) != file_size - 1)
+	if (read_file (FRAGMENT_SHADER_FILE, (void **) &fragment_shader, &file_size) != 0)
 	{
-		fprintf (stderr, "could not read entire vertex shader\n");
+		fprintf (stderr, "failed to read fragment shader\n");
 		return 1;
 	}
-	fclose (fp);
 
-	vertexshader 	= glCreateShader (GL_VERTEX_SHADER);
-	fragmentshader 	= glCreateShader (GL_FRAGMENT_SHADER);
+	vertexshader = glCreateShader (GL_VERTEX_SHADER);
+	fragmentshader = glCreateShader (GL_FRAGMENT_SHADER);
 
 	glShaderSource (vertexshader,   1, (const char **) &vertex_shader,   0);
 	glShaderSource (fragmentshader, 1, (const char **) &fragment_shader, 0);
