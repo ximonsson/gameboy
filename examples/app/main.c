@@ -448,7 +448,7 @@ int main (int argc, char** argv)
 		if (read_file (argv[2], (void **) &ram, &bytes) != 0)
 		{
 			fprintf (stderr, "could not load battery backed RAM @ %s\n", argv[2]);
-			exit (1);
+			fprintf (stderr, "will continue like nada\n");
 		}
 	}
 
@@ -495,7 +495,13 @@ int main (int argc, char** argv)
 
 	free (rom);
 
-	// TODO store RAM for next run.
+	// store RAM for next run.
+	if (argc == 3)
+	{
+		FILE *f = fopen (argv[2], "wb");
+		// TODO communicate size better
+		fwrite (ram, 1, 0x2000 * 4, f);
+	}
 
 	free (ram);
 
