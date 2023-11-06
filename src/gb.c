@@ -24,6 +24,9 @@ int gb_load (const char *file, uint8_t *ram)
 	int ret = 0;
 
 	// read file
+	// TODO
+	// i think this should be done before calling this function.
+	// this function should take the read data from a particular source.
 
 	FILE* fp = fopen (file, "rb");
 	gb_file_header h;
@@ -41,8 +44,10 @@ int gb_load (const char *file, uint8_t *ram)
 
 	// allocate RAM
 	if (ram)
+	{
+		printf ("battery backed RAM supplied\n");
 		RAM = ram;
-
+	}
 	else
 	{
 		RAM = (uint8_t *) malloc (h.ram_size * RAM_BANK_SIZE);
@@ -59,6 +64,8 @@ int gb_load (const char *file, uint8_t *ram)
 	gb_apu_reset (sample_rate);
 
 	// load ROM
+	// TODO
+	// i think this should be part of the reset instead.
 	gb_cpu_load_rom (h.rom_size, ROM);
 
 end:

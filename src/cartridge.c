@@ -1,6 +1,6 @@
 #include "gb/cartridge.h"
-#include "gb/mbc.h"
 #include "gb/cpu.h"
+#include "gb/mbc.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -134,7 +134,7 @@ int gb_load_cartridge (FILE* fp, gb_file_header* hdr, uint8_t** rom)
 	*rom = (uint8_t *) malloc (rom_size);
 
 	fseek (fp, 0, SEEK_SET);
-	ret = fread ((uint8_t*) *rom, 1, rom_size, fp);
+	ret = fread (*rom, 1, rom_size, fp);
 	if (ret != rom_size)
 	{
 		fprintf (stderr, "Did not manage to read the ROM data! (read only %d B out of %lu) \n", ret, rom_size);
@@ -147,6 +147,11 @@ int gb_load_cartridge (FILE* fp, gb_file_header* hdr, uint8_t** rom)
 	ret = read_header (*rom, hdr);
 	if (ret != 0)
 		goto end;
+
+	// TODO
+	// here we should
+	// - allocate RAM
+	// - load MBC
 
 end:
 	return ret;
