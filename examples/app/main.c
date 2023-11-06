@@ -440,28 +440,10 @@ int main (int argc, char** argv)
 	// third argument is location of the battery backed ram data.
 	if (argc == 3)
 	{
-		FILE *fp = fopen (argv[2], "rb");
-		if (!fp)
+		size_t bytes;
+		if (read_file (argv[2], (void **) &ram, &bytes) != 0)
 		{
 			fprintf (stderr, "could not load battery backed RAM @ %s\n", argv[2]);
-			exit (1);
-		}
-
-		// file size
-		fseek (fp, 0, SEEK_END);
-		size_t ram_size = ftell (fp);
-		ram = (uint8_t *) malloc (ram_size);
-
-		// read file content
-		fseek (fp, 0, SEEK_SET);
-		int ret = fread ((uint8_t*) ram, 1, ram_size, fp);
-		if (ret != ram_size)
-		{
-			fprintf
-			(
-				stderr,
-				"Did not manage to read the RAM data! (read only %d B out of %lu) \n", ret, ram_size
-			);
 			exit (1);
 		}
 	}
