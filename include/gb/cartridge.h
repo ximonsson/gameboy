@@ -10,10 +10,10 @@
 #define GB_HEADER_TITLE_SIZE 16
 
 /**
- * gb_file_header contains information from the ROM file header.
+ * gb_cartridge_header contains information from the ROM file header.
  */
 typedef
-struct file_header
+struct cartridge_header
 {
 	uint8_t rom_size; // number of 8KB banks
 	uint8_t ram_size; // number of 4KB banks
@@ -23,19 +23,19 @@ struct file_header
 	uint8_t title[GB_HEADER_TITLE_SIZE]; // ROM title
 	uint8_t logo[GB_HEADER_LOGO_SIZE];   // Nintendo logo
 }
-gb_file_header;
+gb_cartridge_header;
 
 /**
- * gb_load_file loads the game file with the file pointer.
+ * gb_load_cartridge loads the game file with the file pointer.
  * A non-zero return value is returned in case of error.
  */
-int gb_load_cartridge (FILE* /* fp */, gb_file_header* /* header */, uint8_t** /* ROM */) ;
+int gb_load_cartridge (FILE* /* fp */, gb_cartridge_header* /* header */, uint8_t** /* ROM */) ;
 
 /**
  * gb_print_header_info prints information about the cartridge retrieved from the header.
  */
-void gb_print_header_info (gb_file_header /* hdr */);
+void gb_print_header_info (gb_cartridge_header /* hdr */);
 
-int gb_load_mbc (gb_file_header /* h */, uint8_t * /* RAM */);
+int gb_load_mbc (gb_cartridge_header /* h */, uint8_t * /* RAM */);
 
 #endif /* _GB_FILE_ */

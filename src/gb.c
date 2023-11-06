@@ -11,6 +11,7 @@
 
 static uint8_t* ROM;
 static uint8_t* RAM;
+static gb_cartridge_header HDR;
 
 static int sample_rate;
 
@@ -23,13 +24,18 @@ int gb_load (const char *file, uint8_t *ram)
 {
 	int ret = 0;
 
+	// reset all units
+	gb_cpu_reset ();
+	gb_ppu_reset ();
+	gb_io_reset ();
+	gb_apu_reset (sample_rate);
+
 	// read file
 	// TODO
 	// i think this should be done before calling this function.
 	// this function should take the read data from a particular source.
 
 	FILE* fp = fopen (file, "rb");
-	gb_file_header h;
 
 	if (!fp)
 	{
@@ -37,10 +43,10 @@ int gb_load (const char *file, uint8_t *ram)
 		ret = 1;
 		goto end;
 	}
-	else if ((ret = gb_load_cartridge (fp, &h, &ROM)) != 0)
+	else if ((ret = gb_load_cartridge (fp, &HDR, &ROM)) != 0)
 		goto end;
 
-	gb_print_header_info (h);
+	gb_print_header_info (HDR);
 
 	// allocate RAM
 	if (ram)
@@ -50,23 +56,16 @@ int gb_load (const char *file, uint8_t *ram)
 	}
 	else
 	{
-		RAM = (uint8_t *) malloc (h.ram_size * RAM_BANK_SIZE);
-		memset (RAM, 0xFF, h.ram_size * RAM_BANK_SIZE);
+		RAM = (uint8_t *) malloc (HDR.ram_size * RAM_BANK_SIZE);
+		memset (RAM, 0xFF, HDR.ram_size * RAM_BANK_SIZE);
 	}
-	// reset all units
-	gb_cpu_reset ();
-	gb_ppu_reset ();
-	gb_io_reset ();
-	gb_apu_reset (sample_rate);
-
-	if ((ret = gb_load_mbc (h, RAM)) != 0)
+	if ((ret = gb_load_mbc (HDR, RAM)) != 0)
 		goto end;
-
 
 	// load ROM
 	// TODO
 	// i think this should be part of the reset instead.
-	gb_cpu_load_rom (h.rom_size, ROM);
+	gb_cpu_load_rom (HDR.rom_size, ROM);
 
 end:
 	return ret;

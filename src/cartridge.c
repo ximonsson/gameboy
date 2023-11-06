@@ -74,7 +74,7 @@ static int validate_checksum (const uint8_t* header)
 	return header[0x4D] == (x & 0xFF);
 }
 
-static inline int read_header (const uint8_t* rom, gb_file_header* hdr)
+static inline int read_header (const uint8_t* rom, gb_cartridge_header* hdr)
 {
 	// point to header
 	const uint8_t* header = rom + GB_HEADER_LOCATION;
@@ -123,7 +123,7 @@ static inline int read_header (const uint8_t* rom, gb_file_header* hdr)
 	return 0;
 }
 
-int gb_load_cartridge (FILE* fp, gb_file_header* hdr, uint8_t** rom)
+int gb_load_cartridge (FILE* fp, gb_cartridge_header* hdr, uint8_t** rom)
 {
 	int ret = 0;
 
@@ -203,7 +203,7 @@ static const void (*MBC[0x100]) (uint8_t*) =
 	0, // "HuC1+RAM+BATTERY"
 };
 
-int gb_load_mbc (gb_file_header h, uint8_t *ram)
+int gb_load_mbc (gb_cartridge_header h, uint8_t *ram)
 {
 	mbc_loader ld = MBC[h.mbc];
 	if (!ld)
@@ -215,7 +215,7 @@ int gb_load_mbc (gb_file_header h, uint8_t *ram)
 	return 0;
 }
 
-void gb_print_header_info (gb_file_header h)
+void gb_print_header_info (gb_cartridge_header h)
 {
 	static const char* MBC[0x100] =
 	{
