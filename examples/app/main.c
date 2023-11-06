@@ -435,7 +435,38 @@ int main (int argc, char** argv)
 	// TODO
 	// check for battery backed RAM
 
-	if (gb_load (argv[1], NULL) != 0)
+	uint8_t *ram = NULL;
+
+	// third argument is location of the battery backed ram data.
+	if (argc == 3)
+	{
+		FILE *fp = fopen (argv[2], "rb");
+		if (!fp)
+		{
+			fprintf (stderr, "could not load battery backed RAM @ %s\n", argv[2]);
+			exit (1);
+		}
+
+		// file size
+		fseek (fp, 0, SEEK_END);
+		size_t ram_size = ftell (fp);
+		ram = (uint8_t *) malloc (ram_size);
+
+		// read file content
+		fseek (fp, 0, SEEK_SET);
+		int ret = fread ((uint8_t*) *rom, 1, rom_size, fp);
+		if (ret != rom_size)
+		{
+			fprintf
+			(
+				stderr,
+				"Did not manage to read the RAM data! (read only %d B out of %lu) \n", ret, ram_size
+			);
+			exit (1);
+		}
+	}
+
+	if (gb_load (argv[1], ram) != 0)
 	{
 		fprintf (stderr, "error opening game file\n");
 		return 1;
