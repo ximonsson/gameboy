@@ -53,15 +53,15 @@ int gb_load (const char *file, uint8_t *ram)
 		RAM = (uint8_t *) malloc (h.ram_size * RAM_BANK_SIZE);
 		memset (RAM, 0xFF, h.ram_size * RAM_BANK_SIZE);
 	}
-
-	if ((ret = gb_load_mbc (h, RAM)) != 0)
-		goto end;
-
 	// reset all units
 	gb_cpu_reset ();
 	gb_ppu_reset ();
 	gb_io_reset ();
 	gb_apu_reset (sample_rate);
+
+	if ((ret = gb_load_mbc (h, RAM)) != 0)
+		goto end;
+
 
 	// load ROM
 	// TODO
