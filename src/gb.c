@@ -20,7 +20,7 @@ void gb_init (int sample_rate_)
 	sample_rate = sample_rate_;
 }
 
-int gb_load (const char *file, uint8_t *ram)
+int gb_load (uint8_t *rom, uint8_t *ram)
 {
 	int ret = 0;
 
@@ -35,6 +35,7 @@ int gb_load (const char *file, uint8_t *ram)
 	// i think this should be done before calling this function.
 	// this function should take the read data from a particular source.
 
+	/*
 	FILE* fp = fopen (file, "rb");
 
 	if (!fp)
@@ -45,9 +46,14 @@ int gb_load (const char *file, uint8_t *ram)
 	}
 	else if ((ret = gb_load_cartridge (fp, &HDR, &ROM)) != 0)
 		goto end;
+	*/
 
+	RAM = ram;
+	ROM = rom;
+	gb_load_cartridge (ROM, &HDR, &RAM);
 	gb_print_header_info (HDR);
 
+	/*
 	// allocate RAM
 	if (ram)
 	{
@@ -61,6 +67,7 @@ int gb_load (const char *file, uint8_t *ram)
 	}
 	if ((ret = gb_load_mbc (HDR, RAM)) != 0)
 		goto end;
+	*/
 
 	// load ROM
 	// TODO
@@ -102,8 +109,8 @@ uint32_t gb_step (uint32_t ccs)
 
 void gb_stop ()
 {
-	free (ROM);
-	free (RAM);
+	//free (ROM);
+	//free (RAM);
 }
 
 void gb_quit () { }

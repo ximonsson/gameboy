@@ -29,7 +29,12 @@ gb_cartridge_header;
  * gb_load_cartridge loads the game file with the file pointer.
  * A non-zero return value is returned in case of error.
  */
-int gb_load_cartridge (FILE* /* fp */, gb_cartridge_header* /* header */, uint8_t** /* ROM */) ;
+int gb_load_cartridge
+(
+	uint8_t * /* data */,
+	gb_cartridge_header * /* header */,
+	uint8_t ** /* ROM */
+) ;
 
 /**
  * gb_print_header_info prints information about the cartridge retrieved from the header.

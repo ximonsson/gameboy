@@ -123,98 +123,6 @@ static inline int read_header (const uint8_t* rom, gb_cartridge_header* hdr)
 	return 0;
 }
 
-int gb_load_cartridge (FILE* fp, gb_cartridge_header* hdr, uint8_t** rom)
-{
-	int ret = 0;
-
-	// load ROM data
-
-	fseek (fp, 0, SEEK_END);
-	size_t rom_size = ftell (fp);
-	*rom = (uint8_t *) malloc (rom_size);
-
-	fseek (fp, 0, SEEK_SET);
-	ret = fread (*rom, 1, rom_size, fp);
-	if (ret != rom_size)
-	{
-		fprintf (stderr, "Did not manage to read the ROM data! (read only %d B out of %lu) \n", ret, rom_size);
-		ret = 1;
-		goto end;
-	}
-	else ret = 0;
-
-	// load header
-	ret = read_header (*rom, hdr);
-	if (ret != 0)
-		goto end;
-
-	// TODO
-	// here we should
-	// - allocate RAM
-	// - load MBC
-
-end:
-	return ret;
-}
-
-/**
- * Map MBC identifiers to loader functions.
- */
-static const void (*MBC[0x100]) (uint8_t*) =
-{
-	gb_mbc0_load, // "ROM ONLY",
-	gb_mbc1_load, // "MBC1",
-	gb_mbc1_load, // "MBC1+RAM",
-	gb_mbc1_load, // "MBC1+RAM+BATTERY",
-	0, // "0x04 unsupported",
-	gb_mbc2_load, // "MBC2",
-	gb_mbc2_load, // "MBC2+BATTERY",
-	0, // "0x07 unsupported",
-	gb_mbc0_load, // "ROM+RAM",
-	gb_mbc0_load, // "ROM+RAM+BATTERY",
-	0, // "0x0A unsupported",
-	0, // "MMM01",
-	0, // "MMM01+RAM",
-	0, // "MMM01+RAM+BATTERY",
-	0, // "0x0E unsupported",
-	gb_mbc3_load, // "MBC3+TIMER+BATTERY",
-	gb_mbc3_load, // "MBC3+TIMER+RAM+BATTERY",
-	gb_mbc3_load, // "MBC3",
-	gb_mbc3_load, // "MBC3+RAM",
-	gb_mbc3_load, // "MBC3+RAM+BATTERY",
-	0, // "0x14 Unsupported",
-	0, // "MBC4",
-	0, // "MBC4+RAM",
-	0, // "MBC4+RAM+BATTERY",
-	0, // "0x18 Unsupported",
-	gb_mbc5_load, // "MBC5",
-	gb_mbc5_load, // "MBC5+RAM",
-	gb_mbc5_load, // "MBC5+RAM+BATTERY",
-	0, // "MBC5+RUMBLE",
-	0, // "MBC5+RUMBLE+RAM",
-	0, // "MBC5+RUMBLE+RAM+BATTERY",
-	0, // "0x21 Unsupported",
-	0, // "MBC6",
-	0, // "MBC7+SENSOR+RUMBLE+RAM+BATTERY",
-	// 0x23 -> 0xFB unsupported TODO
-	0, // "POCKET CAMERA",
-	0, // "BANDAI TAMA5",
-	0, // "HuC3",
-	0, // "HuC1+RAM+BATTERY"
-};
-
-int gb_load_mbc (gb_cartridge_header h, uint8_t *ram)
-{
-	mbc_loader ld = MBC[h.mbc];
-	if (!ld)
-	{
-		fprintf (stderr, "MBC [%.2X] not supported\n", h.mbc);
-		return 1;
-	}
-	ld (ram);
-	return 0;
-}
-
 void gb_print_header_info (gb_cartridge_header h)
 {
 	static const char* MBC[0x100] =
@@ -267,4 +175,76 @@ void gb_print_header_info (gb_cartridge_header h)
 	printf ("%-15s > %-3d x 4KB\n", "RAM", h.ram_size);
 	printf ("%-15s > %s\n", "CGB", h.cgb == 0x80 ? "CGB SUPPORT" : h.cgb == 0xC0 ? "CGB _ONLY_" : "DMG");
 	printf ("%-15s > %s\n", "SGB", h.sgb == 0x03 ? "YES" : "NO");
+}
+
+int gb_load_mbc (gb_cartridge_header h, uint8_t *ram)
+{
+	static const void (*MBC[0x100]) (uint8_t*) =
+	{
+		gb_mbc0_load, // "ROM ONLY",
+		gb_mbc1_load, // "MBC1",
+		gb_mbc1_load, // "MBC1+RAM",
+		gb_mbc1_load, // "MBC1+RAM+BATTERY",
+		0, // "0x04 unsupported",
+		gb_mbc2_load, // "MBC2",
+		gb_mbc2_load, // "MBC2+BATTERY",
+		0, // "0x07 unsupported",
+		gb_mbc0_load, // "ROM+RAM",
+		gb_mbc0_load, // "ROM+RAM+BATTERY",
+		0, // "0x0A unsupported",
+		0, // "MMM01",
+		0, // "MMM01+RAM",
+		0, // "MMM01+RAM+BATTERY",
+		0, // "0x0E unsupported",
+		gb_mbc3_load, // "MBC3+TIMER+BATTERY",
+		gb_mbc3_load, // "MBC3+TIMER+RAM+BATTERY",
+		gb_mbc3_load, // "MBC3",
+		gb_mbc3_load, // "MBC3+RAM",
+		gb_mbc3_load, // "MBC3+RAM+BATTERY",
+		0, // "0x14 Unsupported",
+		0, // "MBC4",
+		0, // "MBC4+RAM",
+		0, // "MBC4+RAM+BATTERY",
+		0, // "0x18 Unsupported",
+		gb_mbc5_load, // "MBC5",
+		gb_mbc5_load, // "MBC5+RAM",
+		gb_mbc5_load, // "MBC5+RAM+BATTERY",
+		0, // "MBC5+RUMBLE",
+		0, // "MBC5+RUMBLE+RAM",
+		0, // "MBC5+RUMBLE+RAM+BATTERY",
+		0, // "0x21 Unsupported",
+		0, // "MBC6",
+		0, // "MBC7+SENSOR+RUMBLE+RAM+BATTERY",
+		// 0x23 -> 0xFB unsupported TODO
+		0, // "POCKET CAMERA",
+		0, // "BANDAI TAMA5",
+		0, // "HuC3",
+		0, // "HuC1+RAM+BATTERY"
+	};
+
+	mbc_loader ld = MBC[h.mbc];
+	if (!ld)
+	{
+		fprintf (stderr, "MBC [%.2X] not supported\n", h.mbc);
+		return 1;
+	}
+
+	ld (ram);
+	return 0;
+}
+
+int gb_load_cartridge (uint8_t *data, gb_cartridge_header *h, uint8_t **ram)
+{
+	// read header
+	if (read_header (data, h) != 0) return 1;
+
+	// if no RAM we allocate new
+	// otherwise we expect that the RAM is all good and continue
+	if (!*ram)
+	{
+		*ram = malloc (h->ram_size * RAM_BANK_SIZE);
+		memset (*ram, 0xFF, h->ram_size * RAM_BANK_SIZE);
+	}
+
+	return gb_load_mbc (*h, *ram);
 }

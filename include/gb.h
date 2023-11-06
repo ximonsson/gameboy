@@ -18,16 +18,14 @@
  *
  * Right now this is just for setting the audio sample rate before starting.
  */
-void gb_init (int /* sample rate */);
+void gb_init (int /* sample rate */) ;
 
 /**
- * Load the file at the given file path.
+ * Load ROM data.
  *
- * TODO
- * I would like to change this to a FILE pointer instead so the calling application
- * is repsonsible for finding and opening the file for more flexibility.
+ * TODO document
  */
-int gb_load (const char * /* file */, uint8_t * /* battery backed RAM */) ;
+int gb_load (uint8_t *rom, uint8_t *ram) ;
 
 /**
  * Step the emulator for *at least* a given number of CPU cycles. The function returns

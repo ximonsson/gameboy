@@ -432,15 +432,12 @@ int main (int argc, char** argv)
 	// emulator and load ROM
 	gb_init (SAMPLE_RATE);
 
-	// TODO
-	// check for battery backed RAM
-
 	uint8_t *ram = NULL;
+	size_t bytes;
 
 	// third argument is location of the battery backed ram data.
 	if (argc == 3)
 	{
-		size_t bytes;
 		if (read_file (argv[2], (void **) &ram, &bytes) != 0)
 		{
 			fprintf (stderr, "could not load battery backed RAM @ %s\n", argv[2]);
@@ -448,11 +445,15 @@ int main (int argc, char** argv)
 		}
 	}
 
-	if (gb_load (argv[1], ram) != 0)
+	uint8_t *rom;
+	if (read_file (argv[1], (void **) &rom, &bytes) != 0)
 	{
-		fprintf (stderr, "error opening game file\n");
-		return 1;
+		fprintf (stderr, "error reading game data\n");
+		exit (1);
 	}
+
+	if (gb_load (rom, ram) != 0)
+		exit (1);
 
 	// video
 	printf ("initializing video.\n");
@@ -490,5 +491,12 @@ int main (int argc, char** argv)
 	gb_quit ();
 	quit_opengl ();
 	audio_quit ();
+
+	free (rom);
+
+	// TODO store RAM for next run.
+
+	free (ram);
+
 	return 0;
 }
