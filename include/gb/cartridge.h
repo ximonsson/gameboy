@@ -29,11 +29,13 @@ gb_file_header;
  * gb_load_file loads the game file with the file pointer.
  * A non-zero return value is returned in case of error.
  */
-int gb_load_file (FILE* /* fp */, gb_file_header* /* header */, uint8_t** /* ROM */) ;
+int gb_load_cartridge (FILE* /* fp */, gb_file_header* /* header */, uint8_t** /* ROM */) ;
 
 /**
  * gb_print_header_info prints information about the cartridge retrieved from the header.
  */
 void gb_print_header_info (gb_file_header /* hdr */);
+
+int gb_load_mbc (gb_file_header /* h */, uint8_t * /* RAM */);
 
 #endif /* _GB_FILE_ */

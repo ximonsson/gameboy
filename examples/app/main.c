@@ -454,8 +454,8 @@ int main (int argc, char** argv)
 
 		// read file content
 		fseek (fp, 0, SEEK_SET);
-		int ret = fread ((uint8_t*) *rom, 1, rom_size, fp);
-		if (ret != rom_size)
+		int ret = fread ((uint8_t*) ram, 1, ram_size, fp);
+		if (ret != ram_size)
 		{
 			fprintf
 			(

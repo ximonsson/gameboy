@@ -3,7 +3,7 @@ CFLAGS += -Wall
 LDFLAGS += -L./lib -lgb -lSDL2
 INCLUDES = -I./include
 
-SRC=gb.c file.c cpu.c ppu.c io.c apu.c mbc1.c mbc3.c mbc5.c mbc0.c mbc2.c
+SRC=gb.c cartridge.c cpu.c ppu.c io.c apu.c mbc1.c mbc3.c mbc5.c mbc0.c mbc2.c
 OBJ=$(addprefix build/, $(SRC:.c=.o))
 LIB=lib/libgb.a
 ARCMD = rcs

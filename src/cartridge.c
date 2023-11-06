@@ -1,4 +1,5 @@
-#include "gb/file.h"
+#include "gb/cartridge.h"
+#include "gb/mbc.h"
 #include "gb/cpu.h"
 #include <stdio.h>
 #include <string.h>
@@ -73,7 +74,7 @@ static int validate_checksum (const uint8_t* header)
 	return header[0x4D] == (x & 0xFF);
 }
 
-static inline int load_header (const uint8_t* rom, gb_file_header* hdr)
+static inline int read_header (const uint8_t* rom, gb_file_header* hdr)
 {
 	// point to header
 	const uint8_t* header = rom + GB_HEADER_LOCATION;
@@ -122,7 +123,7 @@ static inline int load_header (const uint8_t* rom, gb_file_header* hdr)
 	return 0;
 }
 
-int gb_load_file (FILE* fp, gb_file_header* hdr, uint8_t** rom)
+int gb_load_cartridge (FILE* fp, gb_file_header* hdr, uint8_t** rom)
 {
 	int ret = 0;
 
@@ -143,12 +144,70 @@ int gb_load_file (FILE* fp, gb_file_header* hdr, uint8_t** rom)
 	else ret = 0;
 
 	// load header
-	ret = load_header (*rom, hdr);
+	ret = read_header (*rom, hdr);
 	if (ret != 0)
 		goto end;
 
 end:
 	return ret;
+}
+
+/**
+ * Map MBC identifiers to loader functions.
+ */
+static const void (*MBC[0x100]) (uint8_t*) =
+{
+	gb_mbc0_load, // "ROM ONLY",
+	gb_mbc1_load, // "MBC1",
+	gb_mbc1_load, // "MBC1+RAM",
+	gb_mbc1_load, // "MBC1+RAM+BATTERY",
+	0, // "0x04 unsupported",
+	gb_mbc2_load, // "MBC2",
+	gb_mbc2_load, // "MBC2+BATTERY",
+	0, // "0x07 unsupported",
+	gb_mbc0_load, // "ROM+RAM",
+	gb_mbc0_load, // "ROM+RAM+BATTERY",
+	0, // "0x0A unsupported",
+	0, // "MMM01",
+	0, // "MMM01+RAM",
+	0, // "MMM01+RAM+BATTERY",
+	0, // "0x0E unsupported",
+	gb_mbc3_load, // "MBC3+TIMER+BATTERY",
+	gb_mbc3_load, // "MBC3+TIMER+RAM+BATTERY",
+	gb_mbc3_load, // "MBC3",
+	gb_mbc3_load, // "MBC3+RAM",
+	gb_mbc3_load, // "MBC3+RAM+BATTERY",
+	0, // "0x14 Unsupported",
+	0, // "MBC4",
+	0, // "MBC4+RAM",
+	0, // "MBC4+RAM+BATTERY",
+	0, // "0x18 Unsupported",
+	gb_mbc5_load, // "MBC5",
+	gb_mbc5_load, // "MBC5+RAM",
+	gb_mbc5_load, // "MBC5+RAM+BATTERY",
+	0, // "MBC5+RUMBLE",
+	0, // "MBC5+RUMBLE+RAM",
+	0, // "MBC5+RUMBLE+RAM+BATTERY",
+	0, // "0x21 Unsupported",
+	0, // "MBC6",
+	0, // "MBC7+SENSOR+RUMBLE+RAM+BATTERY",
+	// 0x23 -> 0xFB unsupported TODO
+	0, // "POCKET CAMERA",
+	0, // "BANDAI TAMA5",
+	0, // "HuC3",
+	0, // "HuC1+RAM+BATTERY"
+};
+
+int gb_load_mbc (gb_file_header h, uint8_t *ram)
+{
+	mbc_loader ld = MBC[h.mbc];
+	if (!ld)
+	{
+		fprintf (stderr, "MBC [%.2X] not supported\n", h.mbc);
+		return 1;
+	}
+	ld (ram);
+	return 0;
 }
 
 void gb_print_header_info (gb_file_header h)
