@@ -429,7 +429,9 @@ static void handle_events ()
 
 int main (int argc, char** argv)
 {
-	// init
+	//
+	// Init
+	//
 
 	size_t bytes;
 
@@ -443,7 +445,8 @@ int main (int argc, char** argv)
 		fprintf (stderr, "error reading game data\n");
 		exit (1);
 	}
-	// third argument is location of the battery backed ram data.
+
+	// third argument is location of the battery backed RAM data.
 	uint8_t *ram = NULL;
 	if (argc == 3)
 	{
@@ -467,7 +470,9 @@ int main (int argc, char** argv)
 	printf ("initializing audio device.\n");
 	audio_init (SAMPLE_RATE);
 
-	// run
+	//
+	// Run
+	//
 
 	printf ("starting game.\n");
 	// the number of cpu cycles to run to get the wanted number of audio
@@ -490,12 +495,9 @@ int main (int argc, char** argv)
 		handle_events ();
 	}
 
-	// deinit
-	gb_quit ();
-	quit_opengl ();
-	audio_quit ();
-
-	free (rom);
+	//
+	// Deinit
+	//
 
 	// store RAM for next run.
 	if (argc == 3)
@@ -505,7 +507,12 @@ int main (int argc, char** argv)
 		fwrite (ram, 1, 0x2000 * 4, f);
 	}
 
+	gb_quit ();
+	quit_opengl ();
+	audio_quit ();
+
 	free (ram);
+	free (rom);
 
 	return 0;
 }
