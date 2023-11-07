@@ -40,7 +40,7 @@ static int read_file (const char *fp, void **data, size_t *bytes)
 	fseek (f, 0, SEEK_END);
 	*bytes = ftell (f);
 	rewind (f);
-	*data = malloc (*bytes);
+	*data = calloc (*bytes, 1);
 
 	size_t ret = fread (*data, 1, *bytes, f);
 	if (ret != *bytes)
@@ -100,12 +100,13 @@ static int compile_shaders ()
 	vertexshader = glCreateShader (GL_VERTEX_SHADER);
 	fragmentshader = glCreateShader (GL_FRAGMENT_SHADER);
 
-	glShaderSource (vertexshader,   1, (const char **) &vertex_shader,   0);
+	glShaderSource (vertexshader, 1, (const char **) &vertex_shader, 0);
 	glShaderSource (fragmentshader, 1, (const char **) &fragment_shader, 0);
 
 	int status;
 	glCompileShader (vertexshader);
-	glGetShaderiv   (vertexshader, GL_COMPILE_STATUS, &status);
+	glGetShaderiv (vertexshader, GL_COMPILE_STATUS, &status);
+
 	if (status == GL_FALSE)
 	{
 		GLint log_size = 0;
@@ -119,7 +120,8 @@ static int compile_shaders ()
 	}
 
 	glCompileShader (fragmentshader);
-	glGetShaderiv   (fragmentshader, GL_COMPILE_STATUS, &status);
+	glGetShaderiv (fragmentshader, GL_COMPILE_STATUS, &status);
+
 	if (status == GL_FALSE)
 	{
 		GLint log_size = 0;
@@ -136,8 +138,8 @@ static int compile_shaders ()
 
 	glAttachShader (program, fragmentshader);
 	glAttachShader (program, vertexshader);
-	glLinkProgram  (program);
-	glUseProgram   (program);
+	glLinkProgram (program);
+	glUseProgram (program);
 
 	free (vertex_shader);
 	free (fragment_shader);
@@ -161,7 +163,7 @@ int init_screen (int w, int h)
 	SDL_GL_SetAttribute (SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 #endif
 
-	sdl_window  = SDL_CreateWindow (
+	sdl_window = SDL_CreateWindow (
 		TITLE,
 		SDL_WINDOWPOS_UNDEFINED,
 		SDL_WINDOWPOS_UNDEFINED,
@@ -470,13 +472,13 @@ int main (int argc, char** argv)
 	printf ("starting game.\n");
 	// the number of cpu cycles to run to get the wanted number of audio
 	// samples to buffer.
-	uint32_t step = GB_CPU_CLOCK / SAMPLE_RATE * SAMPLE_BUFFER;
+	const uint32_t STEP = GB_CPU_CLOCK / SAMPLE_RATE * SAMPLE_BUFFER;
 	uint32_t cc = 0;  // keep track of the CPU cycles.
 	running = 1;
 
 	while (running)
 	{
-		cc += gb_step (step);
+		cc += gb_step (STEP);
 
 		if (cc >= GB_FRAME)
 		{

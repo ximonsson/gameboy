@@ -13,3 +13,4 @@ void main ()
 	texture_coords = texture_coords_in;
 	color          = color_in;
 }
+
