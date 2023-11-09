@@ -64,6 +64,4 @@ uint32_t gb_step (uint32_t ccs)
 	return ret;
 }
 
-void gb_stop () { }  // nada
-
 void gb_quit () { }  // nada
