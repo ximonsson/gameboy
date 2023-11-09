@@ -9,10 +9,6 @@
 #include <stdio.h>
 #include <string.h>
 
-static uint8_t *ROM;
-static uint8_t *RAM;
-static gb_cartridge_header HDR;
-
 static int sample_rate;
 
 void gb_init (int sample_rate_)
@@ -20,7 +16,7 @@ void gb_init (int sample_rate_)
 	sample_rate = sample_rate_;
 }
 
-int gb_load (uint8_t *rom, uint8_t *ram)
+int gb_load (uint8_t *ROM, uint8_t **RAM, size_t *ram_size)
 {
 	// reset all units
 	gb_cpu_reset ();
@@ -28,15 +24,13 @@ int gb_load (uint8_t *rom, uint8_t *ram)
 	gb_io_reset ();
 	gb_apu_reset (sample_rate);
 
-	RAM = ram;
-	ROM = rom;
-	if (gb_load_cartridge (ROM, &HDR, &RAM) != 0) return 1;
-	gb_print_header_info (HDR);
+	gb_cartridge_header h;
+	if (gb_load_cartridge (ROM, &h, RAM, ram_size) != 0) return 1;
 
 	// load ROM
 	// TODO
 	// i think this should be part of the reset instead.
-	gb_cpu_load_rom (HDR.rom_size, ROM);
+	gb_cpu_load_rom (h.rom_size, ROM);
 
 	return 0;
 }

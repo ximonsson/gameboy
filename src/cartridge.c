@@ -17,52 +17,6 @@ static const uint8_t LOGO[GB_HEADER_LOGO_SIZE] =
 	0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC, 0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E
 };
 
-/*
- * print_nintendo_logo prints the nintendo logo to stdout from the buffer pointed at by logo.
- * this function is used to make sure the header is loaded correctly.
- */
-static void print_nintendo_logo (const uint8_t* logo)
-{
-	uint8_t bitmap[GB_HEADER_LOGO_SIZE << 3];
-	int w = 12;
-	int h = 8;
-	int bw = GB_HEADER_LOGO_SIZE;
-
-	for (int i = 0; i < GB_HEADER_LOGO_SIZE; i ++)
-	{
-		uint8_t b = logo[i];
-		int scanln = (i / 24) * 2 ;
-		if (i & 1)
-			scanln ++;
-		int square = ((i & 0xFE) / 2) % w;
-
-		for (int r = 0; r < 2; r ++)
-		{
-			for (int j = 0; j < 4; j ++)
-			{
-				int dot = square * 4 + j;
-				int x = (scanln * 2 + r) * bw + dot;
-
-				if (b & 0x80)
-					bitmap[x] = 'x';
-				else
-					bitmap[x] = ' ';
-
-				b <<= 1;
-			}
-		}
-	}
-
-	for (int i = 0; i < h; i ++)
-	{
-		for (int j = 0; j < bw; j ++)
-			printf ("%c", bitmap[i * bw + j]);
-		printf ("\n");
-	}
-
-	printf ("\n");
-}
-
 /**
  * validate_checksum of the header to make sure it is valid.
  */
@@ -74,7 +28,10 @@ static int validate_checksum (const uint8_t* header)
 	return header[0x4D] == (x & 0xFF);
 }
 
-static inline int read_header (const uint8_t* rom, gb_cartridge_header* hdr)
+/**
+ * Read header from the ROM data (cartridge).
+ */
+static int read_header (const uint8_t* rom, gb_cartridge_header* hdr)
 {
 	// point to header
 	const uint8_t* header = rom + GB_HEADER_LOCATION;
@@ -123,9 +80,57 @@ static inline int read_header (const uint8_t* rom, gb_cartridge_header* hdr)
 	return 0;
 }
 
+/*
+ * print_nintendo_logo prints the nintendo logo to stdout from the buffer pointed at by logo.
+ * this function is used to make sure the header is loaded correctly.
+ */
+static void print_nintendo_logo (const uint8_t* logo)
+{
+	int bitmap[GB_HEADER_LOGO_SIZE << 3];
+	int w = 12;
+	int h = 8;
+	int bw = GB_HEADER_LOGO_SIZE;
+
+
+	for (int i = 0; i < GB_HEADER_LOGO_SIZE; i ++)
+	{
+		uint8_t b = logo[i];
+		int scanln = (i / 24) * 2 ;
+		if (i & 1)
+			scanln ++;
+		int square = ((i & 0xFE) / 2) % w;
+
+		for (int r = 0; r < 2; r ++)
+		{
+			for (int j = 0; j < 4; j ++)
+			{
+				int dot = square * 4 + j;
+				int x = (scanln * 2 + r) * bw + dot;
+
+				if (b & 0x80)
+					bitmap[x] = '#';
+				else
+					bitmap[x] = ' ';
+
+				b <<= 1;
+			}
+			printf ("\n");
+		}
+	}
+
+	for (int i = 0; i < h; i ++)
+	{
+		for (int j = 0; j < bw; j ++)
+			printf ("%c", bitmap[i * bw + j]);
+		printf ("\n");
+	}
+
+	printf ("\n");
+}
+
 void gb_print_header_info (gb_cartridge_header h)
 {
-	static const char* MBC[0x100] =
+	const char* MBC[0x100] =
 	{
 		"ROM ONLY",
 		"MBC1",
@@ -171,15 +176,15 @@ void gb_print_header_info (gb_cartridge_header h)
 	print_nintendo_logo (h.logo);
 	printf ("%-15s > %s\n", "TITLE", h.title);
 	printf ("%-15s > %s\n", "MBC", MBC[h.mbc]);
-	printf ("%-15s > %-3d x 8KB\n", "ROM", h.rom_size);
-	printf ("%-15s > %-3d x 4KB\n", "RAM", h.ram_size);
+	printf ("%-15s > %-3d x 16KB\n", "ROM", h.rom_size);
+	printf ("%-15s > %-3d x 8KB\n", "RAM", h.ram_size);
 	printf ("%-15s > %s\n", "CGB", h.cgb == 0x80 ? "CGB SUPPORT" : h.cgb == 0xC0 ? "CGB _ONLY_" : "DMG");
 	printf ("%-15s > %s\n", "SGB", h.sgb == 0x03 ? "YES" : "NO");
 }
 
 int gb_load_mbc (gb_cartridge_header h, uint8_t *ram)
 {
-	static const void (*MBC[0x100]) (uint8_t*) =
+	const void (*MBC[0x100]) (uint8_t*) =
 	{
 		gb_mbc0_load, // "ROM ONLY",
 		gb_mbc1_load, // "MBC1",
@@ -233,17 +238,22 @@ int gb_load_mbc (gb_cartridge_header h, uint8_t *ram)
 	return 0;
 }
 
-int gb_load_cartridge (uint8_t *data, gb_cartridge_header *h, uint8_t **ram)
+int gb_load_cartridge (uint8_t *data, gb_cartridge_header *h, uint8_t **ram, size_t *ram_size)
 {
 	// read header
 	if (read_header (data, h) != 0) return 1;
+
+	*ram_size = h->ram_size * RAM_BANK_SIZE;
 
 	// if no previous RAM we allocate new
 	// otherwise we expect that the RAM is all good and continue
 	if (!*ram)
 	{
-		*ram = malloc (h->ram_size * RAM_BANK_SIZE);
-		memset (*ram, 0xFF, h->ram_size * RAM_BANK_SIZE);
+		*ram = malloc (*ram_size);
+		// NOTE
+		// i have no documentation that this is important but some games require it
+		// i can not remember where i saw this first.
+		memset (*ram, 0xFF, *ram_size);
 	}
 
 	// load MBC

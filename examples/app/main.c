@@ -457,8 +457,10 @@ int main (int argc, char** argv)
 		}
 	}
 
+	size_t ram_size;
+
 	// load the game
-	if (gb_load (rom, ram) != 0)
+	if (gb_load (rom, &ram, &ram_size) != 0)
 		exit (1);
 
 	// video
@@ -503,8 +505,7 @@ int main (int argc, char** argv)
 	if (argc == 3)
 	{
 		FILE *f = fopen (argv[2], "wb");
-		// TODO communicate size better
-		fwrite (ram, 1, 0x2000 * 4, f);
+		fwrite (ram, 1, ram_size, f);
 	}
 
 	gb_quit ();

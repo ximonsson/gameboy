@@ -40,14 +40,20 @@ int gb_load_cartridge
 (
 	uint8_t * /* data */,
 	gb_cartridge_header * /* header */,
-	uint8_t ** /* RAM */
+	uint8_t ** /* RAM */,
+	size_t * /* RAM size */
 ) ;
 
 /**
  * gb_print_header_info prints information about the cartridge retrieved from the header.
  */
-void gb_print_header_info (gb_cartridge_header /* hdr */);
+void gb_print_header_info (gb_cartridge_header /* hdr */) ;
 
-int gb_load_mbc (gb_cartridge_header /* h */, uint8_t * /* RAM */);
+/**
+ * Load the memory back controller that the header defines.
+ *
+ * `RAM` points to the allocated RAM memory that the MBC can write to/switch banks/etc.
+ */
+int gb_load_mbc (gb_cartridge_header /* h */, uint8_t * /* RAM */) ;
 
 #endif /* _GB_FILE_ */
