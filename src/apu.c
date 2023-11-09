@@ -673,8 +673,10 @@ static void sample (uint8_t* l, uint8_t* r)
 	}
 }
 
+#define SAMPLE_BUFFER_SIZE
+
 static int sample_rate;
-static float samples[8192];
+static float samples[SAMPLE_BUFFER_SIZE];
 static int samples_len;
 static int apucc;
 
@@ -690,6 +692,7 @@ void gb_apu_step (uint32_t cc)
 	for (; cc > 0; cc --)
 	{
 		step ();
+
 		if (sample_rate && ++ apucc == sample_rate)
 		{
 			static uint8_t l, r;
@@ -698,6 +701,10 @@ void gb_apu_step (uint32_t cc)
 			samples[samples_len ++] = r / 60.0 - 1.0;
 			apucc = 0;
 		}
+
+		// in case we are not retrieving the samples in time.
+		// reset the samples buffer. tough luck for the user.
+		if (samples_len >= SAMPLE_BUFFER_SIZE) samples_len = 0;
 	}
 }
 
