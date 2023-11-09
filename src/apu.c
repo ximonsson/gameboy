@@ -673,10 +673,10 @@ static void sample (uint8_t* l, uint8_t* r)
 	}
 }
 
-#define SAMPLE_BUFFER_SIZE
+#define SAMPLE_BUFFER_SIZE 8192
 
 static int sample_rate;
-static float samples[SAMPLE_BUFFER_SIZE];
+static float samples[SAMPLE_BUFFER_SIZE + 2];
 static int samples_len;
 static int apucc;
 
