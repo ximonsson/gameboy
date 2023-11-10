@@ -148,7 +148,6 @@ static int write_latch_clock_data (uint16_t adr, uint8_t v)
 	return 1;
 }
 
-
 /* Keep track of CPU clock cycles. */
 static uint32_t cc;
 
@@ -180,6 +179,7 @@ void gb_mbc3_load (uint8_t* ram_)
 	gb_cpu_register_store_handler (write_rom_bank_h);
 	gb_cpu_register_store_handler (write_ram_bank_h);
 	gb_cpu_register_store_handler (write_ram_h);
+	gb_cpu_register_store_handler (write_latch_clock_data);
 
 	gb_cpu_register_read_handler (read_ram_h);
 }
