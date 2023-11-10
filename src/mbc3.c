@@ -1,5 +1,6 @@
 #include "gb/mbc3.h"
 #include "gb/cpu.h"
+#include "gb.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -69,6 +70,7 @@ static int write_ram_bank_h (uint16_t adr, uint8_t v)
 	}
 	else if (v >= 0x8 && v <= 0xC)
 	{
+		//printf ("MBC3 > map RTC register %.2X into $.4X\n", v, adr);
 		rtc_ = rtc + (v - 8);
 		flag_read_rtc = 1;
 	}
@@ -105,11 +107,60 @@ static int write_ram_h (uint16_t adr, uint8_t v)
 		return 1;
 
 	if (flag_read_rtc)
+	{
+		//printf ("MBC3 > writing %2x to RTC\n", v);
 		RTC = v;
+	}
 	else
 		RAM (adr) = v;
 
 	return 1;
+}
+
+/* Flag to indicate if the $00 was written to $6000-7FFF. */
+static uint8_t f_rtc_latched;
+
+/**
+ * Handle writes to $6000-7FFF.
+ *
+ * When writing 00h, and then 01h to this register, the current time becomes latched
+ * into the RTC registers.
+ */
+static int write_latch_clock_data (uint16_t adr, uint8_t v)
+{
+	if (adr < 0x6000 || adr > 0x7FFF)
+		return 0;
+
+	if (v == 0)
+	{
+		f_rtc_latched = 1;
+	}
+	else
+	{
+		if (f_rtc_latched && (v == 1))
+		{
+			// latch time
+		}
+
+		f_rtc_latched = 0;  // not sure this is correct.
+	}
+
+	return 1;
+}
+
+
+/* Keep track of CPU clock cycles. */
+static uint32_t cc;
+
+/* Counts the number of seconds */
+static uint32_t timer;
+
+static void step (uint32_t cc_)
+{
+	cc += cc_;
+	if (cc >= GB_CPU_CLOCK)  // one second
+		timer ++;
+	cc -= GB_CPU_CLOCK;
 }
 
 void gb_mbc3_load (uint8_t* ram_)
@@ -121,6 +172,9 @@ void gb_mbc3_load (uint8_t* ram_)
 	ram_bank = 0;
 	ram_enabled = 0;
 	flag_read_rtc = 0;
+	f_rtc_latched = 0;
+	cc = 0;
+	timer = 0;  // i am confused because this should be part of battery?
 
 	gb_cpu_register_store_handler (write_ram_enable_h);
 	gb_cpu_register_store_handler (write_rom_bank_h);
