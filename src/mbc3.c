@@ -140,6 +140,7 @@ static int write_latch_clock_data (uint16_t adr, uint8_t v)
 		if (f_rtc_latched && (v == 1))
 		{
 			// latch time
+
 		}
 
 		f_rtc_latched = 0;  // not sure this is correct.
@@ -151,9 +152,16 @@ static int write_latch_clock_data (uint16_t adr, uint8_t v)
 /* Keep track of CPU clock cycles. */
 static uint32_t cc;
 
-/* Counts the number of seconds */
+/**
+ * Timer in seconds.
+ *
+ * 32 bits should hold for about 136 years.
+ */
 static uint32_t timer;
 
+/**
+ * Step the timer in relation to the CPU.
+ */
 static void step (uint32_t cc_)
 {
 	cc += cc_;
@@ -172,8 +180,10 @@ void gb_mbc3_load (uint8_t* ram_)
 	ram_enabled = 0;
 	flag_read_rtc = 0;
 	f_rtc_latched = 0;
+
+	// below variables are for the timer, but how does this work with the battery?
 	cc = 0;
-	timer = 0;  // i am confused because this should be part of battery?
+	timer = 0;
 
 	gb_cpu_register_store_handler (write_ram_enable_h);
 	gb_cpu_register_store_handler (write_rom_bank_h);
