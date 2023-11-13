@@ -82,4 +82,9 @@ void gb_release_button (gb_button) ;
  */
 void gb_audio_samples (float * /* buffer */, size_t * /* n */) ;
 
+/**
+ * Add callback to call after `gb_step`.
+ */
+void gb_add_step_callback (void (* fn) (uint32_t)) ;
+
 #endif /* GB_H */

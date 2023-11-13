@@ -215,4 +215,6 @@ void gb_mbc3_load (uint8_t* ram_)
 	gb_cpu_register_store_handler (write_latch_clock_data);
 
 	gb_cpu_register_read_handler (read_ram_h);
+
+	gb_add_step_callback (step);
 }

@@ -11,6 +11,14 @@
 
 static int sample_rate;
 
+static int n_step_cbs;
+static void (*step_cbs[5]) (uint32_t);
+
+void gb_add_step_callback (void (*cb) (uint32_t))
+{
+	step_cbs [n_step_cbs ++] = cb;
+}
+
 void gb_init (int sample_rate_)
 {
 	sample_rate = sample_rate_;
@@ -31,6 +39,8 @@ int gb_load (uint8_t *ROM, uint8_t **RAM, size_t *ram_size)
 	// TODO
 	// i think this should be part of the reset instead.
 	gb_cpu_load_rom (h.rom_size, ROM);
+
+	n_step_cbs = 0;
 
 	return 0;
 }
@@ -60,6 +70,9 @@ uint32_t gb_step (uint32_t ccs)
 
 	uint32_t ret = cpucc - prev_cpucc;  // number of cycles that ran
 	cpucc -= ccs;
+
+	for (int i = 0; i < n_step_cbs; i ++)
+		step_cbs[i] (ret);
 
 	return ret;
 }
