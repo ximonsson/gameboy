@@ -26,6 +26,8 @@ void gb_init (int sample_rate_)
 
 int gb_load (uint8_t *ROM, uint8_t **RAM, size_t *ram_size)
 {
+	n_step_cbs = 0;
+
 	// reset all units
 	gb_cpu_reset ();
 	gb_ppu_reset ();
@@ -39,8 +41,6 @@ int gb_load (uint8_t *ROM, uint8_t **RAM, size_t *ram_size)
 	// TODO
 	// i think this should be part of the reset instead.
 	gb_cpu_load_rom (h.rom_size, ROM);
-
-	n_step_cbs = 0;
 
 	return 0;
 }
@@ -65,14 +65,14 @@ uint32_t gb_step (uint32_t ccs)
 		gb_ppu_step (cc);
 		gb_apu_step (cc);
 
+		for (int i = 0; i < n_step_cbs; i ++)
+			step_cbs[i] (cc);
+
 		cpucc += cc;
 	}
 
 	uint32_t ret = cpucc - prev_cpucc;  // number of cycles that ran
 	cpucc -= ccs;
-
-	for (int i = 0; i < n_step_cbs; i ++)
-		step_cbs[i] (ret);
 
 	return ret;
 }

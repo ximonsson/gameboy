@@ -129,6 +129,17 @@ static uint32_t cc;
  */
 static uint32_t timer;
 
+static void print_timer ()
+{
+
+	uint16_t d = timer / 86400;
+	uint8_t h = (timer / 3600) % 24;
+	uint8_t m = (timer / 60) % 60;
+	uint8_t s = timer % 60;
+
+	printf ("%d days, %.2d:%.2d:%.2d", d, h, m, s);
+}
+
 /**
  * Step the timer in relation to the CPU.
  */
@@ -141,8 +152,8 @@ static void step (uint32_t cc_)
 	{
 		timer ++;
 		// check overflow?
+		cc -= GB_CPU_CLOCK;
 	}
-	cc -= GB_CPU_CLOCK;
 }
 
 /* Flag to indicate if the $00 was written to $6000-7FFF. */
@@ -175,8 +186,6 @@ static int write_latch_clock_data (uint16_t adr, uint8_t v)
 			uint8_t h = (timer / 3600) % 24;
 			uint8_t m = (timer / 60) % 60;
 			uint8_t s = timer % 60;
-
-			printf ("MBC3 > latch time %dD, %.2d:%.2d:%.2d\n", d, h, m, s);
 
 			rtc[0] = s;
 			rtc[1] = m;
