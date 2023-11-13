@@ -4,6 +4,73 @@
 #include <stdio.h>
 #include <string.h>
 
+/**
+ * RTC registers.
+ *
+ * 08h  RTC S   Seconds   0-59 (0-3Bh)
+ * 09h  RTC M   Minutes   0-59 (0-3Bh)
+ * 0Ah  RTC H   Hours     0-23 (0-17h)
+ * 0Bh  RTC DL  Lower 8 bits of Day Counter (0-FFh)
+ * 0Ch  RTC DH  Upper 1 bit of Day Counter, Carry Bit, Halt Flag
+ *       Bit 0  Most significant bit of Day Counter (Bit 8)
+ *       Bit 6  Halt (0=Active, 1=Stop Timer)
+ *       Bit 7  Day Counter Carry Bit (1=Counter Overflow)
+ */
+static uint8_t rtc[5];
+static uint8_t* rtc_;
+#define RTC (* rtc_)
+
+#define TIMER_HALT (rtc[4] & 0x40)
+
+/* Keep track of CPU clock cycles. */
+static uint32_t cc;
+
+/**
+ * Timer in seconds.
+ *
+ * 32 bits should hold for about 136 years.
+ */
+static uint32_t timer;
+
+#ifdef DEBUG
+static void print_timer ()
+{
+
+	uint16_t d = timer / 86400;
+	uint8_t h = (timer / 3600) % 24;
+	uint8_t m = (timer / 60) % 60;
+	uint8_t s = timer % 60;
+
+	printf ("%d days, %.2d:%.2d:%.2d", d, h, m, s);
+}
+#endif  // ifdef DEBUG
+
+/* Keep track if the day counter overflowed. */
+static uint8_t day_count_overflow;
+
+/**
+ * Step the timer in relation to the CPU.
+ */
+static void step (uint32_t cc_)
+{
+	if (TIMER_HALT) return;
+
+	cc += cc_;
+	if (cc >= GB_CPU_CLOCK)  // one second
+	{
+		timer ++;
+
+		// check overflow?
+		if ((timer / 86400)	== 512)
+		{
+			timer = 0;
+			day_count_overflow = 0x80;
+		}
+
+		cc -= GB_CPU_CLOCK;
+	}
+}
+
 static uint8_t* ram;
 
 /* RAM enabled register. */
@@ -37,24 +104,6 @@ static uint8_t ram_bank;
 /* points correctly to address within current RAM bank. */
 #define RAM(adr) ram[adr - 0xA000 + (ram_bank << 13)]
 
-/**
- * RTC registers.
- *
- * 08h  RTC S   Seconds   0-59 (0-3Bh)
- * 09h  RTC M   Minutes   0-59 (0-3Bh)
- * 0Ah  RTC H   Hours     0-23 (0-17h)
- * 0Bh  RTC DL  Lower 8 bits of Day Counter (0-FFh)
- * 0Ch  RTC DH  Upper 1 bit of Day Counter, Carry Bit, Halt Flag
- *       Bit 0  Most significant bit of Day Counter (Bit 8)
- *       Bit 6  Halt (0=Active, 1=Stop Timer)
- *       Bit 7  Day Counter Carry Bit (1=Counter Overflow)
- */
-static uint8_t rtc[5];
-static uint8_t* rtc_;
-#define RTC (* rtc_)
-
-#define TIMER_HALT (rtc[4] & 0x40)
-
 static uint8_t flag_read_rtc;
 
 /* Handles writes to $4000 - $5FFF: writing RAM bank or RTC register. */
@@ -72,7 +121,6 @@ static int write_ram_bank_h (uint16_t adr, uint8_t v)
 	}
 	else if (v >= 0x8 && v <= 0xC)
 	{
-		//printf ("MBC3 > map RTC register %.2X into $.4X\n", v, adr);
 		rtc_ = rtc + (v - 8);
 		flag_read_rtc = 1;
 	}
@@ -100,7 +148,7 @@ static int read_ram_h (uint16_t adr, uint8_t* v)
 	return 1;
 }
 
-/* Handles writing to RAM $A000 - $BFFF. */
+/* Handles writing to RAM $A000 - $BFFF, and RTC registers. */
 static int write_ram_h (uint16_t adr, uint8_t v)
 {
 	if (adr < 0xA000 || adr > 0xBFFF)
@@ -110,50 +158,17 @@ static int write_ram_h (uint16_t adr, uint8_t v)
 
 	if (flag_read_rtc)
 	{
-		//printf ("MBC3 > writing %2x to RTC\n", v);
 		RTC = v;
+
+		// check reset of day counter overflow.
+		// i hope this works.
+		if ((rtc_ == &rtc[4]) && !(v & 0x80))
+			day_count_overflow = 0;
 	}
 	else
 		RAM (adr) = v;
 
 	return 1;
-}
-
-/* Keep track of CPU clock cycles. */
-static uint32_t cc;
-
-/**
- * Timer in seconds.
- *
- * 32 bits should hold for about 136 years.
- */
-static uint32_t timer;
-
-static void print_timer ()
-{
-
-	uint16_t d = timer / 86400;
-	uint8_t h = (timer / 3600) % 24;
-	uint8_t m = (timer / 60) % 60;
-	uint8_t s = timer % 60;
-
-	printf ("%d days, %.2d:%.2d:%.2d", d, h, m, s);
-}
-
-/**
- * Step the timer in relation to the CPU.
- */
-static void step (uint32_t cc_)
-{
-	if (TIMER_HALT) return;
-
-	cc += cc_;
-	if (cc >= GB_CPU_CLOCK)  // one second
-	{
-		timer ++;
-		// check overflow?
-		cc -= GB_CPU_CLOCK;
-	}
 }
 
 /* Flag to indicate if the $00 was written to $6000-7FFF. */
@@ -171,9 +186,8 @@ static int write_latch_clock_data (uint16_t adr, uint8_t v)
 		return 0;
 
 	if (v == 0)
-	{
 		f_rtc_latched = 1;
-	}
+
 	else
 	{
 		if (f_rtc_latched && (v == 1))
@@ -191,9 +205,7 @@ static int write_latch_clock_data (uint16_t adr, uint8_t v)
 			rtc[1] = m;
 			rtc[2] = h;
 			rtc[3] = d;  // lower 8 bits;
-			rtc[4] = (rtc[4] & 0xFE) | (d >> 8);
-
-			// TODO day counter carry bit
+			rtc[4] = (rtc[4] & 0xFE) | (d >> 8) | day_count_overflow;
 		}
 
 		f_rtc_latched = 0;  // not sure this is correct.
@@ -216,6 +228,7 @@ void gb_mbc3_load (uint8_t* ram_)
 	// below variables are for the timer, but how does this work with the battery?
 	cc = 0;
 	timer = 0;
+	day_count_overflow = 0;
 
 	gb_cpu_register_store_handler (write_ram_enable_h);
 	gb_cpu_register_store_handler (write_rom_bank_h);
