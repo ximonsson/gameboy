@@ -100,6 +100,64 @@ static uint8_t* status_;
 
 #define SET_MODE(x) { STATUS = (STATUS & 0xFC) | x; }
 
+/**
+ * Block any illegal writes because of PPU mode.
+ */
+static int write_mode_block (uint16_t addr, uint8_t v)
+{
+	// no access to OAM while in MODE 2
+	if ((MODE == MODE_SEARCH_OAM) && ((addr >= 0xFE00) && (addr <= 0xFE9F)))
+	{
+		printf ("PPU > illegal WRITE access to OAM during mode 2!\n");
+		return 1;
+	}
+	// no access to PPU during MODE 3
+	else if (MODE == MODE_TRANSFER_LCD)
+	{
+		if ((addr >= 0x8000) && (addr <= 0x9FFF))
+		{
+			printf ("PPU > illegal WRITE access to VRAM during mode 3!\n");
+			return 1;
+		}
+		else if ((addr >= 0xFE00) && (addr <= 0xFE9F))
+		{
+			printf ("PPU > illegal WRITE access to OAM during mode 3!\n");
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+static int read_mode_block (uint16_t addr, uint8_t *v)
+{
+	// no access to OAM while in MODE 2
+	if ((MODE == MODE_SEARCH_OAM) && ((addr >= 0xFE00) && (addr <= 0xFE9F)))
+	{
+		printf ("PPU > illegal READ access to OAM during mode 2!\n");
+		*v = 0xFF;
+		return 1;
+	}
+	// no access to PPU during MODE 3
+	else if (MODE == MODE_TRANSFER_LCD)
+	{
+		if ((addr >= 0x8000) && (addr <= 0x9FFF))
+		{
+			printf ("PPU > illegal READ access to VRAM during mode 3!\n");
+			*v = 0xFF;
+			return 1;
+		}
+		else if ((addr >= 0xFE00) && (addr <= 0xFE9F))
+		{
+			printf ("PPU > illegal READ access to OAM during mode 3!\n");
+			*v = 0xFF;
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
 static int write_status_h (uint16_t addr, uint8_t v)
 {
 	if (addr != STATUS_LOC) return 0;
@@ -402,6 +460,9 @@ void gb_ppu_reset ()
 
 	RESET_LINE_SPRITES;
 
+	gb_cpu_register_read_handler (read_mode_block);
+
+	gb_cpu_register_store_handler (write_mode_block);
 	gb_cpu_register_store_handler (write_status_h);
 	gb_cpu_register_store_handler (write_lcdc_h);
 	gb_cpu_register_store_handler (write_ly_h);
@@ -442,7 +503,14 @@ static inline void print_sprite (uint8_t s)
 {
 	uint8_t* sprite = oam + (s << 2);
 
-	printf (" SPRITE @ (%d - 8 [%d], %d - 16 [%d])\n", sprite[1], sprite[1] - 8, sprite[0], sprite[0] - 16);
+	printf
+	(
+		" SPRITE @ (%d - 8 [%d], %d - 16 [%d])\n",
+		sprite[1],
+		sprite[1] - 8,
+		sprite[0],
+		sprite[0] - 16
+	);
 	printf (" > Tile N: %d\n", sprite[2]);
 	printf (" > BG prio: %d\n", SPRITE_BG_PRIO (sprite));
 	printf (" > Y-flip: %d\n", SPRITE_YFLIP (sprite));
@@ -466,4 +534,4 @@ static inline void print_bg (uint8_t bg)
 {
 
 }
-#endif
+#endif  // ifdef DEBUG_PPU
