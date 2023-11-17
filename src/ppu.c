@@ -167,7 +167,7 @@ static int write_lcdc_h (uint16_t adr, uint8_t v)
 		printf (" >>> LCD disabled\n");
 #endif
 		dot = LY = 0;
-		SET_MODE (MODE_VBLANK);
+		SET_MODE (MODE_HBLANK);
 	}
 	return 1;
 }
