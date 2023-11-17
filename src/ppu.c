@@ -408,7 +408,7 @@ static void step ()
 			find_line_sprites ();
 		}
 		// H-BLANK
-		else if (x == GB_LCD_WIDTH)
+		else if (x == (GB_LCD_WIDTH + 12))
 		{
 			SET_MODE (MODE_HBLANK);
 			if (MODE_0_HBLANK_INT)
@@ -420,6 +420,7 @@ static void step ()
 			if (x == 0)
 				SET_MODE (MODE_TRANSFER_LCD);
 			draw (x, LY);
+			// TODO should stall 6 dots for each object that is drawn on this line
 		}
 	}
 
