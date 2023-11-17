@@ -24,4 +24,11 @@ void gb_ppu_reset () ;
  */
 const uint8_t* gb_ppu_lcd () ;
 
+/**
+ * Stall the PPU for a number of CPU cycles.
+ *
+ * This is only used during OAM DMA.
+ */
+void gb_ppu_stall (uint32_t /* cycles */) ;
+
 #endif

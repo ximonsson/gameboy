@@ -357,6 +357,11 @@ static void inline find_line_sprites ()
 	}
 }
 
+void gb_ppu_stall (uint32_t cc)
+{
+	dot += cc;
+}
+
 #define OAM_CC 80
 
 /* step the PPU one dot. */

@@ -1,4 +1,5 @@
 #include "gb/cpu.h"
+#include "gb/ppu.h"
 #include <string.h>
 #include <assert.h>
 
@@ -136,6 +137,7 @@ static void oam_dma_transfer (uint8_t v)
 	uint16_t src = v << 8, dst = OAM_LOC;
 	for (int i = 0; i < 0xA0; i ++, dst ++, src ++)
 		ram[dst] = RAM (src);
+	gb_ppu_stall (160);
 
 #ifdef DEBUG_CPU
 	printf ("\t\t>>> OAM transfer [$%.2X => $%.4X]\n", v, src);
