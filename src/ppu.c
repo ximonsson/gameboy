@@ -360,6 +360,7 @@ static void inline find_line_sprites ()
 void gb_ppu_stall (uint32_t cc)
 {
 	dot += cc;
+	dot %= GB_FRAME;
 }
 
 #define OAM_CC 80
