@@ -1,13 +1,20 @@
-build/*
-lib/*
-bin*
+# various file types that are not to be versioned.
 *.o
 *.gb
 *.gbc
 *.gba
 *.out
 *.log
+*.sav
+
+# build directories
+build/*
+lib/*
+bin*
+
 roms
 tests
+tmp
+
 # this file auto-generated using make
 include/gameboy/operations.h
