@@ -59,7 +59,7 @@ static uint8_t* lcdc_;
 #define LCD_ENABLED (LCDC & 0x80)
 #define WIN_TILE_MAP (0x1800 | ((LCDC & 0x40) << 4))
 #define WIN_DISP_ENABLED (LCDC & 0x20)
-#define BG_WIN_TILE (0x0800 & ~((LCDC & 0x10) << 7))
+#define BG_WIN_TILE (LCDC & 0x10)
 #define BG_TILE_MAP (0x1800 | ((LCDC & 0x08) << 7))
 #define OBJ_SIZE (8 + ((LCDC & 0x04) << 1))
 #define OBJ_ENABLED (LCDC & 0x02)
@@ -178,9 +178,9 @@ static int read_mode_block (uint16_t addr, uint8_t *v)
 /* OAM data pointer */
 static uint8_t* oam;
 
-#define SPRITE_BG_PRIO(sprite) ((sprite[3] & 0x80) == 0x80)
-#define SPRITE_YFLIP(sprite) ((sprite[3] & 0x40) == 0x40)
-#define SPRITE_XFLIP(sprite) ((sprite[3] & 0x20) == 0x20)
+#define SPRITE_BG_PRIO(sprite) (sprite[3] & 0x80)
+#define SPRITE_YFLIP(sprite) (sprite[3] & 0x40)
+#define SPRITE_XFLIP(sprite) (sprite[3] & 0x20)
 #define SPRITE_PALETTE(sprite) ((sprite[3] & 0x10) >> 4)
 #define SPRITE_VRAM(sprite) ((sprite[3] & 0x08) >> 3)
 #define SPRITE_PALETTE_CGB(sprite) (sprite[3] & 0x07)
@@ -231,7 +231,7 @@ static inline uint8_t color_sprite (uint8_t n, uint8_t x, uint8_t y)
 static inline uint8_t color_bg_tile (uint8_t n, uint8_t x, uint8_t y)
 {
 	int16_t offset = n << 4;
-	if (BG_WIN_TILE == 0x0800) // $8800 addressing mode
+	if (!BG_WIN_TILE) // $8800 addressing mode
 		offset = 0x1000 + ((int8_t) n << 4);
 
 	return color_tile (vram + offset, x, y);

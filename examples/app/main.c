@@ -57,7 +57,14 @@ static int width, height;
 static SDL_Window *sdl_window;
 static SDL_GLContext sdl_context;
 
-static GLuint image_texture, program, vertexshader, fragmentshader, color_uniform, vertex_vbo, texture_vbo;
+static GLuint
+	image_texture,
+	program,
+	vertexshader,
+	fragmentshader,
+	color_uniform,
+	vertex_vbo,
+	texture_vbo;
 
 static GLfloat texture_coords[6 * 2] =
 {
