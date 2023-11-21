@@ -1,5 +1,5 @@
-CC = gcc
-CFLAGS += -Wall
+CC = cc
+CFLAGS += -Wall -finline-functions
 LDFLAGS += -L./lib -lgb -lSDL2
 INCLUDES = -I./include
 
@@ -11,8 +11,13 @@ BIN=bin/gb
 
 ifdef DEBUG
 CFLAGS += -g3 -DDEBUG_PPU # -DDEBUG_CPU
+endif
+
+ifdef PROFILE
+CFLAGS += -pg -g
+LDFLAGS += -pg
 else
-CFLAGS += -O3
+CFLAGS += -Ofast
 endif
 
 ifdef GLES

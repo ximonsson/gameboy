@@ -241,7 +241,18 @@ void draw ()
 	glViewport (0, 0, width, height);
 
 	const uint8_t* screen = gb_lcd ();
-	glTexImage2D (GL_TEXTURE_2D, 0, GL_RGB, GB_LCD_WIDTH, GB_LCD_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, screen);
+	glTexImage2D
+	(
+		GL_TEXTURE_2D,
+		0,
+		GL_RGB,
+		GB_LCD_WIDTH,
+		GB_LCD_HEIGHT,
+		0,
+		GL_RGB,
+		GL_UNSIGNED_BYTE,
+		screen
+	);
 
 	glClear (GL_COLOR_BUFFER_BIT);
 	glDrawArrays (GL_TRIANGLES, 0, 6);
@@ -304,6 +315,7 @@ static void audio_init (int rate)
 #endif
 }
 
+#define SAMPLE_BUFFER 1024
 // play audio samples
 static int audio_play ()
 {
@@ -321,9 +333,10 @@ static int audio_play ()
 	// halt emulation while we are playing the audio
 
 	Uint32 q = SDL_GetQueuedAudioSize (audio_devid);
-	while (q >= 1024 * 2 * sizeof (float)) // while more than 1024 samples are queued we pause emulation
+	// while more than `SAMPLE_BUFFER` samples are queued we pause emulation
+	while (q >= SAMPLE_BUFFER * sizeof (float))
 	{
-		usleep (200);
+		usleep (1000);
 		q = SDL_GetQueuedAudioSize (audio_devid);
 	}
 
@@ -425,7 +438,6 @@ static void handle_events ()
 }
 
 #define SAMPLE_RATE 44100
-#define SAMPLE_BUFFER 1024
 
 int main (int argc, char** argv)
 {
@@ -493,6 +505,7 @@ int main (int argc, char** argv)
 			draw ();
 			cc -= GB_FRAME;
 		}
+
 		audio_play ();
 		handle_events ();
 	}

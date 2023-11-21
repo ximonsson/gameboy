@@ -630,7 +630,7 @@ static void step_timer_fs ()
 	}
 }
 
-static void step ()
+static inline void step ()
 {
 	// step channel timers
 	step_timer_ch1 ();
