@@ -308,26 +308,6 @@ static inline void color_obj (uint8_t x, uint8_t *c, uint8_t bgc, uint8_t *pal)
 	}
 }
 
-/* draw in the LCD at position x, y. *
-static inline void draw (uint8_t x, uint8_t y)
-{
-	uint8_t bgc = 0;
-	// Background
-	if (BG_WIN_PRIO)
-	{
-		// BG
-		bgc = draw_bg (x, y);
-
-		// WIN
-		if (WIN_DISP_ENABLED && (x >= (WX - 7)) && (y >= WY))
-			draw_win (x, y);
-	}
-	// Sprite
-	if (OBJ_ENABLED)
-		draw_obj (x, y, bgc);
-}
-//*/
-
 /* Find (the first 10) sprites that are visible on the current line. */
 static inline void find_line_sprites ()
 {
