@@ -17,7 +17,7 @@ struct envelope
 	uint8_t cc;
 
 	// register
-	uint8_t* R;
+	uint8_t *R;
 
 	// enabled flag
 	uint8_t enabled;
@@ -65,7 +65,7 @@ void envelope_reset (envelope* e)
 }
 
 /* Initialize and reset the envelope. */
-void envelope_init (envelope* e, uint8_t* r)
+void envelope_init (envelope* e, uint8_t *r)
 {
 	e->R = r;
 	envelope_reset (e);
@@ -95,7 +95,7 @@ void envelope_init (envelope* e, uint8_t* r)
  * initial freq & X(t-1) is last freq:
  *   X(t) = X(t-1) +/- X(t-1)/2^n`
  */
-static uint8_t* nr10;
+static uint8_t *nr10;
 
 /**
  * FF11 - NR11 - Channel 1 Sound length/Wave pattern duty (R/W)
@@ -112,7 +112,7 @@ static uint8_t* nr10;
  *
  * Sound Length = (64-t1)*(1/256) seconds The Length value is used only if Bit 6 in NR14 is set.
  */
-static uint8_t* nr11;
+static uint8_t *nr11;
 
 /**
  * FF12 - NR12 - Channel 1 Volume Envelope (R/W)
@@ -124,14 +124,14 @@ static uint8_t* nr11;
  *
  * Length of 1 step = n*(1/64) seconds
  */
-static uint8_t* nr12;
+static uint8_t *nr12;
 
 /**
  * FF13 - NR13 - Channel 1 Frequency lo (Write Only)
  *
  * Lower 8 bits of 11 bit frequency (x). Next 3 bit are in NR14 ($FF14)
  */
-static uint8_t* nr13;
+static uint8_t *nr13;
 
 /**
  * FF14 - NR14 - Channel 1 Frequency hi (R/W)
@@ -143,23 +143,23 @@ static uint8_t* nr13;
  *
  * Frequency = 131072/(2048-x) Hz
  */
-static uint8_t* nr14;
+static uint8_t *nr14;
 
 /* FF16 - NR21 - Channel 2 Sound Length/Wave Pattern Duty (R/W) */
-static uint8_t* nr21;
+static uint8_t *nr21;
 /* FF17 - NR22 - Channel 2 Volume Envelope (R/W) */
-static uint8_t* nr22;
+static uint8_t *nr22;
 /* FF18 - NR23 - Channel 2 Frequency lo data (W) */
-static uint8_t* nr23;
+static uint8_t *nr23;
 /* FF19 - NR24 - Channel 2 Frequency hi data (R/W) */
-static uint8_t* nr24;
+static uint8_t *nr24;
 
 /**
  * FF1A - NR30 - Channel 3 Sound on/off (R/W)
  *
  *   Bit 7 - Sound Channel 3 Off  (0=Stop, 1=Playback)  (Read/Write)
  */
-static uint8_t* nr30;
+static uint8_t *nr30;
 
 /**
  * FF1B - NR31 - Channel 3 Sound Length
@@ -168,7 +168,7 @@ static uint8_t* nr30;
  *
  * Sound Length = (256-t1)*(1/256) seconds This value is used only if Bit 6 in NR34 is set.
  */
-static uint8_t* nr31;
+static uint8_t *nr31;
 
 /**
  * FF1C - NR32 - Channel 3 Select output level (R/W)
@@ -181,14 +181,14 @@ static uint8_t* nr31;
  * 2:  50% Volume (Produce Wave Pattern RAM data shifted once to the right)`
  * 3:  25% Volume (Produce Wave Pattern RAM data shifted twice to the right)`
  */
-static uint8_t* nr32;
+static uint8_t *nr32;
 
 /**
  * FF1D - NR33 - Channel 3 Frequency's lower data (W)
  *
  * Lower 8 bits of an 11 bit frequency (x).
  */
-static uint8_t* nr33;
+static uint8_t *nr33;
 
 /**
  * FF1E - NR34 - Channel 3 Frequency's higher data (R/W)
@@ -200,7 +200,7 @@ static uint8_t* nr33;
  *
  * Frequency = 4194304/(64*(2048-x)) Hz = 65536/(2048-x) Hz
  */
-static uint8_t* nr34;
+static uint8_t *nr34;
 
 /**
  * FF30-FF3F - Wave Pattern RAM
@@ -213,7 +213,7 @@ static uint8_t* nr34;
  * On almost all models, the byte will be written at the offset CH3 is currently reading.
  * On GBA, the write will simply be ignored.
  */
-static uint8_t* wav_pat;
+static uint8_t *wav_pat;
 
 /**
  * FF20 - NR41 - Channel 4 Sound Length (R/W)
@@ -222,7 +222,7 @@ static uint8_t* wav_pat;
  *
  * Sound Length = (64-t1)*(1/256) seconds The Length value is used only if Bit 6 in NR44 is set.
  */
-static uint8_t* nr41;
+static uint8_t *nr41;
 
 /**
  * FF21 - NR42 - Channel 4 Volume Envelope (R/W)
@@ -234,7 +234,7 @@ static uint8_t* nr41;
 
  * Length of 1 step = n*(1/64) seconds
  */
-static uint8_t* nr42;
+static uint8_t *nr42;
 
 /**
  * FF22 - NR43 - Channel 4 Polynomial Counter (R/W)
@@ -249,7 +249,7 @@ static uint8_t* nr42;
  *
  * Frequency = 524288 Hz / r / 2^(s+1) ;For r=0 assume r=0.5 instead
  */
-static uint8_t* nr43;
+static uint8_t *nr43;
 
 /**
  * FF23 - NR44 - Channel 4 Counter/consecutive; Inital (R/W)
@@ -258,7 +258,7 @@ static uint8_t* nr43;
  *   Bit 6   - Counter/consecutive selection (Read/Write)
  *             (1=Stop output when length in NR41 expires)
  */
-static uint8_t* nr44;
+static uint8_t *nr44;
 
 /**
  * FF24 - NR50 - Channel control / ON-OFF / Volume (R/W)
@@ -278,7 +278,7 @@ static uint8_t* nr44;
  *  (Despite rumors, Pocket Music does not use Vin. It blocks use on the GBA for a different reason:
  *  the developer couldn't figure out how to silence buzzing associated with the wave channel's DAC.)
  */
-static uint8_t* nr50;
+static uint8_t *nr50;
 
 /**
  * FF25 - NR51 - Selection of Sound output terminal (R/W)
@@ -294,7 +294,7 @@ static uint8_t* nr50;
  *  Bit 1 - Output sound 2 to SO1 terminal
  *  Bit 0 - Output sound 1 to SO1 terminal
  */
-static uint8_t* nr51;
+static uint8_t *nr51;
 
 /**
  * FF26 - NR52 - Sound on/off
@@ -314,7 +314,7 @@ static uint8_t* nr51;
  * the flag remains set until the sound length has expired (if enabled). A volume envelopes which has
  * decreased to zero volume will NOT cause the sound flag to go off.
  */
-static uint8_t* nr52;
+static uint8_t *nr52;
 
 #define NR10 (* nr10)
 #define NR11 (* nr11)
@@ -379,7 +379,7 @@ static uint16_t ch1_cc;
 static uint8_t ch1_duty_cc;
 
 /* Step Channel 1 timer. */
-static void step_timer_ch1 ()
+static inline void step_timer_ch1 ()
 {
 	if (-- ch1_cc <= 0)
 	{
@@ -392,7 +392,7 @@ static void step_timer_ch1 ()
 static uint8_t ch1_len;
 
 /* Step channel 1 length counter. */
-static void step_len_ch1 ()
+static inline void step_len_ch1 ()
 {
 	if ((~NR14 & 0x40) || !ch1_len)
 		return; // length disabled
@@ -409,7 +409,7 @@ static void step_len_ch1 ()
 
 static uint16_t ch1_shadow;
 
-static int16_t sweep ()
+static inline int16_t sweep ()
 {
 	int16_t freq = ch1_shadow >> CH1SWEEP_SHIFT;
 	if (NR10 & 0x08)
@@ -425,7 +425,7 @@ static int16_t sweep ()
 static uint8_t ch1_sweep_cc;
 
 /* Step channel 1 sweep. */
-static void step_sweep_ch1 ()
+static inline void step_sweep_ch1 ()
 {
 	if (-- ch1_sweep_cc > 0)
 		return;
@@ -450,7 +450,7 @@ static void step_sweep_ch1 ()
 
 static envelope ch1_env;
 
-static uint8_t ch1sample ()
+static inline uint8_t ch1sample ()
 {
 	if (! ENABLED (1)) return 0;
 	uint8_t s = (CH1DUTY >> ch1_duty_cc) & 1;
@@ -470,7 +470,7 @@ static int ch2_cc;
 static uint8_t ch2_duty_cc;
 
 /* Step Channel 2. */
-static void step_timer_ch2 ()
+static inline void step_timer_ch2 ()
 {
 	if (-- ch2_cc == 0)
 	{
@@ -483,7 +483,7 @@ static void step_timer_ch2 ()
 static uint8_t ch2_len;
 
 /* Step channel 2's length counter. */
-static void step_len_ch2 ()
+static inline void step_len_ch2 ()
 {
 	if ((~NR24 & 0x40) || !ch2_len)
 		return; // length disabled
@@ -493,7 +493,7 @@ static void step_len_ch2 ()
 
 static envelope ch2_env;
 
-static uint8_t ch2sample ()
+static inline uint8_t ch2sample ()
 {
 	if (! ENABLED (2)) return 0;
 
@@ -509,7 +509,7 @@ static int wav_cc;
 static uint8_t wav_duty;
 
 /* Step Wave channel. */
-static void step_timer_wav ()
+static inline void step_timer_wav ()
 {
 	if (-- wav_cc <= 0)
 	{
@@ -520,7 +520,7 @@ static void step_timer_wav ()
 
 static uint16_t wav_len;
 
-static void step_len_wav ()
+static inline void step_len_wav ()
 {
 	if ((~NR34 & 0x40) || !wav_len)
 		return;
@@ -528,7 +528,7 @@ static void step_len_wav ()
 		DISABLE_CH (3);
 }
 
-static uint8_t wavsample ()
+static inline uint8_t wavsample ()
 {
 	// not enabled or volume is 0%
 	if (!ENABLED (3) || (NR32 & 0x60) == 0 || (NR30 & 0x80) == 0)
@@ -554,7 +554,7 @@ static const uint8_t divisors[8] = { 8, 16, 32, 48, 64, 80, 96, 112 };
 #define NOIFREQ (divisors[(NR43 & 0x07)] << (NR43 >> 4))
 
 /* Step Noise channel. */
-static void step_timer_noi ()
+static inline void step_timer_noi ()
 {
 	if (-- noi_cc <= 0)
 	{
@@ -572,7 +572,7 @@ static void step_timer_noi ()
 static uint16_t noi_len;
 
 /* Step Noise channel's length counter. */
-static void step_len_noi ()
+static inline void step_len_noi ()
 {
 	if ((~NR44 & 0x40) || !noi_len)
 		return;
@@ -583,7 +583,7 @@ static void step_len_noi ()
 static envelope noi_env;
 
 /* Sample from the noise channel. */
-static uint8_t noisample ()
+static inline uint8_t noisample ()
 {
 	if ((! ENABLE_CH (4)) || !(NR42 & 0xF8))
 		return 0;
@@ -594,7 +594,7 @@ static uint8_t noisample ()
 static uint8_t fs;
 
 /* Step Frame Sequencer. */
-static void step_fs ()
+static inline void step_fs ()
 {
 	fs ++; fs &= 0x07;
 
@@ -621,7 +621,7 @@ static int fs_cc;
 
 #define FSFREQ 8192 // CPU FREQ / 512 Hz
 
-static void step_timer_fs ()
+static inline void step_timer_fs ()
 {
 	if (-- fs_cc <= 0)
 	{
@@ -641,7 +641,7 @@ static inline void step ()
 	step_timer_fs ();
 }
 
-static void sample (uint8_t* l, uint8_t* r)
+static inline void sample (uint8_t *l, uint8_t *r)
 {
 	*l = 0;
 	*r = 0;
@@ -814,7 +814,7 @@ static int write_wav (uint16_t adr, uint8_t v)
 	return 0;
 }
 
-static int write_noi (uint16_t adr, uint8_t v)
+static inline int write_noi (uint16_t adr, uint8_t v)
 {
 	adr -= 0x1F;
 	if (adr == 4)
@@ -906,7 +906,7 @@ static int write_apu_h (uint16_t adr, uint8_t v)
 	return 0;
 }
 
-static int read_apu_h (uint16_t adr, uint8_t* v)
+static int read_apu_h (uint16_t adr, uint8_t *v)
 {
 	// TODO clean this later
 
