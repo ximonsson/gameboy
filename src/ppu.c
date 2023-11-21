@@ -270,7 +270,7 @@ static inline uint8_t color_win (uint8_t x)
 /* Indices of the sprites that are visible on this line. */
 static uint8_t line_sprites[SPRITES_PER_LINE];
 
-#define RESET_LINE_SPRITES memset (line_sprites, 0xFF, SPRITES_PER_LINE)
+#define RESET_LINE_SPRITES memset (line_sprites, 0xFF, SPRITES_PER_LINE);
 
 static inline void color_obj (uint8_t x, uint8_t *c, uint8_t bgc, uint8_t *pal)
 {
@@ -314,7 +314,7 @@ static inline void find_line_sprites ()
 	static uint8_t* sprite;
 	static uint8_t x, y;
 
-	RESET_LINE_SPRITES;
+	RESET_LINE_SPRITES
 	for (uint8_t i = 0, n = 0; i < 40 && n < SPRITES_PER_LINE; i ++)
 	{
 		// every 4 B is a sprite
@@ -400,11 +400,9 @@ static inline void step ()
 			{
 				// BG
 				c = bgc = color_bg (x);
-
 				// WIN
 				if (WIN_DISP_ENABLED && (x >= (WX - 7)) && (LY >= WY))
 					c = color_win (x);
-
 			}
 			// Sprite
 			if (OBJ_ENABLED)
@@ -432,6 +430,11 @@ static inline void step ()
 	}
 }
 
+void gb_ppu_step (uint32_t cc)
+{
+	for (; cc > 0; cc --) step ();
+}
+
 void gb_ppu_reset ()
 {
 	lcdc_   = gb_cpu_mem (LCDC_LOC);
@@ -455,7 +458,7 @@ void gb_ppu_reset ()
 
 	dot = LY = 0;
 
-	RESET_LINE_SPRITES;
+	RESET_LINE_SPRITES
 
 	gb_cpu_register_read_handler (read_mode_block);
 
@@ -468,11 +471,6 @@ void gb_ppu_reset ()
 	memset (__lcd_2, 0, NPIXELS);
 	lcd = __lcd_1;
 	lcd_buf = __lcd_2;
-}
-
-void gb_ppu_step (uint32_t cc)
-{
-	for (; cc > 0; cc --) step ();
 }
 
 #ifdef DEBUG_PPU
