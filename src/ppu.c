@@ -208,7 +208,7 @@ static const uint8_t SHADES [4][3] =
 };
 
 /* get color @ (x, y) within 8x8 tile. */
-static uint8_t color_tile (uint8_t* tile, uint8_t x, uint8_t y)
+static uint8_t color_tile (uint8_t *tile, uint8_t x, uint8_t y)
 {
 	uint8_t shift = 7 - x;
 	y <<= 1; // y mul 2
@@ -216,25 +216,16 @@ static uint8_t color_tile (uint8_t* tile, uint8_t x, uint8_t y)
 	uint8_t lsb = (tile[y] >> shift) & 1;
 	uint8_t msb = (tile[y | 1] >> shift) & 1;
 
-	uint8_t c = (msb << 1) | lsb; // color value 0-3
-	return c;
-}
-
-/* get color within sprite. */
-static inline uint8_t color_sprite (uint8_t n, uint8_t x, uint8_t y)
-{
-	if (OBJ_SIZE == 16) n &= 0xFE;
-	return color_tile (vram + (n << 4), x, y);
+	return (msb << 1) | lsb; // color value 0-3
 }
 
 /* get color within background BG tile. */
 static inline uint8_t color_bg_tile (uint8_t n, uint8_t x, uint8_t y)
 {
-	int16_t offset = n << 4;
 	if (!BG_WIN_TILE) // $8800 addressing mode
-		offset = 0x1000 + ((int8_t) n << 4);
-
-	return color_tile (vram + offset, x, y);
+		return color_tile (vram + 0x1000 + ((int8_t) n << 4), x, y);
+	else
+		return color_tile (vram + (n << 4), x, y);
 }
 
 /**
@@ -276,11 +267,13 @@ static inline void color_obj (uint8_t x, uint8_t *c, uint8_t bgc, uint8_t *pal)
 {
 	uint8_t *sprite;
 	int16_t dx;
-	uint8_t dy, oc;
+	uint8_t dy, oc, ti;
 
-	for (int i = 0; i < SPRITES_PER_LINE && line_sprites[i] != 0xFF; i ++)
+	for (int i = 0; line_sprites[i] != 0xFF; i ++)
+	//for (uint8_t *s = line_sprites; (*s) != 0xFF; s ++)
 	{
 		sprite = oam + (line_sprites[i] << 2);
+		//sprite = oam + ((*s) << 2);
 
 		// background priority
 		if (SPRITE_BG_PRIO (sprite) && bgc) continue;
@@ -297,7 +290,9 @@ static inline void color_obj (uint8_t x, uint8_t *c, uint8_t bgc, uint8_t *pal)
 			if (SPRITE_YFLIP (sprite))
 				dy = OBJ_SIZE - 1 - dy;
 
-			oc = color_sprite (sprite[2], dx, dy);
+			ti = sprite[2]; if (OBJ_SIZE == 16) ti &= 0xFE;
+			oc = color_tile (vram + (ti << 4), dx, dy);
+
 			if (oc)
 			{
 				*c = oc;
@@ -409,7 +404,7 @@ static inline void step ()
 				color_obj (x, &c, bgc, &pal);
 
 			const uint8_t* rgb = SHADES[(pal >> (c << 1)) & 0x3];
-			memcpy (&lcd_buf[(LY * GB_LCD_WIDTH + x) * 3], rgb, 3);
+			memcpy (lcd_buf + (LY * GB_LCD_WIDTH + x) * 3, rgb, 3);
 		}
 		// H-BLANK
 		else if (x == (GB_LCD_WIDTH + 12))
@@ -474,6 +469,14 @@ void gb_ppu_reset ()
 }
 
 #ifdef DEBUG_PPU
+
+/* get color within sprite. */
+static inline uint8_t color_sprite (uint8_t n, uint8_t x, uint8_t y)
+{
+	if (OBJ_SIZE == 16) n &= 0xFE;
+	return color_tile (vram + (n << 4), x, y);
+}
+
 static inline void print_tile (uint8_t* t)
 {
 	uint8_t c;
