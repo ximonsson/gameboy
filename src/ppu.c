@@ -269,7 +269,9 @@ static inline void color_obj (uint8_t x, uint8_t *c, uint8_t bgc, uint8_t *pal)
 	int16_t dx;
 	uint8_t dy, oc, ti;
 
-	for (int i = 0; line_sprites[i] != 0xFF; i ++)
+	// TODO
+	// check why I need the `i < SPRITES_PER_LINE`. the other check does not work properly...
+	for (int i = 0; i < SPRITES_PER_LINE && line_sprites[i] != 0xFF; i ++)
 	//for (uint8_t *s = line_sprites; (*s) != 0xFF; s ++)
 	{
 		sprite = oam + (line_sprites[i] << 2);
@@ -306,8 +308,7 @@ static inline void color_obj (uint8_t x, uint8_t *c, uint8_t bgc, uint8_t *pal)
 /* Find (the first 10) sprites that are visible on the current line. */
 static inline void find_line_sprites ()
 {
-	static uint8_t* sprite;
-	static uint8_t x, y;
+	uint8_t x, y, *sprite;
 
 	RESET_LINE_SPRITES
 	for (uint8_t i = 0, n = 0; i < 40 && n < SPRITES_PER_LINE; i ++)
