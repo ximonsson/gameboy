@@ -259,9 +259,9 @@ static inline uint8_t color_win (uint8_t x)
 #define SPRITES_PER_LINE 10
 
 /* Indices of the sprites that are visible on this line. */
-static uint8_t line_sprites[SPRITES_PER_LINE];
+static uint8_t line_sprites[SPRITES_PER_LINE + 1];
 
-#define RESET_LINE_SPRITES memset (line_sprites, 0xFF, SPRITES_PER_LINE);
+#define RESET_LINE_SPRITES memset (line_sprites, 0xFF, SPRITES_PER_LINE + 1);
 
 static inline void color_obj (uint8_t x, uint8_t *c, uint8_t bgc, uint8_t *pal)
 {
@@ -269,13 +269,9 @@ static inline void color_obj (uint8_t x, uint8_t *c, uint8_t bgc, uint8_t *pal)
 	int16_t dx;
 	uint8_t dy, oc, ti;
 
-	// TODO
-	// check why I need the `i < SPRITES_PER_LINE`. the other check does not work properly...
-	for (int i = 0; i < SPRITES_PER_LINE && line_sprites[i] != 0xFF; i ++)
-	//for (uint8_t *s = line_sprites; (*s) != 0xFF; s ++)
+	for (uint8_t *s = line_sprites; (*s) != 0xFF; s ++)
 	{
-		sprite = oam + (line_sprites[i] << 2);
-		//sprite = oam + ((*s) << 2);
+		sprite = oam + ((*s) << 2);
 
 		// background priority
 		if (SPRITE_BG_PRIO (sprite) && bgc) continue;
