@@ -10,7 +10,7 @@ ARCMD = rcs
 BIN=bin/gb
 
 ifdef DEBUG
-CFLAGS += -g3 -DDEBUG_PPU # -DDEBUG_CPU
+CFLAGS += -g3 -DDEBUG_CPU -DDEBUG_PPU
 endif
 
 ifdef PROFILE

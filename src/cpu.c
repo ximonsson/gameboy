@@ -891,7 +891,8 @@ int gb_cpu_step ()
 	const operation* op = &operations[opcode];
 
 #ifdef DEBUG_CPU
-	if (opcode == 0xCB) op = &operations_cb[RAM (PC ++)]; // hijack in debug mode so we can print the operation
+	// hijack in debug mode so we can print the operation
+	if (opcode == 0xCB) op = &operations_cb[RAM (PC ++)];
 	printf
 	(
 		"%-20s AF = x%.4X BC = x%.4X DE = x%.4X HL = x%.4X SP = x%.4X IF = x%.2X IE = 0x%.2X IME = %d\n",
@@ -900,7 +901,7 @@ int gb_cpu_step ()
 #endif
 
 	cc += op->instruction () + cond_cc;
-	cond_cc = 0;
+	cond_cc = 0;  // reset in case it was set
 
 inc:
 	// increment timers

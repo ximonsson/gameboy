@@ -114,11 +114,22 @@ static int write_lcdc_h (uint16_t adr, uint8_t v)
 {
 	if (adr != LCDC_LOC) return 0;
 
+#ifdef DEBUG_PPU
+	uint8_t tmp = LCDC;
+	if (!LCD_ENABLED)
+	{
+		LCDC = v;
+		if (LCD_ENABLED)
+			printf (" PPU > LCD enabled\n");
+		LCDC = tmp;
+	}
+#endif
+
 	LCDC = v;
 	if (!LCD_ENABLED)
 	{
 #ifdef DEBUG_PPU
-		printf (" >>> LCD disabled\n");
+		printf (" PPU > LCD disabled\n");
 #endif
 		dot = LY = 0;
 		SET_MODE (MODE_HBLANK);
