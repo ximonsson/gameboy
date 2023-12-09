@@ -9,6 +9,10 @@ LIB=lib/libgb.a
 ARCMD = rcs
 BIN=bin/gb
 
+ifndef DMG  # compile DMG version
+CFLAGS += -DCGB
+endif
+
 ifdef DEBUG
 CFLAGS += -g3 -DDEBUG_CPU -DDEBUG_PPU
 endif

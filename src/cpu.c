@@ -3,9 +3,9 @@
 #include <string.h>
 #include <assert.h>
 
-#ifdef DEBUG_CPU
+//#ifdef DEBUG_CPU
 #include <stdio.h>
-#endif
+//#endif
 
 /* CPU Registers */
 
@@ -131,6 +131,39 @@ static void mem_store (uint16_t adr, uint8_t v)
 
 /* Define some memory handlers here. */
 
+#ifdef CGB
+#define HDMA1 0xFF51
+#define HDMA2 0xFF52
+#define HDMA3 0xFF53
+#define HDMA4 0xFF54
+#define HDMA5 0xFF55
+
+static void oam_dma_transfer (uint8_t v)
+{
+	uint16_t src = ((RAM (HDMA1) << 8) | RAM (HDMA2)) & 0xFFF0;
+	uint16_t dst = ((RAM (HDMA3) << 8) | RAM (HDMA4)) & 0x1FF0;
+
+	// x << 4 == x mul 16
+	uint16_t n = ((v & 0x7F) + 0x0001) << 4;
+
+	if (v & 0x80)  // General purpose DMA
+	{
+		for (uint16_t i = 0; i < n; i ++)
+			ram[dst + i] = ram[src + i];
+		ram[HDMA5] = 0xFF;
+	}
+	else  // HBlank DMA
+	{
+		fprintf (stderr, "CPU > HBLANK DMA !! not supported yet\n");
+	}
+}
+
+static int oam_dma_transf_handler (uint16_t adr, uint8_t v)
+{
+	if (adr != HDMA5) oam_dma_transfer (v);
+	return 0;
+}
+#else  // DMG
 /* Transfer memory to OAM location. */
 static void oam_dma_transfer (uint8_t v)
 {
@@ -151,6 +184,7 @@ static int oam_dma_transf_handler (uint16_t address, uint8_t v)
 		oam_dma_transfer (v);
 	return 0;
 }
+#endif  // ifdef CGB
 
 /**
  * stack_push pushes the value v to the stack.
