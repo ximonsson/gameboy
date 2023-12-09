@@ -209,6 +209,27 @@ const uint8_t* gb_ppu_lcd () { return lcd; }
 /* VRAM */
 static uint8_t* vram;
 
+#ifdef CGB
+/* VRAM bank 1 */
+static uint8_t vram_bank1[0x2000];
+
+static uint8_t *_vbk;
+#define VBK (*_vbk)
+#define VBK_LOC 0xFF4F
+
+static int write_vbk_handler (uint16_t adr, uint8_t v)
+{
+	if (adr != VBK_LOC) return 0;
+
+	if (v & 1) vram = vram_bank1;
+	else vram = gb_cpu_mem (VRAM_LOC);
+
+	VBK = 0xFE | (v & 1);
+
+	return 1;
+}
+#endif  // ifdef CGB
+
 /* monochrome palett. */
 static const uint8_t SHADES [4][3] =
 {
@@ -469,6 +490,11 @@ void gb_ppu_reset ()
 	gb_cpu_register_store_handler (write_status_h);
 	gb_cpu_register_store_handler (write_lcdc_h);
 	gb_cpu_register_store_handler (write_ly_h);
+
+#ifdef CGB
+	_vbk = gb_cpu_mem (VBK_LOC);
+	gb_cpu_register_store_handler (write_vbk_handler);
+#endif  // ifdef CGB
 
 	memset (__lcd_1, 0, NPIXELS);
 	memset (__lcd_2, 0, NPIXELS);
