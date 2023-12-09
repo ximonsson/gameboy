@@ -186,6 +186,28 @@ static int oam_dma_transf_handler (uint16_t address, uint8_t v)
 }
 #endif  // ifdef CGB
 
+#ifdef CGB
+static uint8_t *_svbk;
+#define SVBK (*_svbk)
+#define SVBK_LOC 0xFF70
+
+static uint8_t wram[0x8000];
+static uint8_t *wram_bank;
+
+static int write_wram_bank_handler (uint16_t adr, uint8_t v)
+{
+	if (adr != SVBK_LOC) goto ret;
+
+	// v << 12 == v mul 0x1000
+	if (v == 0) v = 1;
+	wram_bank = wram + (v << 12);
+
+ret:
+	return 0;
+}
+
+#endif  // ifdef CGB
+
 /**
  * stack_push pushes the value v to the stack.
  */
