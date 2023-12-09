@@ -187,8 +187,8 @@ static int oam_dma_transf_handler (uint16_t address, uint8_t v)
 #endif  // ifdef CGB
 
 #ifdef CGB
-static uint8_t *_svbk;
-#define SVBK (*_svbk)
+//static uint8_t *_svbk;
+//#define SVBK (*_svbk)
 #define SVBK_LOC 0xFF70
 
 static uint8_t wram[0x8000];
@@ -204,6 +204,17 @@ static int write_wram_bank_handler (uint16_t adr, uint8_t v)
 
 ret:
 	return 0;
+}
+
+static int read_wram_handler (uint16_t adr, uint8_t *v)
+{
+	if (adr < 0xD000 || adr > 0xDFFF) return 0;
+
+	//uint16_t x = (SVBK == 0 ? 1 : SVBK) << 12;
+	//*v = wram[x + adr - 0xD000];
+	*v = wram_bank[adr - 0xD000];
+
+	return 1;
 }
 
 #endif  // ifdef CGB
@@ -890,12 +901,15 @@ void gb_cpu_reset ()
 	gb_cpu_register_store_handler (write_div_h);
 	gb_cpu_register_store_handler (write_unused_ram_h);
 	gb_cpu_register_store_handler (write_echo_ram_h);
-	store_handlers[n_store_handlers] = 0;
 
 	n_read_handlers = 0;
 	gb_cpu_register_read_handler (read_unused_ram_h);
 	gb_cpu_register_read_handler (read_echo_ram_h);
-	read_handlers[n_read_handlers] = 0;
+
+#ifdef CGB
+	gb_cpu_register_store_handler (write_wram_bank_handler);
+	gb_cpu_register_read_handler (read_wram_handler);
+#endif  // ifdef CGB
 
 	memset (ram, 0, 1 << 16);
 
