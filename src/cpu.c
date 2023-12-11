@@ -154,7 +154,12 @@ static void oam_dma_transfer (uint8_t v)
 	}
 	else  // HBlank DMA
 	{
-		fprintf (stderr, "CPU > HBLANK DMA !! not supported yet\n");
+		// TODO
+		// correct implementation
+		//fprintf (stderr, "CPU > HBLANK DMA !! not supported yet\n");
+		for (uint16_t i = 0; i < n; i ++)
+			ram[dst + i] = ram[src + i];
+		ram[HDMA5] = 0xFF;
 	}
 }
 
@@ -909,6 +914,7 @@ void gb_cpu_reset ()
 #ifdef CGB
 	gb_cpu_register_store_handler (write_wram_bank_handler);
 	gb_cpu_register_read_handler (read_wram_handler);
+	wram_bank = wram + 0x1000;
 #endif  // ifdef CGB
 
 	memset (ram, 0, 1 << 16);
