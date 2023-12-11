@@ -196,26 +196,28 @@ static uint8_t* oam;
 #define SPRITE_VRAM(sprite) ((sprite[3] & 0x08) >> 3)
 #define SPRITE_PALETTE_CGB(sprite) (sprite[3] & 0x07)
 
-#define NPIXELS 69120 // width x height x rgb
+#define NPIXELS 23040
+//#define NPIXELS 69120 // width x height x rgb
 
 /* switchable screen buffer for rendering. */
-static uint8_t *lcd, *lcd_buf;
-static uint8_t __lcd_1[NPIXELS];
-static uint8_t __lcd_2[NPIXELS];
+static uint16_t *lcd, *lcd_buf;
+static uint16_t __lcd_1[NPIXELS];
+static uint16_t __lcd_2[NPIXELS];
 
 
-const uint8_t* gb_ppu_lcd () { return lcd; }
+const uint16_t *gb_ppu_lcd () { return lcd; }
 
 /* VRAM */
 static uint8_t* vram;
 
 /* monochrome palett. */
-static const uint8_t SHADES [4][3] =
+static const uint16_t SHADES [4] =
 {
-	{ 0xFF, 0xFF, 0xFF },
-	{ 0xAA, 0xAA, 0xAA },
-	{ 0x55, 0x55, 0x55 },
-	{ 0x00, 0x00, 0x00 },
+	0xFFFF, 0xAAAA, 0x5555, 0x0000
+	//{ 0xFF, 0xFF, 0xFF },
+	//{ 0xAA, 0xAA, 0xAA },
+	//{ 0x55, 0x55, 0x55 },
+	//{ 0x00, 0x00, 0x00 },
 };
 
 /* get color @ (x, y) within 8x8 tile. */
@@ -411,8 +413,12 @@ static inline void step ()
 			if (OBJ_ENABLED)
 				color_obj (x, &c, bgc, &pal);
 
-			const uint8_t* rgb = SHADES[(pal >> (c << 1)) & 0x3];
-			memcpy (lcd_buf + (LY * GB_LCD_WIDTH + x) * 3, rgb, 3);
+			//const uint8_t* rgb = SHADES[(pal >> (c << 1)) & 0x3];
+			//memcpy (lcd_buf + (LY * GB_LCD_WIDTH + x) * 3, rgb, 3);
+
+			// TODO
+			// i can't remember why this magic gets the correct shade
+			lcd_buf[LY * GB_LCD_WIDTH + x] = SHADES[(pal >> (c << 1)) & 0x3];
 		}
 		// H-BLANK
 		else if (x == (GB_LCD_WIDTH + 12))
@@ -470,8 +476,8 @@ void gb_ppu_reset ()
 	gb_cpu_register_store_handler (write_lcdc_h);
 	gb_cpu_register_store_handler (write_ly_h);
 
-	memset (__lcd_1, 0, NPIXELS);
-	memset (__lcd_2, 0, NPIXELS);
+	memset (__lcd_1, 0, NPIXELS * sizeof (uint16_t));
+	memset (__lcd_2, 0, NPIXELS * sizeof (uint16_t));
 	lcd = __lcd_1;
 	lcd_buf = __lcd_2;
 }

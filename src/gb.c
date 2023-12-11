@@ -49,7 +49,7 @@ void gb_press_button (gb_button b) { gb_io_press_button (b); }
 
 void gb_release_button (gb_button b) { gb_io_release_button (b); }
 
-const uint8_t* gb_lcd () { return gb_ppu_lcd (); }
+const uint16_t *gb_lcd () { return gb_ppu_lcd (); }
 
 void gb_audio_samples (float *buf, size_t *n) { gb_apu_samples (buf, n); }
 

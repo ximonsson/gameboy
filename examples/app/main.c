@@ -247,17 +247,17 @@ void draw ()
 	SDL_GetWindowSize (sdl_window, &width, &height);
 	glViewport (0, 0, width, height);
 
-	const uint8_t* screen = gb_lcd ();
+	const uint16_t *screen = gb_lcd ();
 	glTexImage2D
 	(
 		GL_TEXTURE_2D,
 		0,
-		GL_RGB,
+		GL_RGB5,
 		GB_LCD_WIDTH,
 		GB_LCD_HEIGHT,
 		0,
 		GL_RGB,
-		GL_UNSIGNED_BYTE,
+		GL_UNSIGNED_SHORT,
 		screen
 	);
 
