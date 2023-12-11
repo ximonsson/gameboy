@@ -1,5 +1,5 @@
 CC = cc
-CFLAGS += -Wall -finline-functions
+CFLAGS += -Wall
 LDFLAGS += -L./lib -lgb -lSDL2
 INCLUDES = -I./include
 
@@ -17,7 +17,7 @@ ifdef PROFILE
 CFLAGS += -pg -g
 LDFLAGS += -pg
 else
-CFLAGS += -Ofast
+CFLAGS += -O3
 endif
 
 ifdef GLES

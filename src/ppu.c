@@ -196,8 +196,7 @@ static uint8_t* oam;
 #define SPRITE_VRAM(sprite) ((sprite[3] & 0x08) >> 3)
 #define SPRITE_PALETTE_CGB(sprite) (sprite[3] & 0x07)
 
-#define NPIXELS 23040
-//#define NPIXELS 69120 // width x height x rgb
+#define NPIXELS 23040  // width * height
 
 /* switchable screen buffer for rendering. */
 static uint16_t *lcd, *lcd_buf;
@@ -211,14 +210,7 @@ const uint16_t *gb_ppu_lcd () { return lcd; }
 static uint8_t* vram;
 
 /* monochrome palett. */
-static const uint16_t SHADES [4] =
-{
-	0xFFFF, 0xAAAA, 0x5555, 0x0000
-	//{ 0xFF, 0xFF, 0xFF },
-	//{ 0xAA, 0xAA, 0xAA },
-	//{ 0x55, 0x55, 0x55 },
-	//{ 0x00, 0x00, 0x00 },
-};
+static const uint16_t SHADES[4] = { 0xFFFF, 0xAD6A, 0x294A, 0x0000 };
 
 /* get color @ (x, y) within 8x8 tile. */
 static uint8_t color_tile (uint8_t *tile, uint8_t x, uint8_t y)

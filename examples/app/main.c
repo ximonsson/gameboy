@@ -252,12 +252,12 @@ void draw ()
 	(
 		GL_TEXTURE_2D,
 		0,
-		GL_RGB5,
+		GL_RGB5_A1,
 		GB_LCD_WIDTH,
 		GB_LCD_HEIGHT,
 		0,
-		GL_RGB,
-		GL_UNSIGNED_SHORT,
+		GL_RGBA,
+		GL_UNSIGNED_SHORT_5_5_5_1,
 		screen
 	);
 
@@ -267,16 +267,12 @@ void draw ()
 }
 
 #ifdef AUDIO_SDL
-
 static float *audio_samples_buffer;
 static SDL_AudioDeviceID audio_devid;
-
 #else
-
 // connection to Pulse Audio server
 static pa_simple* audioconn;
 static float* audio_samples_buffer;
-
 #endif
 
 // initialize audio connection
