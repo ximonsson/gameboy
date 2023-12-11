@@ -59,7 +59,7 @@ void gb_quit () ;
  * This can change between frames so it is recommended to make a call each time
  * AFTER stepping the emulator and drawing while it is paused before stepping again.
  */
-const uint8_t* gb_lcd () ;
+const uint16_t *gb_lcd () ;
 
 // TODO
 // I don't like this solution for the buttons.

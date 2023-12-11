@@ -48,7 +48,7 @@ while (1)
     if (cc >= GB_FRAME)
     {
         // get pointer to pixel data
-        const uint8_t *gb_screen = gb_lcd ();
+        const uint16_t *gb_screen = gb_lcd ();
 
         /* your draw code */
 
@@ -72,6 +72,13 @@ gb_quit ();
 ```
 
 Above you can notice that you need to specify a sampling rate for `gb_init` method. When later choosing a step size you will probably want something that is proportional to the sampling rate, because you will most likely want to sync by audio. I recommend something similar to `GB_CPU_CLOCK / SAMPLE_RATE * BUFFER_SIZE`, where `BUFFER_SIZE` is the number of audio samples you would like to buffer before sending to the playback device.
+
+
+### Color Format
+
+You will note that `gb_lcd` returns a pointer to an array of unsigned 16-bit integers. Each integer contains *one* color; first 5-bits are the red channel, next five are the green channel, next five the blue, and ultimately the last bit is ignored. Same format as the [palettes are stored on the CGB](https://gbdev.io/pandocs/Palettes.html#lcd-color-palettes-cgb-only).
+
+Tip: If you use OpenGL to render the LCD, you can send the pointer directly as a texture using internal format `GL_RGB5_A1` and data type `GL_UNSIGNED_SHORT_5_5_5_1`.
 
 
 ### Emulating battery support

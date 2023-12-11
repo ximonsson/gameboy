@@ -96,8 +96,7 @@ static void print_nintendo_logo (const uint8_t* logo)
 	{
 		uint8_t b = logo[i];
 		int scanln = (i / 24) * 2 ;
-		if (i & 1)
-			scanln ++;
+		if (i & 1) scanln ++;
 		int square = ((i & 0xFE) / 2) % w;
 
 		for (int r = 0; r < 2; r ++)
@@ -114,10 +113,10 @@ static void print_nintendo_logo (const uint8_t* logo)
 
 				b <<= 1;
 			}
-			printf ("\n");
 		}
 	}
 
+	printf ("\n");
 	for (int i = 0; i < h; i ++)
 	{
 		for (int j = 0; j < bw; j ++)
@@ -174,12 +173,13 @@ void gb_print_header_info (gb_cartridge_header h)
 	};
 
 	print_nintendo_logo (h.logo);
-	printf ("%-15s > %s\n", "TITLE", h.title);
-	printf ("%-15s > %s\n", "MBC", MBC[h.mbc]);
-	printf ("%-15s > %-3d x 16KB\n", "ROM", h.rom_size);
-	printf ("%-15s > %-3d x 8KB\n", "RAM", h.ram_size);
-	printf ("%-15s > %s\n", "CGB", h.cgb == 0x80 ? "CGB SUPPORT" : h.cgb == 0xC0 ? "CGB _ONLY_" : "DMG");
-	printf ("%-15s > %s\n", "SGB", h.sgb == 0x03 ? "YES" : "NO");
+	printf ("%-10s > %s\n", "TITLE", h.title);
+	printf ("%-10s > %s\n", "MBC", MBC[h.mbc]);
+	printf ("%-10s > %-3d x 16KB\n", "ROM", h.rom_size);
+	printf ("%-10s > %-3d x 8KB\n", "RAM", h.ram_size);
+	printf ("%-10s > %s\n", "CGB", h.cgb == 0x80 ? "CGB SUPPORT" : h.cgb == 0xC0 ? "CGB _ONLY_" : "DMG");
+	printf ("%-10s > %s\n", "SGB", h.sgb == 0x03 ? "YES" : "NO");
+	printf ("\n");
 }
 
 int gb_load_mbc (gb_cartridge_header h, uint8_t *ram)

@@ -22,7 +22,7 @@ void gb_ppu_reset () ;
 /**
  * Return a pointer to the current buffer being drawn to.
  */
-const uint8_t* gb_ppu_lcd () ;
+const uint16_t *gb_ppu_lcd () ;
 
 /**
  * Stall the PPU for a number of CPU cycles.
