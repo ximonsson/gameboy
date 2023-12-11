@@ -37,6 +37,8 @@ int gb_load (uint8_t *ROM, uint8_t **RAM, size_t *ram_size)
 	gb_cartridge_header h;
 	if (gb_load_cartridge (ROM, &h, RAM, ram_size) != 0) return 1;
 
+	gb_print_header_info (h);
+
 	// load ROM
 	// TODO
 	// i think this should be part of the reset instead.
