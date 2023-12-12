@@ -233,6 +233,54 @@ static int write_vbk_handler (uint16_t adr, uint8_t v)
 /* monochrome palett. */
 static const uint16_t SHADES[4] = { 0xFFFF, 0xAD6A, 0x294A, 0x0000 };
 
+#ifdef CGB
+static uint8_t CRAM_BG[64];
+
+static uint8_t *_bcps;
+#define BCPS (*_bcps)
+#define BCPS_LOC 0xFF68
+
+//static uint8_t *_bcpd;
+//#define BCPD (*_bcpd)
+#define BCPD_LOC 0xFF69
+
+static int write_bcpd_handler (uint16_t adr, uint8_t v)
+{
+	if (adr != BCPD_LOC) return 0;
+
+	CRAM_BG[BCPS & 0x3F] = v;
+
+	// auto increment
+	if (BCPS & 0x80)
+		BCPS = 0x80 | (((BCPS & 0x3F) + 1) & 0x3F);
+
+	return 1;
+}
+
+static uint8_t CRAM_OBJ[64];
+
+static uint8_t *_ocps;
+#define OCPS (*_ocps)
+#define OCPS_LOC 0xFF68
+
+//static uint8_t *_ocpd;
+//#define OCPD (*_ocpd)
+#define OCPD_LOC 0xFF69
+
+static int write_ocpd_handler (uint16_t adr, uint8_t v)
+{
+	if (adr != OCPD_LOC) return 0;
+
+	CRAM_OBJ[OCPS & 0x3F] = v;
+
+	// auto increment
+	if (OCPS & 0x80)
+		OCPS = 0x80 | (((OCPS & 0x3F) + 1) & 0x3F);
+
+	return 1;
+}
+#endif  // ifdef CGB
+
 /* get color @ (x, y) within 8x8 tile. */
 static uint8_t color_tile (uint8_t *tile, uint8_t x, uint8_t y)
 {
@@ -491,7 +539,13 @@ void gb_ppu_reset ()
 
 #ifdef CGB
 	_vbk = gb_cpu_mem (VBK_LOC);
+	_ocps = gb_cpu_mem (OCPS_LOC);
+	_bcps = gb_cpu_mem (BCPS_LOC);
 	gb_cpu_register_store_handler (write_vbk_handler);
+	gb_cpu_register_store_handler (write_bcpd_handler);
+	gb_cpu_register_store_handler (write_ocpd_handler);
+	memset (CRAM_BG, 0, 64);
+	memset (CRAM_OBJ, 0, 64);
 #endif  // ifdef CGB
 
 	memset (__lcd_1, 0, NPIXELS * sizeof (uint16_t));
