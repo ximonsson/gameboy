@@ -230,9 +230,6 @@ static int write_vbk_handler (uint16_t adr, uint8_t v)
 }
 #endif  // ifdef CGB
 
-/* monochrome palett. */
-static const uint16_t SHADES[4] = { 0xFFFF, 0xAD6A, 0x294A, 0x0000 };
-
 #ifdef CGB
 static uint8_t CRAM_BG[64];
 
@@ -280,6 +277,9 @@ static int write_ocpd_handler (uint16_t adr, uint8_t v)
 	return 1;
 }
 #endif  // ifdef CGB
+		//
+/* monochrome palett. */
+static const uint16_t SHADES[4] = { 0xFFFF, 0xAD6A, 0x294A, 0x0000 };
 
 /* get color @ (x, y) within 8x8 tile. */
 static uint8_t color_tile (uint8_t *tile, uint8_t x, uint8_t y)
@@ -408,6 +408,37 @@ void gb_ppu_stall (uint32_t cc)
 
 #define OAM_CC 80
 
+
+static inline void draw_dmg (uint16_t x)
+{
+	uint8_t bgc = 0, c = 0;
+	uint8_t pal = BGP;
+
+	// Background
+	if (BG_WIN_PRIO)
+	{
+		// BG
+		c = bgc = color_bg (x);
+		// WIN
+		if (WIN_DISP_ENABLED && (x >= (WX - 7)) && (LY >= WY))
+			c = color_win (x);
+	}
+	// Sprite
+	if (OBJ_ENABLED)
+		color_obj (x, &c, bgc, &pal);
+
+	// TODO
+	// i can't remember why this magic gets the correct shade
+	lcd_buf[LY * GB_LCD_WIDTH + x] = SHADES[(pal >> (c << 1)) & 0x3];
+}
+
+static inline void draw_cgb (uint16_t x)
+{
+
+}
+
+static inline void (*draw) (uint16_t) = draw_dmg;
+
 /* step the PPU one dot. */
 static inline void step ()
 {
@@ -457,30 +488,7 @@ static inline void step ()
 
 		if (x == 0) SET_MODE (MODE_TRANSFER_LCD);
 
-		if (x < GB_LCD_WIDTH) // draw (x, LY);
-		{
-			uint8_t bgc = 0, c = 0;
-			uint8_t pal = BGP;
-			// Background
-			if (BG_WIN_PRIO)
-			{
-				// BG
-				c = bgc = color_bg (x);
-				// WIN
-				if (WIN_DISP_ENABLED && (x >= (WX - 7)) && (LY >= WY))
-					c = color_win (x);
-			}
-			// Sprite
-			if (OBJ_ENABLED)
-				color_obj (x, &c, bgc, &pal);
-
-			//const uint8_t* rgb = SHADES[(pal >> (c << 1)) & 0x3];
-			//memcpy (lcd_buf + (LY * GB_LCD_WIDTH + x) * 3, rgb, 3);
-
-			// TODO
-			// i can't remember why this magic gets the correct shade
-			lcd_buf[LY * GB_LCD_WIDTH + x] = SHADES[(pal >> (c << 1)) & 0x3];
-		}
+		if (x < GB_LCD_WIDTH) draw (x);
 		// H-BLANK
 		else if (x == (GB_LCD_WIDTH + 12))
 		{
