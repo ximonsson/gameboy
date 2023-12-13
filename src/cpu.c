@@ -196,17 +196,16 @@ static int oam_dma_transf_handler (uint16_t address, uint8_t v)
 //#define SVBK (*_svbk)
 #define SVBK_LOC 0xFF70
 
-static uint8_t wram[0x8000];
+static uint8_t wram[0x7000];
 static uint8_t *wram_bank;
 
 static int write_wram_bank_handler (uint16_t adr, uint8_t v)
 {
 	if (adr != SVBK_LOC) goto ret;
 
-	// v << 12 == v mul 0x1000
 	if (v == 0) v = 1;
-	wram_bank = wram + (v << 12);
-
+	// v << 12 == v mul 0x1000
+	wram_bank = wram + ((v - 1) << 12);
 ret:
 	return 0;
 }
@@ -218,7 +217,14 @@ static int read_wram_handler (uint16_t adr, uint8_t *v)
 	//uint16_t x = (SVBK == 0 ? 1 : SVBK) << 12;
 	//*v = wram[x + adr - 0xD000];
 	*v = wram_bank[adr - 0xD000];
+	return 1;
+}
 
+static int write_wram_handler (uint16_t adr, uint8_t v)
+{
+	if (adr < 0xD000 || adr > 0xDFFF) return 0;
+
+	wram_bank[adr - 0xD000] = v;
 	return 1;
 }
 
@@ -913,6 +919,7 @@ void gb_cpu_reset ()
 
 #ifdef CGB
 	gb_cpu_register_store_handler (write_wram_bank_handler);
+	gb_cpu_register_store_handler (write_wram_handler);
 	gb_cpu_register_read_handler (read_wram_handler);
 	wram_bank = wram + 0x1000;
 #endif  // ifdef CGB
