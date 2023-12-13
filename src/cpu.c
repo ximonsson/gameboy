@@ -191,7 +191,7 @@ static int oam_dma_transf_handler (uint16_t address, uint8_t v)
 }
 #endif  // ifdef CGB
 
-#ifdef CGB
+//#ifdef CGB
 //static uint8_t *_svbk;
 //#define SVBK (*_svbk)
 #define SVBK_LOC 0xFF70
@@ -228,7 +228,7 @@ static int write_wram_handler (uint16_t adr, uint8_t v)
 	return 1;
 }
 
-#endif  // ifdef CGB
+//#endif  // ifdef CGB
 
 /**
  * stack_push pushes the value v to the stack.
@@ -896,7 +896,7 @@ void gb_cpu_reset ()
 	PC = 0x100;
 	SP = 0xFFFE;
 
-	AF = 0x01B0;
+	AF = 0x11B0;
 	BC = 0x0013;
 	DE = 0x00D8;
 	HL = 0x014D;
@@ -917,12 +917,11 @@ void gb_cpu_reset ()
 	gb_cpu_register_read_handler (read_unused_ram_h);
 	gb_cpu_register_read_handler (read_echo_ram_h);
 
-#ifdef CGB
 	gb_cpu_register_store_handler (write_wram_bank_handler);
 	gb_cpu_register_store_handler (write_wram_handler);
 	gb_cpu_register_read_handler (read_wram_handler);
 	wram_bank = wram + 0x1000;
-#endif  // ifdef CGB
+	memset (wram, 0, 0x7000);
 
 	memset (ram, 0, 1 << 16);
 

@@ -210,7 +210,8 @@ const uint16_t *gb_ppu_lcd () { return lcd; }
 static uint8_t* vram;
 
 #ifdef CGB
-/* VRAM bank 1 */
+/* VRAM banks */
+static uint8_t *vram_bank0;
 static uint8_t vram_bank1[0x2000];
 
 static uint8_t *_vbk;
@@ -222,7 +223,7 @@ static int write_vbk_handler (uint16_t adr, uint8_t v)
 	if (adr != VBK_LOC) return 0;
 
 	if (v & 1) vram = vram_bank1;
-	else vram = gb_cpu_mem (VRAM_LOC);
+	else vram = vram_bank0;
 
 	VBK = 0xFE | (v & 1);
 
@@ -281,6 +282,10 @@ static int write_ocpd_handler (uint16_t adr, uint8_t v)
 /* monochrome palett. */
 static const uint16_t SHADES[4] = { 0xFFFF, 0xAD6A, 0x294A, 0x0000 };
 
+// 2 bits / color, so shift the palette 2 × the color index right to
+// put the desired color in the 2 least significant bits
+#define SHADE(c, pal) SHADES[(pal >> (c << 1)) & 0x03]
+
 /* get color @ (x, y) within 8x8 tile. */
 static uint8_t color_tile (uint8_t *tile, uint8_t x, uint8_t y)
 {
@@ -337,11 +342,35 @@ static uint8_t line_sprites[SPRITES_PER_LINE + 1];
 
 #define RESET_LINE_SPRITES memset (line_sprites, 0xFF, SPRITES_PER_LINE + 1);
 
-static inline void color_obj (uint8_t x, uint8_t *c, uint8_t bgc, uint8_t *pal)
+static inline uint16_t __color_obj_dmg (uint8_t *sprite, uint8_t ti, uint8_t dx, uint8_t dy)
+{
+	uint8_t oc = color_tile (vram + (ti << 4), dx, dy);
+	return SHADE (sprite[3] & 0x10 ? OBP1 : OBP0, oc);
+}
+
+#ifdef CGB
+static inline uint16_t __color_obj_cgb (uint8_t *sprite, uint8_t ti, uint8_t dx, uint8_t dy)
+{
+	uint8_t oc = color_tile
+	(
+		(sprite[3] & 0x08 ? vram_bank1 : vram_bank0) + (ti << 4),
+		dx,
+		dy
+	);
+
+	// 4 colors / palette × 2 B / colors = every 8 B
+	return CRAM_OBJ[((sprite[3] & 0x7) << 3) + (oc & 0x3)];
+}
+#endif  // ifdef CGB
+
+static uint16_t (*__color_obj) (uint8_t *, uint8_t, uint8_t, uint8_t);
+
+static inline void color_obj (uint8_t x, uint16_t *c, uint16_t bgc)
 {
 	uint8_t *sprite;
 	int16_t dx;
-	uint8_t dy, oc, ti;
+	uint8_t dy, ti;
+	uint16_t oc;
 
 	for (uint8_t *s = line_sprites; (*s) != 0xFF; s ++)
 	{
@@ -356,19 +385,21 @@ static inline void color_obj (uint8_t x, uint8_t *c, uint8_t bgc, uint8_t *pal)
 		{
 			dy = LY - sprite[0] + 16;
 
+			// flip
 			if (SPRITE_XFLIP (sprite))
 				dx = 7 - dx;
-
 			if (SPRITE_YFLIP (sprite))
 				dy = OBJ_SIZE - 1 - dy;
 
+			// tile
 			ti = sprite[2]; if (OBJ_SIZE == 16) ti &= 0xFE;
-			oc = color_tile (vram + (ti << 4), dx, dy);
+
+			// tile color
+			oc = __color_obj (sprite, ti, dx, dy);
 
 			if (oc)
 			{
 				*c = oc;
-				*pal = obp0_[SPRITE_PALETTE (sprite)];
 				break;
 			}
 		}
@@ -408,11 +439,9 @@ void gb_ppu_stall (uint32_t cc)
 
 #define OAM_CC 80
 
-
 static inline void draw_dmg (uint16_t x)
 {
-	uint8_t bgc = 0, c = 0;
-	uint8_t pal = BGP;
+	uint16_t bgc = 0, c = 0;
 
 	// Background
 	if (BG_WIN_PRIO)
@@ -425,19 +454,37 @@ static inline void draw_dmg (uint16_t x)
 	}
 	// Sprite
 	if (OBJ_ENABLED)
-		color_obj (x, &c, bgc, &pal);
+		color_obj (x, &c, bgc);
 
-	// TODO
-	// i can't remember why this magic gets the correct shade
-	lcd_buf[LY * GB_LCD_WIDTH + x] = SHADES[(pal >> (c << 1)) & 0x3];
+	lcd_buf[LY * GB_LCD_WIDTH + x] = c;
 }
 
 static inline void draw_cgb (uint16_t x)
 {
+	uint16_t bgc = 0, c = 0;
 
+	// TODO
+	// implement correct priorities
+
+	// Background
+	/*
+	if (BG_WIN_PRIO)
+	{
+		// BG
+		c = bgc = color_bg (x);
+		// WIN
+		if (WIN_DISP_ENABLED && (x >= (WX - 7)) && (LY >= WY))
+			c = color_win (x);
+	}
+	*/
+	// Sprite
+	if (OBJ_ENABLED)
+		color_obj (x, &c, bgc);
+
+	lcd_buf[LY * GB_LCD_WIDTH + x] = c;
 }
 
-static inline void (*draw) (uint16_t) = draw_dmg;
+static void (*draw) (uint16_t);
 
 /* step the PPU one dot. */
 static inline void step ()
@@ -560,6 +607,9 @@ void gb_ppu_reset ()
 	memset (__lcd_2, 0, NPIXELS * sizeof (uint16_t));
 	lcd = __lcd_1;
 	lcd_buf = __lcd_2;
+
+	draw = draw_dmg;
+	__color_obj = __color_obj_dmg;
 }
 
 #ifdef DEBUG_PPU
