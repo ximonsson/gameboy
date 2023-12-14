@@ -31,10 +31,10 @@ static int validate_checksum (const uint8_t* header)
 /**
  * Read header from the ROM data (cartridge).
  */
-static int read_header (const uint8_t* rom, gb_cartridge_header* hdr)
+static int read_header (const uint8_t *rom, gb_cartridge_header *hdr)
 {
 	// point to header
-	const uint8_t* header = rom + GB_HEADER_LOCATION;
+	const uint8_t *header = rom + GB_HEADER_LOCATION;
 
 	// copy logo from cartridge
 	// and compare to correct logo, making sure they are correct
@@ -238,7 +238,13 @@ int gb_load_mbc (gb_cartridge_header h, uint8_t *ram)
 	return 0;
 }
 
-int gb_load_cartridge (uint8_t *data, gb_cartridge_header *h, uint8_t **ram, size_t *ram_size)
+int gb_load_cartridge
+(
+	const uint8_t *data,
+	gb_cartridge_header *h,
+	uint8_t **ram,
+	size_t *ram_size
+)
 {
 	// read header
 	if (read_header (data, h) != 0) return 1;
@@ -257,5 +263,6 @@ int gb_load_cartridge (uint8_t *data, gb_cartridge_header *h, uint8_t **ram, siz
 	}
 
 	// load MBC
-	return gb_load_mbc (*h, *ram);
+	//return gb_load_mbc (*h, *ram);
+	return 0;
 }

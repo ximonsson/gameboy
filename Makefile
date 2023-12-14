@@ -9,10 +9,6 @@ LIB=lib/libgb.a
 ARCMD = rcs
 BIN=bin/gb
 
-ifndef DMG  # compile DMG version
-CFLAGS += -DCGB
-endif
-
 ifdef DEBUG
 CFLAGS += -g3 -DDEBUG_CPU -DDEBUG_PPU
 endif
@@ -21,7 +17,7 @@ ifdef PROFILE
 CFLAGS += -pg -g
 LDFLAGS += -pg
 else
-CFLAGS += -O3
+CFLAGS += -O3 -g3
 endif
 
 ifdef GLES

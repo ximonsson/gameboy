@@ -24,20 +24,28 @@ void gb_init (int sample_rate_)
 	sample_rate = sample_rate_;
 }
 
-int gb_load (uint8_t *ROM, uint8_t **RAM, size_t *ram_size)
+int gb_load (const uint8_t *ROM, uint8_t **RAM, size_t *ram_size)
 {
 	n_step_cbs = 0;
-
-	// reset all units
-	gb_cpu_reset ();
-	gb_ppu_reset ();
-	gb_io_reset ();
-	gb_apu_reset (sample_rate);
 
 	gb_cartridge_header h;
 	if (gb_load_cartridge (ROM, &h, RAM, ram_size) != 0) return 1;
 
 	gb_print_header_info (h);
+	uint8_t cgb = h.cgb == 0x80 || h.cgb == 0xC0;
+
+	if (cgb)
+	{
+		printf ("GB > Running emulator in CGB mode.\n");
+	}
+
+	// reset all units
+	gb_cpu_reset (!cgb);
+	gb_ppu_reset (!cgb);
+	gb_io_reset ();
+	gb_apu_reset (sample_rate);
+
+	gb_load_mbc (h, *RAM);
 
 	// load ROM
 	// TODO

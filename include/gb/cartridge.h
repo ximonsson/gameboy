@@ -38,7 +38,7 @@ gb_cartridge_header;
  */
 int gb_load_cartridge
 (
-	uint8_t * /* data */,
+	const uint8_t * /* data */,
 	gb_cartridge_header * /* header */,
 	uint8_t ** /* RAM */,
 	size_t * /* RAM size */

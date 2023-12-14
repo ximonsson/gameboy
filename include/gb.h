@@ -32,7 +32,7 @@ void gb_init (int /* sample rate */) ;
  *
  * A non-zero return value is returned in case the ROM data is corrupt or invalid.
  */
-int gb_load (uint8_t * /* rom */, uint8_t ** /* ram */, size_t * /* ram_size */) ;
+int gb_load (const uint8_t * /* rom */, uint8_t ** /* ram */, size_t * /* ram_size */) ;
 
 /**
  * Step the emulator for *at least* a given number of CPU cycles. The function returns

@@ -17,8 +17,10 @@ int gb_cpu_step () ;
 
 /**
  * Reset the CPU.
+ *
+ * Pass 0 or 1 for DMG compability mode.
  */
-void gb_cpu_reset () ;
+void gb_cpu_reset (uint8_t) ;
 
 /**
  * Get a pointer to a location within the RAM.

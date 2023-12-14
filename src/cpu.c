@@ -131,14 +131,13 @@ static void mem_store (uint16_t adr, uint8_t v)
 
 /* Define some memory handlers here. */
 
-#ifdef CGB
 #define HDMA1 0xFF51
 #define HDMA2 0xFF52
 #define HDMA3 0xFF53
 #define HDMA4 0xFF54
 #define HDMA5 0xFF55
 
-static void oam_dma_transfer (uint8_t v)
+static void vram_dma (uint8_t v)
 {
 	uint16_t src = ((RAM (HDMA1) << 8) | RAM (HDMA2)) & 0xFFF0;
 	uint16_t dst = ((RAM (HDMA3) << 8) | RAM (HDMA4)) & 0x1FF0;
@@ -163,12 +162,12 @@ static void oam_dma_transfer (uint8_t v)
 	}
 }
 
-static int oam_dma_transf_handler (uint16_t adr, uint8_t v)
+static int write_vram_dma_handler (uint16_t adr, uint8_t v)
 {
-	if (adr != HDMA5) oam_dma_transfer (v);
+	if (adr != HDMA5) vram_dma (v);
 	return 0;
 }
-#else  // DMG
+
 /* Transfer memory to OAM location. */
 static void oam_dma_transfer (uint8_t v)
 {
@@ -189,7 +188,6 @@ static int oam_dma_transf_handler (uint16_t address, uint8_t v)
 		oam_dma_transfer (v);
 	return 0;
 }
-#endif  // ifdef CGB
 
 //#ifdef CGB
 //static uint8_t *_svbk;
@@ -891,7 +889,7 @@ void interrupt ()
 /**
  * Reset the CPU.
  */
-void gb_cpu_reset ()
+void gb_cpu_reset (uint8_t dmg)
 {
 	PC = 0x100;
 	SP = 0xFFFE;
@@ -917,6 +915,7 @@ void gb_cpu_reset ()
 	gb_cpu_register_read_handler (read_unused_ram_h);
 	gb_cpu_register_read_handler (read_echo_ram_h);
 
+	// wram
 	gb_cpu_register_store_handler (write_wram_bank_handler);
 	gb_cpu_register_store_handler (write_wram_handler);
 	gb_cpu_register_read_handler (read_wram_handler);
@@ -924,6 +923,13 @@ void gb_cpu_reset ()
 	memset (wram, 0, 0x7000);
 
 	memset (ram, 0, 1 << 16);
+
+	// cgb mode
+	if (!dmg)
+	{
+		// vram dma
+		gb_cpu_register_store_handler (write_vram_dma_handler);
+	}
 
 	// reset timers
 	divcc = timacc = 0;

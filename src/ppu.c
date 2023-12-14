@@ -209,7 +209,6 @@ const uint16_t *gb_ppu_lcd () { return lcd; }
 /* VRAM */
 static uint8_t* vram;
 
-#ifdef CGB
 /* VRAM banks */
 static uint8_t *vram_bank0;
 static uint8_t vram_bank1[0x2000];
@@ -229,9 +228,7 @@ static int write_vbk_handler (uint16_t adr, uint8_t v)
 
 	return 1;
 }
-#endif  // ifdef CGB
 
-#ifdef CGB
 static uint8_t CRAM_BG[64];
 
 static uint8_t *_bcps;
@@ -277,8 +274,7 @@ static int write_ocpd_handler (uint16_t adr, uint8_t v)
 
 	return 1;
 }
-#endif  // ifdef CGB
-		//
+
 /* monochrome palett. */
 static const uint16_t SHADES[4] = { 0xFFFF, 0xAD6A, 0x294A, 0x0000 };
 
@@ -348,7 +344,6 @@ static inline uint16_t __color_obj_dmg (uint8_t *sprite, uint8_t ti, uint8_t dx,
 	return SHADE (sprite[3] & 0x10 ? OBP1 : OBP0, oc);
 }
 
-#ifdef CGB
 static inline uint16_t __color_obj_cgb (uint8_t *sprite, uint8_t ti, uint8_t dx, uint8_t dy)
 {
 	uint8_t oc = color_tile
@@ -359,9 +354,8 @@ static inline uint16_t __color_obj_cgb (uint8_t *sprite, uint8_t ti, uint8_t dx,
 	);
 
 	// 4 colors / palette × 2 B / colors = every 8 B
-	return CRAM_OBJ[((sprite[3] & 0x7) << 3) + (oc & 0x3)];
+	return CRAM_OBJ[(SPRITE_PALETTE_CGB(sprite) << 3) + (oc & 0x3)];
 }
-#endif  // ifdef CGB
 
 static uint16_t (*__color_obj) (uint8_t *, uint8_t, uint8_t, uint8_t);
 
@@ -560,7 +554,7 @@ void gb_ppu_step (uint32_t cc)
 	for (; cc > 0; cc --) step ();
 }
 
-void gb_ppu_reset ()
+void gb_ppu_reset (uint8_t dmg)
 {
 	lcdc_   = gb_cpu_mem (LCDC_LOC);
 	status_ = gb_cpu_mem (STATUS_LOC);
@@ -592,24 +586,30 @@ void gb_ppu_reset ()
 	gb_cpu_register_store_handler (write_lcdc_h);
 	gb_cpu_register_store_handler (write_ly_h);
 
-#ifdef CGB
-	_vbk = gb_cpu_mem (VBK_LOC);
-	_ocps = gb_cpu_mem (OCPS_LOC);
-	_bcps = gb_cpu_mem (BCPS_LOC);
-	gb_cpu_register_store_handler (write_vbk_handler);
-	gb_cpu_register_store_handler (write_bcpd_handler);
-	gb_cpu_register_store_handler (write_ocpd_handler);
-	memset (CRAM_BG, 0, 64);
-	memset (CRAM_OBJ, 0, 64);
-#endif  // ifdef CGB
+	if (!dmg)
+	{
+		_vbk = gb_cpu_mem (VBK_LOC);
+		_ocps = gb_cpu_mem (OCPS_LOC);
+		_bcps = gb_cpu_mem (BCPS_LOC);
+		gb_cpu_register_store_handler (write_vbk_handler);
+		gb_cpu_register_store_handler (write_bcpd_handler);
+		gb_cpu_register_store_handler (write_ocpd_handler);
+		memset (CRAM_BG, 0, 64);
+		memset (CRAM_OBJ, 0, 64);
+
+		draw = draw_cgb;
+		__color_obj = __color_obj_cgb;
+	}
+	else
+	{
+		draw = draw_dmg;
+		__color_obj = __color_obj_dmg;
+	}
 
 	memset (__lcd_1, 0, NPIXELS * sizeof (uint16_t));
 	memset (__lcd_2, 0, NPIXELS * sizeof (uint16_t));
 	lcd = __lcd_1;
 	lcd_buf = __lcd_2;
-
-	draw = draw_dmg;
-	__color_obj = __color_obj_dmg;
 }
 
 #ifdef DEBUG_PPU

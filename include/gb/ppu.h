@@ -16,8 +16,10 @@ void gb_ppu_step (uint32_t /* cycles */) ;
 /**
  * Reset the PPU.
  * Should be done on startup _after_ the CPU.
+ *
+ * Takes as input a flag wether to run in DMG compability mode.
  */
-void gb_ppu_reset () ;
+void gb_ppu_reset (uint8_t /* dmg compatibility mode */) ;
 
 /**
  * Return a pointer to the current buffer being drawn to.
