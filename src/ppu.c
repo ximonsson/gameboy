@@ -210,7 +210,7 @@ const uint16_t *gb_ppu_lcd () { return lcd; }
 static uint8_t* vram;
 
 /* VRAM banks */
-static uint8_t *vram_bank0;
+static uint8_t *vram_bank0;  // this one points to mem $8000-$9FFF
 static uint8_t vram_bank1[0x2000];
 
 static uint8_t *_vbk;
@@ -280,7 +280,7 @@ static const uint16_t SHADES[4] = { 0xFFFF, 0xAD6A, 0x294A, 0x0000 };
 
 // 2 bits / color, so shift the palette 2 × the color index right to
 // put the desired color in the 2 least significant bits
-#define SHADE(c, pal) SHADES[(pal >> (c << 1)) & 0x03]
+#define SHADE(pal, c) SHADES[(pal >> (c << 1)) & 0x03]
 
 /* get color @ (x, y) within 8x8 tile. */
 static uint8_t color_tile (uint8_t *tile, uint8_t x, uint8_t y)
@@ -338,15 +338,40 @@ static uint8_t line_sprites[SPRITES_PER_LINE + 1];
 
 #define RESET_LINE_SPRITES memset (line_sprites, 0xFF, SPRITES_PER_LINE + 1);
 
-static inline uint16_t __color_obj_dmg (uint8_t *sprite, uint8_t ti, uint8_t dx, uint8_t dy)
+/* Find (the first 10) sprites that are visible on the current line. */
+static inline void find_line_sprites ()
 {
-	uint8_t oc = color_tile (vram + (ti << 4), dx, dy);
-	return SHADE (sprite[3] & 0x10 ? OBP1 : OBP0, oc);
+	uint8_t x, y, *sprite;
+
+	RESET_LINE_SPRITES
+	for (uint8_t i = 0, n = 0; i < 40 && n < SPRITES_PER_LINE; i ++)
+	{
+		// every 4 B is a sprite
+		sprite = oam + (i << 2);
+
+		y = sprite[0];
+		x = sprite[1];
+
+		// hidden sprite (outside of screen)?
+		if (y == 0 || y >= (GB_LCD_HEIGHT + 16) || x == 0 || x >= (GB_LCD_WIDTH + 8))
+			continue;
+
+		// visible sprite on the current line
+		int16_t dy = LY - (y - 16);
+		if (dy < OBJ_SIZE && dy >= 0)
+			line_sprites[n ++] = i;
+	}
 }
 
-static inline uint16_t __color_obj_cgb (uint8_t *sprite, uint8_t ti, uint8_t dx, uint8_t dy)
+static inline uint8_t __color_obj_dmg (uint8_t *sprite, uint8_t ti, uint8_t dx, uint8_t dy)
 {
-	uint8_t oc = color_tile
+	return color_tile (vram + (ti << 4), dx, dy);
+	//return SHADE (SPRITE_PALETTE (sprite) ? OBP1 : OBP0, oc);
+}
+
+static inline uint8_t __color_obj_cgb (uint8_t *sprite, uint8_t ti, uint8_t dx, uint8_t dy)
+{
+	return color_tile
 	(
 		(sprite[3] & 0x08 ? vram_bank1 : vram_bank0) + (ti << 4),
 		dx,
@@ -354,12 +379,12 @@ static inline uint16_t __color_obj_cgb (uint8_t *sprite, uint8_t ti, uint8_t dx,
 	);
 
 	// 4 colors / palette × 2 B / colors = every 8 B
-	return CRAM_OBJ[(SPRITE_PALETTE_CGB(sprite) << 3) + (oc & 0x3)];
+	//return CRAM_OBJ[(SPRITE_PALETTE_CGB (sprite) << 3) + (oc & 0x3)];
 }
 
-static uint16_t (*__color_obj) (uint8_t *, uint8_t, uint8_t, uint8_t);
+static uint8_t (*__color_obj) (uint8_t *, uint8_t, uint8_t, uint8_t);
 
-static inline void color_obj (uint8_t x, uint16_t *c, uint16_t bgc)
+static inline void color_obj (uint8_t x, uint16_t bgc, uint8_t *c, uint8_t *pal)
 {
 	uint8_t *sprite;
 	int16_t dx;
@@ -394,34 +419,10 @@ static inline void color_obj (uint8_t x, uint16_t *c, uint16_t bgc)
 			if (oc)
 			{
 				*c = oc;
+				*pal = SPRITE_PALETTE (sprite) ? OBP1 : OBP0;
 				break;
 			}
 		}
-	}
-}
-
-/* Find (the first 10) sprites that are visible on the current line. */
-static inline void find_line_sprites ()
-{
-	uint8_t x, y, *sprite;
-
-	RESET_LINE_SPRITES
-	for (uint8_t i = 0, n = 0; i < 40 && n < SPRITES_PER_LINE; i ++)
-	{
-		// every 4 B is a sprite
-		sprite = oam + (i << 2);
-
-		y = sprite[0];
-		x = sprite[1];
-
-		// hidden sprite (outside of screen)?
-		if (y == 0 || y >= (GB_LCD_HEIGHT + 16) || x == 0 || x >= (GB_LCD_WIDTH + 8))
-			continue;
-
-		// visible sprite on the current line
-		int16_t dy = LY - (y - 16);
-		if (dy < OBJ_SIZE && dy >= 0)
-			line_sprites[n ++] = i;
 	}
 }
 
@@ -435,7 +436,7 @@ void gb_ppu_stall (uint32_t cc)
 
 static inline void draw_dmg (uint16_t x)
 {
-	uint16_t bgc = 0, c = 0;
+	uint8_t bgc = 0, c = 0, pal = BGP;
 
 	// Background
 	if (BG_WIN_PRIO)
@@ -448,9 +449,9 @@ static inline void draw_dmg (uint16_t x)
 	}
 	// Sprite
 	if (OBJ_ENABLED)
-		color_obj (x, &c, bgc);
+		color_obj (x, bgc, &c, &pal);
 
-	lcd_buf[LY * GB_LCD_WIDTH + x] = c;
+	lcd_buf[LY * GB_LCD_WIDTH + x] = SHADE (pal, c);
 }
 
 static inline void draw_cgb (uint16_t x)
@@ -472,10 +473,10 @@ static inline void draw_cgb (uint16_t x)
 	}
 	*/
 	// Sprite
-	if (OBJ_ENABLED)
-		color_obj (x, &c, bgc);
+	//if (OBJ_ENABLED)
+		//color_obj (x, &c, bgc);
 
-	lcd_buf[LY * GB_LCD_WIDTH + x] = c;
+	//lcd_buf[LY * GB_LCD_WIDTH + x] = c;
 }
 
 static void (*draw) (uint16_t);
@@ -572,7 +573,7 @@ void gb_ppu_reset (uint8_t dmg)
 	BGP = 0xFC;
 	OBP0 = OBP1 = 0xFF;
 
-	vram = gb_cpu_mem (VRAM_LOC);
+	vram = vram_bank0 = gb_cpu_mem (VRAM_LOC);
 	oam = gb_cpu_mem (OAM_LOC);
 
 	dot = LY = 0;
@@ -591,9 +592,11 @@ void gb_ppu_reset (uint8_t dmg)
 		_vbk = gb_cpu_mem (VBK_LOC);
 		_ocps = gb_cpu_mem (OCPS_LOC);
 		_bcps = gb_cpu_mem (BCPS_LOC);
+
 		gb_cpu_register_store_handler (write_vbk_handler);
 		gb_cpu_register_store_handler (write_bcpd_handler);
 		gb_cpu_register_store_handler (write_ocpd_handler);
+
 		memset (CRAM_BG, 0, 64);
 		memset (CRAM_OBJ, 0, 64);
 
