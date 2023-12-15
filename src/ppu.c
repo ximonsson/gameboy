@@ -371,12 +371,8 @@ static inline uint8_t __color_obj_dmg (uint8_t *sprite, uint8_t ti, uint8_t dx, 
 
 static inline uint8_t __color_obj_cgb (uint8_t *sprite, uint8_t ti, uint8_t dx, uint8_t dy)
 {
-	return color_tile
-	(
-		(sprite[3] & 0x08 ? vram_bank1 : vram_bank0) + (ti << 4),
-		dx,
-		dy
-	);
+	uint8_t *vb = SPRITE_VRAM (sprite) ? vram_bank1 : vram_bank0;
+	return color_tile (vb + (ti << 4), dx, dy);
 
 	// 4 colors / palette × 2 B / colors = every 8 B
 	//return CRAM_OBJ[(SPRITE_PALETTE_CGB (sprite) << 3) + (oc & 0x3)];
@@ -456,7 +452,7 @@ static inline void draw_dmg (uint16_t x)
 
 static inline void draw_cgb (uint16_t x)
 {
-	uint16_t bgc = 0, c = 0;
+	uint8_t bgc = 0, c = 0, pal = 0;
 
 	// TODO
 	// implement correct priorities
@@ -473,10 +469,11 @@ static inline void draw_cgb (uint16_t x)
 	}
 	*/
 	// Sprite
-	//if (OBJ_ENABLED)
-		//color_obj (x, &c, bgc);
+	if (OBJ_ENABLED)
+		color_obj (x, bgc, &c, bgc);
 
-	//lcd_buf[LY * GB_LCD_WIDTH + x] = c;
+	//return CRAM_OBJ[(SPRITE_PALETTE_CGB (sprite) << 3) + (oc & 0x3)];
+	lcd_buf[LY * GB_LCD_WIDTH + x] = c;
 }
 
 static void (*draw) (uint16_t);
