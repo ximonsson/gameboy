@@ -295,18 +295,37 @@ static uint8_t color_tile (uint8_t *tile, uint8_t x, uint8_t y)
 }
 
 /* get color within background BG tile. */
-static inline uint8_t color_bg_tile (uint8_t n, uint8_t x, uint8_t y)
+static inline uint8_t __color_bg_tile_dmg (uint8_t n, uint8_t x, uint8_t y, uint8_t *)
 {
-	if (!BG_WIN_TILE) // $8800 addressing mode
+	if (!BG_WIN_TILE)  // $8800 addressing mode
 		return color_tile (vram + 0x1000 + ((int8_t) n << 4), x, y);
 	else
 		return color_tile (vram + (n << 4), x, y);
 }
 
+static inline uint8_t __color_bg_tile_cgb (uint8_t n, uint8_t x, uint8_t y, uint8_t *pal)
+{
+	uint16_t off = !BG_WIN_TILE ? 0x1000 + ((int8_t) n << 4) : n << 4;
+	uint8_t att = vram_bank1[off];  // tile attributes
+
+	// TODO
+	// how to propagate priority?
+
+	// flip
+	if (att & 0x40) y = 7 - y;
+	if (att & 0x20) x = 7 - x;
+
+	*pal = att & 0x7;
+	uint8_t *t = (att & 0x8 ? vram_bank1 : vram_bank0) + off;
+	return color_tile (t, x, y);
+}
+
+static uint8_t (*color_bg_tile) (uint8_t, uint8_t, uint8_t, uint8_t *) ;
+
 /**
  * Draw BG pixel @ x,y in LCD.
  */
-static inline uint8_t color_bg (uint8_t x)
+static inline uint8_t color_bg (uint8_t x, uint8_t *pal)
 {
 	// BG X and Y viewport, the uint8_t type makes sure to wrap around 255.
 	uint8_t bgx = (x + SCX), bgy = (LY + SCY);
@@ -314,21 +333,19 @@ static inline uint8_t color_bg (uint8_t x)
 	// determine BG tile index in 32x32 tile map.
 	// (x div 8) + (y div 8) * 32
 	uint16_t _t = (bgx >> 3) + ((bgy & 0xF8) << 2);
+	uint8_t t = vram_bank0[BG_TILE_MAP + _t];
 
-	// pointer to BG tile map
-	uint8_t t = vram[BG_TILE_MAP + _t];
-
-	return color_bg_tile (t, bgx & 0x7, bgy & 0x7);
+	return color_bg_tile (t, bgx & 0x7, bgy & 0x7, pal);
 }
 
-static inline uint8_t color_win (uint8_t x)
+static inline uint8_t color_win (uint8_t x, uint8_t *pal)
 {
 	uint8_t winx = x - (WX - 7), winy = LY - WY;
 
 	uint16_t t = (winx >> 3) + ((winy & 0xF8) << 2);
-	uint8_t tn = vram[WIN_TILE_MAP + t];
+	uint8_t tn = vram_bank0[WIN_TILE_MAP + t];
 
-	return color_bg_tile (tn, winx & 0x7, winy & 0x7);
+	return color_bg_tile (tn, winx & 0x7, winy & 0x7, pal);
 }
 
 #define SPRITES_PER_LINE 10
@@ -453,10 +470,10 @@ static inline void draw_dmg (uint16_t x)
 	if (BG_WIN_PRIO)
 	{
 		// BG
-		c = bgc = color_bg (x);
+		c = bgc = color_bg (x, 0);
 		// WIN
 		if (WIN_DISP_ENABLED && (x >= (WX - 7)) && (LY >= WY))
-			c = color_win (x);
+			c = color_win (x, 0);
 	}
 	// Sprite
 	if (OBJ_ENABLED)
@@ -474,22 +491,19 @@ static inline void draw_cgb (uint16_t x)
 	// implement correct priorities
 
 	// Background
-	/*
 	if (BG_WIN_PRIO)
 	{
 		// BG
-		ci = bgc = color_bg (x);
+		ci = bgc = color_bg (x, &pal);
 		// WIN
 		if (WIN_DISP_ENABLED && (x >= (WX - 7)) && (LY >= WY))
-			ci = color_win (x);
+			ci = color_win (x, &pal);
 	}
-	*/
 	// Sprite
-	if (OBJ_ENABLED)
-		if (color_obj (x, bgc, &ci, &pal))
-			cram = (uint16_t *) CRAM_OBJ;
+	if (OBJ_ENABLED && color_obj (x, bgc, &ci, &pal))
+		cram = (uint16_t *) CRAM_OBJ;
 
-	// 4 colors / palette × 2 B / colors = one palette is 8 B
+	// 4 colors / palette × 2 B / colors = 8 B / palette = 4 uint16_t / palette
 	lcd_buf[LY * GB_LCD_WIDTH + x] = cram[(pal << 2) + ci];
 }
 
@@ -616,11 +630,13 @@ void gb_ppu_reset (uint8_t dmg)
 
 		draw = draw_cgb;
 		__color_obj = __color_obj_cgb;
+		color_bg_tile = __color_bg_tile_cgb;
 	}
 	else
 	{
 		draw = draw_dmg;
 		__color_obj = __color_obj_dmg;
+		color_bg_tile = __color_bg_tile_dmg;
 	}
 
 	memset (__lcd_1, 0, NPIXELS * sizeof (uint16_t));
