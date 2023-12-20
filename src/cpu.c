@@ -26,20 +26,20 @@ static uint8_t* reg_h = ((uint8_t *) &reg_hl) + 1;
 static uint8_t* reg_l = ((uint8_t *) &reg_hl);
 
 #define AF reg_af
-#define A (* reg_a)
-#define F (* reg_f)
+#define A (*reg_a)
+#define F (*reg_f)
 
 #define BC reg_bc
-#define B (* reg_b)
-#define C (* reg_c)
+#define B (*reg_b)
+#define C (*reg_c)
 
 #define DE reg_de
-#define D (* reg_d)
-#define E (* reg_e)
+#define D (*reg_d)
+#define E (*reg_e)
 
 #define HL reg_hl
-#define H (* reg_h)
-#define L (* reg_l)
+#define H (*reg_h)
+#define L (*reg_l)
 
 #define SP sp
 #define PC pc
@@ -140,22 +140,22 @@ static void mem_store (uint16_t adr, uint8_t v)
 static void vram_dma (uint8_t v)
 {
 	uint16_t src = ((RAM (HDMA1) << 8) | RAM (HDMA2)) & 0xFFF0;
-	uint16_t dst = ((RAM (HDMA3) << 8) | RAM (HDMA4)) & 0x1FF0;
+	uint16_t dst = (((RAM (HDMA3) << 8) | RAM (HDMA4)) & 0x1FF0) + 0x8000;
 
 	// x << 4 == x mul 16
 	uint16_t n = ((v & 0x7F) + 0x0001) << 4;
 
-	if (v & 0x80)  // General purpose DMA
-	{
-		for (uint16_t i = 0; i < n; i ++)
-			ram[dst + i] = ram[src + i];
-		ram[HDMA5] = 0xFF;
-	}
-	else  // HBlank DMA
+	if (v & 0x80)  // HBlank DMA
 	{
 		// TODO
 		// correct implementation
-		//fprintf (stderr, "CPU > HBLANK DMA !! not supported yet\n");
+		// fprintf (stderr, "CPU > HBLANK DMA !! not supported yet\n");
+		for (uint16_t i = 0; i < n; i ++)
+			ram[dst + i] = ram[src + i];
+		ram[HDMA5] = 0x00;
+	}
+	else  // General purpose DMA
+	{
 		for (uint16_t i = 0; i < n; i ++)
 			ram[dst + i] = ram[src + i];
 		ram[HDMA5] = 0xFF;
@@ -189,7 +189,6 @@ static int oam_dma_transf_handler (uint16_t address, uint8_t v)
 	return 0;
 }
 
-//#ifdef CGB
 //static uint8_t *_svbk;
 //#define SVBK (*_svbk)
 #define SVBK_LOC 0xFF70
@@ -225,8 +224,6 @@ static int write_wram_handler (uint16_t adr, uint8_t v)
 	wram_bank[adr - 0xD000] = v;
 	return 1;
 }
-
-//#endif  // ifdef CGB
 
 /**
  * stack_push pushes the value v to the stack.
@@ -916,10 +913,9 @@ void gb_cpu_reset (uint8_t dmg)
 	gb_cpu_register_read_handler (read_echo_ram_h);
 
 	// wram
-	gb_cpu_register_store_handler (write_wram_bank_handler);
 	gb_cpu_register_store_handler (write_wram_handler);
 	gb_cpu_register_read_handler (read_wram_handler);
-	wram_bank = wram + 0x1000;
+	wram_bank = wram;
 	memset (wram, 0, 0x7000);
 
 	memset (ram, 0, 1 << 16);
@@ -929,6 +925,8 @@ void gb_cpu_reset (uint8_t dmg)
 	{
 		// vram dma
 		gb_cpu_register_store_handler (write_vram_dma_handler);
+		// wram bank switch
+		gb_cpu_register_store_handler (write_wram_bank_handler);
 	}
 
 	// reset timers
