@@ -256,7 +256,7 @@ void draw ()
 		GB_LCD_WIDTH,
 		GB_LCD_HEIGHT,
 		0,
-		GL_RGBA,
+		GL_BGRA,
 		GL_UNSIGNED_SHORT_5_5_5_1,
 		screen
 	);
