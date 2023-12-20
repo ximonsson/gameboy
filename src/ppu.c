@@ -187,7 +187,7 @@ static int read_mode_block (uint16_t addr, uint8_t *v)
 }
 
 /* OAM data pointer */
-static uint8_t* oam;
+static uint8_t *oam;
 
 #define SPRITE_BG_PRIO(sprite) (sprite[3] & 0x80)
 #define SPRITE_YFLIP(sprite) (sprite[3] & 0x40)
@@ -207,7 +207,7 @@ static uint16_t __lcd_2[NPIXELS];
 const uint16_t *gb_ppu_lcd () { return lcd; }
 
 /* VRAM */
-static uint8_t* vram;
+static uint8_t *vram;
 
 /* VRAM banks */
 static uint8_t *vram_bank0;  // this one points to mem $8000-$9FFF
@@ -256,11 +256,11 @@ static uint8_t CRAM_OBJ[64];
 
 static uint8_t *_ocps;
 #define OCPS (*_ocps)
-#define OCPS_LOC 0xFF68
+#define OCPS_LOC 0xFF6A
 
 //static uint8_t *_ocpd;
 //#define OCPD (*_ocpd)
-#define OCPD_LOC 0xFF69
+#define OCPD_LOC 0xFF6B
 
 static int write_ocpd_handler (uint16_t adr, uint8_t v)
 {
@@ -363,29 +363,42 @@ static inline void find_line_sprites ()
 	}
 }
 
-static inline uint8_t __color_obj_dmg (uint8_t *sprite, uint8_t ti, uint8_t dx, uint8_t dy)
+static inline uint8_t __color_obj_dmg
+(
+	uint8_t *sprite, uint8_t ti, uint8_t dx, uint8_t dy, uint8_t *pal
+)
 {
+	*pal = SPRITE_PALETTE (sprite) ? OBP1 : OBP0;
 	return color_tile (vram + (ti << 4), dx, dy);
-	//return SHADE (SPRITE_PALETTE (sprite) ? OBP1 : OBP0, oc);
 }
 
-static inline uint8_t __color_obj_cgb (uint8_t *sprite, uint8_t ti, uint8_t dx, uint8_t dy)
+static inline uint8_t __color_obj_cgb
+(
+	uint8_t *sprite, uint8_t ti, uint8_t dx, uint8_t dy, uint8_t *pal
+)
 {
+	*pal = SPRITE_PALETTE_CGB (sprite);
 	uint8_t *vb = SPRITE_VRAM (sprite) ? vram_bank1 : vram_bank0;
 	return color_tile (vb + (ti << 4), dx, dy);
-
-	// 4 colors / palette × 2 B / colors = every 8 B
-	//return CRAM_OBJ[(SPRITE_PALETTE_CGB (sprite) << 3) + (oc & 0x3)];
 }
 
-static uint8_t (*__color_obj) (uint8_t *, uint8_t, uint8_t, uint8_t);
+/**
+ * Pointer to function that will handle computing the color of the sprite at a fixed
+ * coordinate within the tile. This differs depending if we are in CGB mode or not.
+ *
+ * Takes a pointer to the sprite bytes, a tile index, and x,y within the tile.
+ * Returns the color index within the palette.
+ */
+static uint8_t (*__color_obj) (uint8_t *, uint8_t, uint8_t, uint8_t, uint8_t *);
 
-static inline void color_obj (uint8_t x, uint16_t bgc, uint8_t *c, uint8_t *pal)
+/**
+ * Compute (if) color of object at the current drawing coordinate.
+ */
+static inline uint8_t color_obj (uint8_t x, uint16_t bgc, uint8_t *c, uint8_t *pal)
 {
 	uint8_t *sprite;
 	int16_t dx;
-	uint8_t dy, ti;
-	uint16_t oc;
+	uint8_t dy, ti, obc, obp;
 
 	for (uint8_t *s = line_sprites; (*s) != 0xFF; s ++)
 	{
@@ -410,16 +423,18 @@ static inline void color_obj (uint8_t x, uint16_t bgc, uint8_t *c, uint8_t *pal)
 			ti = sprite[2]; if (OBJ_SIZE == 16) ti &= 0xFE;
 
 			// tile color
-			oc = __color_obj (sprite, ti, dx, dy);
+			obc = __color_obj (sprite, ti, dx, dy, &obp);
 
-			if (oc)
+			if (obc)
 			{
-				*c = oc;
-				*pal = SPRITE_PALETTE (sprite) ? OBP1 : OBP0;
-				break;
+				*c = obc;
+				*pal = obp;
+				return 1;
 			}
 		}
 	}
+
+	return 0;
 }
 
 void gb_ppu_stall (uint32_t cc)
@@ -452,7 +467,8 @@ static inline void draw_dmg (uint16_t x)
 
 static inline void draw_cgb (uint16_t x)
 {
-	uint8_t bgc = 0, c = 0, pal = 0;
+	uint8_t bgc = 0, ci = 0, pal = 0;
+	uint16_t *cram = (uint16_t *) CRAM_BG;
 
 	// TODO
 	// implement correct priorities
@@ -462,18 +478,19 @@ static inline void draw_cgb (uint16_t x)
 	if (BG_WIN_PRIO)
 	{
 		// BG
-		c = bgc = color_bg (x);
+		ci = bgc = color_bg (x);
 		// WIN
 		if (WIN_DISP_ENABLED && (x >= (WX - 7)) && (LY >= WY))
-			c = color_win (x);
+			ci = color_win (x);
 	}
 	*/
 	// Sprite
 	if (OBJ_ENABLED)
-		color_obj (x, bgc, &c, bgc);
+		if (color_obj (x, bgc, &ci, &pal))
+			cram = (uint16_t *) CRAM_OBJ;
 
-	//return CRAM_OBJ[(SPRITE_PALETTE_CGB (sprite) << 3) + (oc & 0x3)];
-	lcd_buf[LY * GB_LCD_WIDTH + x] = c;
+	// 4 colors / palette × 2 B / colors = one palette is 8 B
+	lcd_buf[LY * GB_LCD_WIDTH + x] = cram[(pal << 2) + ci];
 }
 
 static void (*draw) (uint16_t);
