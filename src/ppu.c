@@ -221,11 +221,26 @@ static int write_vbk_handler (uint16_t adr, uint8_t v)
 {
 	if (adr != VBK_LOC) return 0;
 
-	if (v & 1) vram = vram_bank1;
-	else vram = vram_bank0;
-
+	vram = v & 1 ? vram_bank1 : vram_bank0;
 	VBK = 0xFE | (v & 1);
+	return 1;
+}
 
+/* handler to make sure that writes to VRAM go to the correct bank. */
+static int write_vram_handler (uint16_t adr, uint8_t v)
+{
+	if ((adr < 0x8000) || (adr >= 0xA000)) return 0;
+
+	vram[adr - 0x8000] = v;
+	return 1;
+}
+
+/* handler to make sure that reads from VRAM come from the correct bank. */
+static int read_vram_handler (uint16_t adr, uint8_t *v)
+{
+	if ((adr < 0x8000) || (adr >= 0xA000)) return 0;
+
+	*v = vram[adr - 0x8000];
 	return 1;
 }
 
@@ -512,6 +527,14 @@ static inline void draw_cgb (uint16_t x)
 	if (OBJ_ENABLED && color_obj (x, bgc, &ci, &pal))
 		cram = (uint16_t *) CRAM_OBJ;
 
+	// TODO
+	// I shift away the unused MSB to make the LSB cleared, this is to be compatible
+	// with `GL_UNSIGNED_SHORT_5_5_5_1` which wants the alpha channel in LSB and then
+	// BGR in the 15 MSBs.
+	//
+	// I don't think this should be done here. It should be untouched and the caller
+	// takes care of transforming the value the way they are going to represent it.
+
 	// 4 colors / palette × 2 B / colors = 8 B / palette = 4 uint16_t / palette
 	lcd_buf[LY * GB_LCD_WIDTH + x] = cram[(pal << 2) + ci] << 1;
 }
@@ -631,8 +654,11 @@ void gb_ppu_reset (uint8_t dmg)
 		_bcps = gb_cpu_mem (BCPS_LOC);
 
 		gb_cpu_register_store_handler (write_vbk_handler);
+		gb_cpu_register_store_handler (write_vram_handler);
 		gb_cpu_register_store_handler (write_bcpd_handler);
 		gb_cpu_register_store_handler (write_ocpd_handler);
+
+		gb_cpu_register_read_handler (read_vram_handler);
 
 		memset (CRAM_BG, 0, 64);
 		memset (CRAM_OBJ, 0, 64);
