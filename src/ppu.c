@@ -150,7 +150,7 @@ static int write_mode_block (uint16_t addr, uint8_t v)
 	{
 		if ((addr >= 0x8000) && (addr <= 0x9FFF))
 			return 1;
-		else if ((addr >= 0xFE00) && (addr <= 0xFE9F))
+		else if (((addr >= 0xFE00) && (addr <= 0xFE9F)) || (addr == 0xFF69))
 			return 1;
 	}
 
@@ -176,7 +176,7 @@ static int read_mode_block (uint16_t addr, uint8_t *v)
 			*v = 0xFF;
 			return 1;
 		}
-		else if ((addr >= 0xFE00) && (addr <= 0xFE9F))
+		else if (((addr >= 0xFE00) && (addr <= 0xFE9F)) || (addr == 0xFF69))
 		{
 			*v = 0xFF;
 			return 1;
@@ -243,11 +243,15 @@ static int write_bcpd_handler (uint16_t adr, uint8_t v)
 {
 	if (adr != BCPD_LOC) return 0;
 
-	CRAM_BG[BCPS & 0x3F] = v;
+	uint8_t a = BCPS & 0x3F;
+	CRAM_BG[a] = v;
 
 	// auto increment
 	if (BCPS & 0x80)
-		BCPS = 0x80 | (((BCPS & 0x3F) + 1) & 0x3F);
+	{
+		a += 1;
+		BCPS = 0x80 | (a & 0x3F);
+	}
 
 	return 1;
 }
@@ -266,11 +270,15 @@ static int write_ocpd_handler (uint16_t adr, uint8_t v)
 {
 	if (adr != OCPD_LOC) return 0;
 
-	CRAM_OBJ[OCPS & 0x3F] = v;
+	uint8_t a = OCPS & 0x3F;
+	CRAM_OBJ[a] = v;
 
 	// auto increment
 	if (OCPS & 0x80)
-		OCPS = 0x80 | (((OCPS & 0x3F) + 1) & 0x3F);
+	{
+		a += 1;
+		OCPS = 0x80 | (a & 0x3F);
+	}
 
 	return 1;
 }
@@ -297,15 +305,16 @@ static uint8_t color_tile (uint8_t *tile, uint8_t x, uint8_t y)
 /* get color within background BG tile. */
 static inline uint8_t __color_bg_tile_dmg (uint8_t n, uint8_t x, uint8_t y, uint8_t *)
 {
-	if (!BG_WIN_TILE)  // $8800 addressing mode
-		return color_tile (vram + 0x1000 + ((int8_t) n << 4), x, y);
-	else
-		return color_tile (vram + (n << 4), x, y);
+	uint16_t off = !BG_WIN_TILE ? 0x1000 + ((int8_t) n << 4) : n << 4;
+	return color_tile (vram_bank0 + off, x, y);
 }
 
 static inline uint8_t __color_bg_tile_cgb (uint8_t n, uint8_t x, uint8_t y, uint8_t *pal)
 {
 	uint16_t off = !BG_WIN_TILE ? 0x1000 + ((int8_t) n << 4) : n << 4;
+
+	// i don't think this is correct.
+	// should be BG_TILE_MAP + coordinates
 	uint8_t att = vram_bank1[off];  // tile attributes
 
 	// TODO
@@ -342,10 +351,10 @@ static inline uint8_t color_win (uint8_t x, uint8_t *pal)
 {
 	uint8_t winx = x - (WX - 7), winy = LY - WY;
 
-	uint16_t t = (winx >> 3) + ((winy & 0xF8) << 2);
-	uint8_t tn = vram_bank0[WIN_TILE_MAP + t];
+	uint16_t _t = (winx >> 3) + ((winy & 0xF8) << 2);
+	uint8_t t = vram_bank0[WIN_TILE_MAP + _t];
 
-	return color_bg_tile (tn, winx & 0x7, winy & 0x7, pal);
+	return color_bg_tile (t, winx & 0x7, winy & 0x7, pal);
 }
 
 #define SPRITES_PER_LINE 10
@@ -504,7 +513,7 @@ static inline void draw_cgb (uint16_t x)
 		cram = (uint16_t *) CRAM_OBJ;
 
 	// 4 colors / palette × 2 B / colors = 8 B / palette = 4 uint16_t / palette
-	lcd_buf[LY * GB_LCD_WIDTH + x] = cram[(pal << 2) + ci];
+	lcd_buf[LY * GB_LCD_WIDTH + x] = cram[(pal << 2) + ci] << 1;
 }
 
 static void (*draw) (uint16_t);
