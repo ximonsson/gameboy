@@ -318,19 +318,19 @@ static uint8_t color_tile (uint8_t *tile, uint8_t x, uint8_t y)
 }
 
 /* get color within background BG tile. */
-static inline uint8_t __color_bg_tile_dmg (uint8_t n, uint8_t x, uint8_t y, uint8_t *)
+static inline uint8_t __color_bg_tile_dmg (uint8_t *t, uint8_t x, uint8_t y, uint8_t *)
 {
+	uint8_t n = *t;
 	uint16_t off = !BG_WIN_TILE ? 0x1000 + ((int8_t) n << 4) : n << 4;
 	return color_tile (vram_bank0 + off, x, y);
 }
 
-static inline uint8_t __color_bg_tile_cgb (uint8_t n, uint8_t x, uint8_t y, uint8_t *pal)
+static inline uint8_t __color_bg_tile_cgb (uint8_t *t, uint8_t x, uint8_t y, uint8_t *pal)
 {
+	uint8_t n = *t;
 	uint16_t off = !BG_WIN_TILE ? 0x1000 + ((int8_t) n << 4) : n << 4;
 
-	// i don't think this is correct.
-	// should be BG_TILE_MAP + coordinates
-	uint8_t att = vram_bank1[off];  // tile attributes
+	uint8_t att = vram_bank1[t - vram_bank0];
 
 	// TODO
 	// how to propagate priority?
@@ -340,11 +340,11 @@ static inline uint8_t __color_bg_tile_cgb (uint8_t n, uint8_t x, uint8_t y, uint
 	if (att & 0x20) x = 7 - x;
 
 	*pal = att & 0x7;
-	uint8_t *t = (att & 0x8 ? vram_bank1 : vram_bank0) + off;
-	return color_tile (t, x, y);
+	uint8_t *tmp = (att & 0x8 ? vram_bank1 : vram_bank0) + off;
+	return color_tile (tmp, x, y);
 }
 
-static uint8_t (*color_bg_tile) (uint8_t, uint8_t, uint8_t, uint8_t *) ;
+static uint8_t (*color_bg_tile) (uint8_t *, uint8_t, uint8_t, uint8_t *) ;
 
 /**
  * Draw BG pixel @ x,y in LCD.
@@ -357,7 +357,7 @@ static inline uint8_t color_bg (uint8_t x, uint8_t *pal)
 	// determine BG tile index in 32x32 tile map.
 	// (x div 8) + (y div 8) * 32
 	uint16_t _t = (bgx >> 3) + ((bgy & 0xF8) << 2);
-	uint8_t t = vram_bank0[BG_TILE_MAP + _t];
+	uint8_t *t = &vram_bank0[BG_TILE_MAP + _t];
 
 	return color_bg_tile (t, bgx & 0x7, bgy & 0x7, pal);
 }
@@ -367,7 +367,7 @@ static inline uint8_t color_win (uint8_t x, uint8_t *pal)
 	uint8_t winx = x - (WX - 7), winy = LY - WY;
 
 	uint16_t _t = (winx >> 3) + ((winy & 0xF8) << 2);
-	uint8_t t = vram_bank0[WIN_TILE_MAP + _t];
+	uint8_t *t = &vram_bank0[WIN_TILE_MAP + _t];
 
 	return color_bg_tile (t, winx & 0x7, winy & 0x7, pal);
 }
@@ -524,8 +524,7 @@ static inline void draw_cgb (uint16_t x)
 			ci = color_win (x, &pal);
 	}
 	// Sprite
-	if (OBJ_ENABLED && color_obj (x, bgc, &ci, &pal))
-		cram = (uint16_t *) CRAM_OBJ;
+	if (OBJ_ENABLED && color_obj (x, bgc, &ci, &pal)) cram = (uint16_t *) CRAM_OBJ;
 
 	// TODO
 	// I shift away the unused MSB to make the LSB cleared, this is to be compatible

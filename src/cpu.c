@@ -151,20 +151,20 @@ static void vram_dma (uint8_t v)
 		// correct implementation
 		// fprintf (stderr, "CPU > HBLANK DMA !! not supported yet\n");
 		for (uint16_t i = 0; i < n; i ++)
-			ram[dst + i] = ram[src + i];
+			STORE (dst + i, RAM (src + i));
 		ram[HDMA5] = 0x00;
 	}
 	else  // General purpose DMA
 	{
 		for (uint16_t i = 0; i < n; i ++)
-			ram[dst + i] = ram[src + i];
+			STORE (dst + i, RAM (src + i));
 		ram[HDMA5] = 0xFF;
 	}
 }
 
 static int write_vram_dma_handler (uint16_t adr, uint8_t v)
 {
-	if (adr != HDMA5) vram_dma (v);
+	if (adr == HDMA5) vram_dma (v);
 	return 0;
 }
 
@@ -173,7 +173,7 @@ static void oam_dma_transfer (uint8_t v)
 {
 	uint16_t src = v << 8, dst = OAM_LOC;
 	for (int i = 0; i < 0xA0; i ++, dst ++, src ++)
-		ram[dst] = RAM (src);
+		STORE (dst, RAM (src));
 	gb_ppu_stall (160);
 
 #ifdef DEBUG_CPU
